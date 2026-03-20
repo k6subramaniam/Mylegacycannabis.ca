@@ -73,9 +73,13 @@ export async function storagePut(
 ): Promise<{ key: string; url: string }> {
   const config = getStorageConfig();
   if (!config) {
-    console.warn("[Storage] Storage not configured, returning placeholder URL");
+    // No storage backend — embed the image as a base64 data URL so it is
+    // always viewable in the admin panel without any external service.
     const key = normalizeKey(relKey);
-    return { key, url: `https://placehold.co/400x400?text=Image+Unavailable` };
+    const buf = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data as any);
+    const b64 = buf.toString("base64");
+    const dataUrl = `data:${contentType};base64,${b64}`;
+    return { key, url: dataUrl };
   }
   const { baseUrl, apiKey } = config;
   const key = normalizeKey(relKey);

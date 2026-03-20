@@ -366,7 +366,9 @@ export async function updateOrder(id: number, data: Partial<InsertOrder>): Promi
 
 // ─── ID VERIFICATION HELPERS ───
 export async function getAllVerifications(opts?: { page?: number; limit?: number; status?: string }) {
-  let filtered = [..._idVerifications];
+  // Normalize: records without a status field are treated as "pending"
+  const allNormalized = _idVerifications.map((v: any) => ({ ...v, status: v.status || 'pending' }));
+  let filtered = [...allNormalized];
   if (opts?.status) filtered = filtered.filter(v => v.status === opts.status);
   const sorted = filtered.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
   const page = opts?.page ?? 1;
@@ -375,7 +377,10 @@ export async function getAllVerifications(opts?: { page?: number; limit?: number
 }
 
 export async function getVerificationById(id: number) {
-  return _idVerifications.find((v: any) => v.id === id);
+  const v = _idVerifications.find((v: any) => v.id === id);
+  if (!v) return undefined;
+  // Normalize: records without a status field are treated as "pending"
+  return { ...v, status: (v as any).status || 'pending' };
 }
 
 export async function createVerification(data: InsertIdVerification): Promise<number> {
@@ -457,7 +462,7 @@ export async function getDashboardStats() {
   const totalRevenue = _orders
     .filter(o => (o as any).paymentStatus === 'confirmed')
     .reduce((sum, o) => sum + parseFloat((o as any).total ?? '0'), 0);
-  const pendingVerifications = _idVerifications.filter((v: any) => v.status === 'pending').length;
+  const pendingVerifications = _idVerifications.filter((v: any) => !v.status || v.status === 'pending').length;
   const totalProducts = _products.filter(p => p.isActive).length;
   const totalUsers = _users.length;
   const recentOrders = [..._orders]

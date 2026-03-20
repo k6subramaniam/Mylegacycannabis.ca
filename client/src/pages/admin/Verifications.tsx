@@ -24,13 +24,17 @@ export default function AdminVerifications() {
 
   const totalPages = Math.ceil((data?.total ?? 0) / 20);
 
-  const statusBadge = (s: string) => {
+  // Treat missing/undefined status as "pending" (records created before status fix)
+  const normalizeStatus = (s: string | undefined | null) => s || "pending";
+
+  const statusBadge = (s: string | undefined | null) => {
+    const status = normalizeStatus(s);
     const colors: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-700",
       approved: "bg-green-100 text-green-700",
       rejected: "bg-red-100 text-red-700",
     };
-    return <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${colors[s] || "bg-gray-100 text-gray-600"}`}>{s}</span>;
+    return <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-600"}`}>{status}</span>;
   };
 
   return (
@@ -121,15 +125,27 @@ export default function AdminVerifications() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-2">Front of ID</p>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
-                    <img src={detail.frontImageUrl} alt="Front of ID" className="w-full h-auto max-h-80 object-contain" />
+                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[160px] flex items-center justify-center">
+                    {detail.frontImageUrl && !detail.frontImageUrl.includes('placehold.co') ? (
+                      <img src={detail.frontImageUrl} alt="Front of ID" className="w-full h-auto max-h-80 object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                    ) : null}
+                    <p className={`text-sm text-gray-400 p-4 text-center ${detail.frontImageUrl && !detail.frontImageUrl.includes('placehold.co') ? 'hidden' : ''}`}>
+                      No image on file — submitted before image storage was configured
+                    </p>
                   </div>
                 </div>
                 {detail.selfieImageUrl && (
                   <div>
                     <p className="text-sm font-medium text-gray-600 mb-2">Selfie</p>
-                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
-                      <img src={detail.selfieImageUrl} alt="Selfie" className="w-full h-auto max-h-80 object-contain" />
+                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 min-h-[160px] flex items-center justify-center">
+                      {!detail.selfieImageUrl.includes('placehold.co') ? (
+                        <img src={detail.selfieImageUrl} alt="Selfie" className="w-full h-auto max-h-80 object-contain"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                      ) : null}
+                      <p className={`text-sm text-gray-400 p-4 text-center ${!detail.selfieImageUrl.includes('placehold.co') ? 'hidden' : ''}`}>
+                        No image on file — submitted before image storage was configured
+                      </p>
                     </div>
                   </div>
                 )}
@@ -144,8 +160,8 @@ export default function AdminVerifications() {
                 </div>
               )}
 
-              {/* Review Actions */}
-              {detail.status === "pending" && (
+              {/* Review Actions — show for pending or undefined status (legacy records) */}
+              {(normalizeStatus(detail.status) === "pending") && (
                 <div className="space-y-3 pt-2">
                   <textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} placeholder="Add review notes (optional, required for rejection)..."
                     rows={2} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none" />
