@@ -26,6 +26,8 @@ export const users = mysqlTable("users", {
   birthday: varchar("birthday", { length: 10 }),
   rewardPoints: int("rewardPoints").default(0).notNull(),
   idVerified: boolean("idVerified").default(false).notNull(),
+  isLocked: boolean("isLocked").default(false).notNull(),
+  adminNotes: text("adminNotes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

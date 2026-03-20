@@ -201,6 +201,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (user.idVerified !== undefined) existing.idVerified = user.idVerified ?? false;
     if (user.phoneVerified !== undefined) existing.phoneVerified = user.phoneVerified ?? false;
     if (user.emailVerified !== undefined) existing.emailVerified = user.emailVerified ?? false;
+    if ((user as any).isLocked !== undefined) (existing as any).isLocked = (user as any).isLocked ?? false;
+    if ((user as any).adminNotes !== undefined) (existing as any).adminNotes = (user as any).adminNotes ?? null;
     existing.updatedAt = now;
   } else {
     const id = nextId();
@@ -219,6 +221,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       birthday: user.birthday ?? null,
       rewardPoints: user.rewardPoints ?? 0,
       idVerified: user.idVerified ?? false,
+      isLocked: (user as any).isLocked ?? false,
+      adminNotes: (user as any).adminNotes ?? null,
       createdAt: now,
       updatedAt: now,
       lastSignedIn: user.lastSignedIn ?? now,
@@ -230,9 +234,36 @@ export async function getUserByOpenId(openId: string): Promise<User | undefined>
   return _users.find(u => u.openId === openId);
 }
 
-export async function getAllUsers(page = 1, limit = 50) {
-  const sorted = [..._users].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+export async function getAllUsers(page = 1, limit = 50, search?: string) {
+  let list = [..._users];
+  if (search) {
+    const q = search.toLowerCase();
+    list = list.filter(u =>
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.phone && u.phone.includes(q))
+    );
+  }
+  const sorted = list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return { data: paginate(sorted, page, limit), total: sorted.length };
+}
+
+export async function getUserById(id: number): Promise<User | undefined> {
+  return _users.find(u => u.id === id);
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  const idx = _users.findIndex(u => u.id === id);
+  if (idx !== -1) _users.splice(idx, 1);
+}
+
+export async function getUserOrders(userId: number) {
+  const user = _users.find(u => u.id === userId);
+  if (!user) return [];
+  return _orders.filter((o: any) =>
+    (user.email && o.guestEmail && o.guestEmail.toLowerCase() === user.email.toLowerCase()) ||
+    (user.phone && o.guestPhone && o.guestPhone === user.phone)
+  ).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {

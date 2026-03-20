@@ -235,6 +235,12 @@ export function registerCustomAuthRoutes(app: Express) {
           return;
         }
 
+        // Enforce account lock
+        if ((user as any).isLocked) {
+          res.status(403).json({ error: "Your account has been locked. Please contact support at support@mylegacycannabis.ca." });
+          return;
+        }
+
         // Update verified status
         if (type === "email" && !user.emailVerified) {
           await db.updateUser(user.id, { emailVerified: true } as any);

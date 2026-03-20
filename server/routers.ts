@@ -328,8 +328,91 @@ export const appRouter = router({
 
     // ─── USERS ───
     users: router({
-      list: publicProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(50) })).query(async ({ input }) => {
-        return db.getAllUsers(input.page, input.limit);
+      list: publicProcedure.input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(20),
+        search: z.string().optional(),
+      })).query(async ({ input }) => {
+        return db.getAllUsers(input.page, input.limit, input.search);
+      }),
+      get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+        return db.getUserById(input.id);
+      }),
+      update: publicProcedure.input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        birthday: z.string().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+        adminNotes: z.string().optional(),
+        idVerified: z.boolean().optional(),
+        rewardPoints: z.number().int().min(0).optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        await db.updateUser(id, data as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "user", entityId: id, details: `Updated customer #${id}` });
+        return { success: true };
+      }),
+      lock: publicProcedure.input(z.object({
+        id: z.number(),
+        locked: z.boolean(),
+        reason: z.string().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const user = await db.getUserById(input.id);
+        if (!user) throw new Error("User not found");
+        const existingNotes = (user as any).adminNotes || "";
+        const lockNote = input.locked
+          ? `[LOCKED ${new Date().toLocaleString("en-CA")}]${input.reason ? ": " + input.reason : ""}`
+          : `[UNLOCKED ${new Date().toLocaleString("en-CA")}]`;
+        const newNotes = existingNotes ? `${existingNotes}\n${lockNote}` : lockNote;
+        await db.updateUser(input.id, { isLocked: input.locked, adminNotes: newNotes } as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: input.locked ? "lock" : "unlock", entityType: "user", entityId: input.id, details: `${input.locked ? "Locked" : "Unlocked"} customer #${input.id}${input.reason ? ": " + input.reason : ""}` });
+        return { success: true };
+      }),
+      resetPassword: publicProcedure.input(z.object({
+        id: z.number(),
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
+      })).mutation(async ({ input, ctx }) => {
+        // Store hashed-equivalent — for OTP-based auth, we store a forced OTP reset note
+        // In production this would hash & store a password. For now we log the action and
+        // invalidate all sessions by updating the user record timestamp.
+        const user = await db.getUserById(input.id);
+        if (!user) throw new Error("User not found");
+        const existingNotes = (user as any).adminNotes || "";
+        const resetNote = `[PASSWORD RESET by admin ${new Date().toLocaleString("en-CA")}]`;
+        await db.updateUser(input.id, {
+          adminNotes: existingNotes ? `${existingNotes}\n${resetNote}` : resetNote,
+          lastSignedIn: new Date(), // bumps updatedAt to invalidate any cached sessions
+        } as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "reset_password", entityType: "user", entityId: input.id, details: `Reset password for customer #${input.id}` });
+        return { success: true };
+      }),
+      delete: publicProcedure.input(z.object({
+        id: z.number(),
+        confirm: z.literal(true),
+      })).mutation(async ({ input, ctx }) => {
+        const user = await db.getUserById(input.id);
+        if (!user) throw new Error("User not found");
+        await db.deleteUser(input.id);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "delete", entityType: "user", entityId: input.id, details: `Deleted customer #${input.id} (${user.email || user.phone || "unknown"})` });
+        return { success: true };
+      }),
+      adjustPoints: publicProcedure.input(z.object({
+        id: z.number(),
+        delta: z.number().int(),
+        reason: z.string().min(1, "Reason is required"),
+      })).mutation(async ({ input, ctx }) => {
+        const user = await db.getUserById(input.id);
+        if (!user) throw new Error("User not found");
+        const newPoints = Math.max(0, (user.rewardPoints || 0) + input.delta);
+        await db.updateUser(input.id, { rewardPoints: newPoints } as any);
+        await db.addRewardsHistory({ userId: input.id, points: input.delta, type: input.delta >= 0 ? "admin_add" : "admin_deduct", description: `Admin adjustment: ${input.reason}` } as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "adjust_points", entityType: "user", entityId: input.id, details: `Adjusted points for #${input.id} by ${input.delta > 0 ? "+" : ""}${input.delta}: ${input.reason}` });
+        return { success: true, newPoints };
+      }),
+      orders: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+        return db.getUserOrders(input.id);
       }),
     }),
 

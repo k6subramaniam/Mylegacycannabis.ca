@@ -292,6 +292,11 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
+    // Enforce account lock — reject all requests from locked accounts
+    if ((user as any).isLocked) {
+      throw ForbiddenError("Your account has been locked. Please contact support.");
+    }
+
     await db.upsertUser({
       openId: user.openId,
       lastSignedIn: signedInAt,
