@@ -48,6 +48,7 @@ function PageLoader() {
   );
 }
 
+// Provide wouter route params directly to avoid nested-router path mismatch
 function AdminRouter() {
   return (
     <AdminLayout>
@@ -56,7 +57,7 @@ function AdminRouter() {
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/admin/products" component={AdminProducts} />
           <Route path="/admin/orders" component={AdminOrders} />
-          <Route path="/admin/orders/:id" component={AdminOrders} />
+          <Route path="/admin/orders/:id">{(params) => <AdminOrders routeId={params.id} />}</Route>
           <Route path="/admin/verifications" component={AdminVerifications} />
           <Route path="/admin/shipping" component={AdminShipping} />
           <Route path="/admin/emails" component={AdminEmailTemplates} />

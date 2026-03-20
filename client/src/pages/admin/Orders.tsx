@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { useRoute, Link } from "wouter";
+import { Link } from "wouter";
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"] as const;
 const PAYMENT_OPTIONS = ["pending", "received", "confirmed", "refunded"] as const;
@@ -137,9 +137,9 @@ function OrderDetail({ id }: { id: number }) {
   );
 }
 
-export default function AdminOrders() {
-  const [, params] = useRoute("/admin/orders/:id");
-  if (params?.id) return <OrderDetail id={parseInt(params.id)} />;
+export default function AdminOrders({ routeId }: { routeId?: string }) {
+  // routeId is passed directly from App.tsx route to avoid nested-router path mismatch
+  if (routeId) return <OrderDetail id={parseInt(routeId)} />;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");

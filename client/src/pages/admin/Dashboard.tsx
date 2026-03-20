@@ -6,7 +6,9 @@ import {
 import { Link } from "wouter";
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = trpc.admin.stats.useQuery();
+  const { data: stats, isLoading } = trpc.admin.stats.useQuery(undefined, {
+    refetchInterval: 30_000, // re-poll every 30s so new orders/verifications appear without a refresh
+  });
 
   if (isLoading) {
     return (
@@ -86,7 +88,7 @@ export default function AdminDashboard() {
       {/* Recent Orders */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center justify-between p-4 md:p-5 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-800">Recent Orders</h2>
+          <h2 className="font-display text-lg text-gray-800">RECENT ORDERS</h2>
           <Link href="/admin/orders" className="text-sm text-[#4B2D8E] hover:underline flex items-center gap-1">
             View All <ArrowRight size={14} />
           </Link>
