@@ -380,7 +380,7 @@ export async function getVerificationById(id: number) {
 
 export async function createVerification(data: InsertIdVerification): Promise<number> {
   const id = nextId();
-  _idVerifications.push({ id, ...data, createdAt: new Date(), updatedAt: new Date() });
+  _idVerifications.push({ id, status: 'pending', ...data, createdAt: new Date(), updatedAt: new Date() });
   return id;
 }
 
