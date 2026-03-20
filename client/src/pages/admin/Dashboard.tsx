@@ -108,7 +108,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {stats.recentOrders.map((order: any) => (
+                {stats.recentOrders.slice(0, 10).map((order: any) => (
                   <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                     <td className="px-4 md:px-5 py-3 font-mono text-xs font-semibold text-[#4B2D8E]">{order.orderNumber}</td>
                     <td className="px-4 md:px-5 py-3 text-gray-600 hidden sm:table-cell">{order.guestName || "—"}</td>

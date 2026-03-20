@@ -159,16 +159,32 @@ function seedData() {
       subtotal: o.total,
       tax: '0.00',
       shipping: '9.99',
+      shippingCost: '9.99',
+      discount: '0.00',
+      pointsRedeemed: 0,
       guestName: o.guestName,
       guestEmail: o.guestEmail,
       guestPhone: null,
       shippingAddress: o.shippingAddress,
       billingAddress: o.shippingAddress,
       notes: null,
+      adminNotes: null,
       trackingNumber: o.status === 'shipped' || o.status === 'delivered' ? 'TRK' + Math.random().toString(36).substr(2, 9).toUpperCase() : null,
       createdAt: createdDate,
       updatedAt: createdDate,
     });
+    // Seed realistic order items for each order
+    const itemSets: Record<string, Array<{ productName: string; price: string; quantity: number }>> = {
+      'ORD-2024-001': [{ productName: 'Blue Dream', price: '38.00', quantity: 1 }, { productName: 'Indica Pre-Roll Pack', price: '25.00', quantity: 1 }, { productName: 'Premium Grinder', price: '25.00', quantity: 1 }],
+      'ORD-2024-002': [{ productName: 'OG Kush Vape Cart', price: '45.00', quantity: 2 }, { productName: 'Mixed Fruit Gummies', price: '15.00', quantity: 1 }, { productName: 'Dark Chocolate Bar', price: '12.00', quantity: 1 }],
+      'ORD-2024-003': [{ productName: 'Purple Kush', price: '35.00', quantity: 1 }, { productName: 'Sativa Pre-Roll Pack', price: '25.00', quantity: 1 }],
+      'ORD-2024-004': [{ productName: 'THCA Diamonds', price: '65.00', quantity: 2 }, { productName: 'Live Resin — Gelato', price: '50.00', quantity: 1 }, { productName: 'Glass Water Pipe', price: '75.00', quantity: 1 }],
+      'ORD-2024-005': [{ productName: 'Gelato', price: '44.00', quantity: 1 }, { productName: 'Blue Raspberry Live Resin Cart', price: '55.00', quantity: 1 }],
+    };
+    const items = itemSets[o.orderNumber] || [];
+    for (const item of items) {
+      _orderItems.push({ id: nextId(), orderId, productName: item.productName, price: item.price, quantity: item.quantity, productImage: null, productId: null, createdAt: createdDate });
+    }
   }
 
   console.log(`[DB] Seeded ${_products.length} products, ${_shippingZones.length} shipping zones, ${_orders.length} sample orders`);
@@ -490,15 +506,16 @@ export async function getRewardsHistoryByUser(userId: number) {
 // ─── DASHBOARD STATS ───
 export async function getDashboardStats() {
   const totalOrders = _orders.length;
+  // Revenue = all orders that have been paid (received or confirmed)
   const totalRevenue = _orders
-    .filter(o => (o as any).paymentStatus === 'confirmed')
+    .filter(o => (o as any).paymentStatus === 'confirmed' || (o as any).paymentStatus === 'received')
     .reduce((sum, o) => sum + parseFloat((o as any).total ?? '0'), 0);
   const pendingVerifications = _idVerifications.filter((v: any) => !v.status || v.status === 'pending').length;
   const totalProducts = _products.filter(p => p.isActive).length;
   const totalUsers = _users.length;
+  // Return all orders sorted by date (Reports page needs full set for status breakdown)
   const recentOrders = [..._orders]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, 10);
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return { totalOrders, totalRevenue, pendingVerifications, totalProducts, totalUsers, recentOrders };
 }
 
