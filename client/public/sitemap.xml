@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://mylegacycannabis.ca/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/flower</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/pre-rolls</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/edibles</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/vapes</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/concentrates</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shop/accessories</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/rewards</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/locations</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mylegacycannabis.ca/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mylegacycannabis.ca/shipping</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mylegacycannabis.ca/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mylegacycannabis.ca/faq</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mylegacycannabis.ca/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://mylegacycannabis.ca/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>
