@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import fs from "fs";
+import path from "path";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -46,8 +48,12 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
+  // Use static serving if the dist/public directory exists (production build available),
+  // otherwise fall back to Vite dev server. This allows NODE_ENV=development in .env
+  // while still serving the production build in sandbox/Railway.
+  const distPublicPath = path.resolve(import.meta.dirname, "public");
+  const hasBuild = fs.existsSync(distPublicPath);
+  if (!hasBuild && process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
