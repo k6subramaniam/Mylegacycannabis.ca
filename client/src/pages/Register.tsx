@@ -31,10 +31,25 @@ export default function Register() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  const isAtLeast19 = (dob: string): boolean => {
+    if (!dob) return false;
+    const today = new Date();
+    const birth = new Date(dob);
+    // Calculate age precisely — subtract 1 year if birthday hasn't occurred yet this year
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age >= 19;
+  };
+
   const validateInfo = () => {
     if (!name.trim()) { setError('Please enter your full name'); return false; }
     if (!email.trim() || !email.includes('@')) { setError('Please enter a valid email address'); return false; }
     if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Please enter a valid 10-digit phone number'); return false; }
+    if (!birthday) { setError('Date of birth is required. You must be 19 or older to create an account.'); return false; }
+    if (!isAtLeast19(birthday)) { setError('You must be 19 years of age or older to create an account.'); return false; }
     return true;
   };
 
@@ -224,18 +239,26 @@ export default function Register() {
                   <p className="text-xs text-gray-400 font-body mt-1">Used for account verification and order updates</p>
                 </div>
 
-                {/* Birthday (Optional) */}
+                {/* Birthday (Required — age gate) */}
                 <div>
-                  <label className="block text-xs font-display text-[#333] mb-1.5">BIRTHDAY <span className="text-gray-400 font-body">(optional — earn 100 bonus points!)</span></label>
+                  <label className="block text-xs font-display text-[#333] mb-1.5">
+                    DATE OF BIRTH * <span className="text-[#F15929] font-body normal-case font-normal">(must be 19+)</span>
+                  </label>
                   <div className="relative">
                     <Calendar size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="date"
                       value={birthday}
-                      onChange={e => setBirthday(e.target.value)}
+                      max={(() => {
+                        const d = new Date();
+                        d.setFullYear(d.getFullYear() - 19);
+                        return d.toISOString().split('T')[0];
+                      })()}
+                      onChange={e => { setBirthday(e.target.value); setError(''); }}
                       className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
                     />
                   </div>
+                  <p className="text-xs text-gray-400 font-body mt-1">You must be 19 years of age or older to purchase cannabis in Ontario</p>
                 </div>
 
                 <button
@@ -426,7 +449,8 @@ export default function Register() {
           {/* Footer */}
           <div className="text-center mt-6">
             <p className="text-white/40 text-xs font-body">
-              By creating an account, you confirm you are 19+ and agree to our Terms.
+              By creating an account, you confirm you are 19 years of age or older and agree to our{' '}
+              <a href="/terms" className="underline hover:text-white/70">Terms</a>.
             </p>
           </div>
         </div>

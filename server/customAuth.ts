@@ -11,6 +11,18 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function isAtLeast19(birthday: string): boolean {
+  const today = new Date();
+  const birth = new Date(birthday);
+  if (isNaN(birth.getTime())) return false;
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age >= 19;
+}
+
 function normalizePhone(phone: string): string {
   // Remove all non-digits, then ensure +1 prefix for Canadian numbers
   let digits = phone.replace(/\D/g, "");
@@ -144,6 +156,16 @@ export function registerCustomAuthRoutes(app: Express) {
       if (purpose === "register") {
         if (!registrationData?.name || !registrationData?.phone) {
           res.status(400).json({ error: "Name and phone number are required for registration" });
+          return;
+        }
+
+        // ─── AGE GATE: must be 19+ ───
+        if (!registrationData.birthday) {
+          res.status(400).json({ error: "Date of birth is required. You must be 19 or older to create an account." });
+          return;
+        }
+        if (!isAtLeast19(registrationData.birthday)) {
+          res.status(403).json({ error: "You must be 19 years of age or older to create an account." });
           return;
         }
 
