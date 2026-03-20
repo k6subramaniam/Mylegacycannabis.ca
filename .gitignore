@@ -5,6 +5,4 @@ dist/
 *.log
 .manus-logs/
 extracted_source/
-patches/
-pnpm-lock.yaml
 *.pid
