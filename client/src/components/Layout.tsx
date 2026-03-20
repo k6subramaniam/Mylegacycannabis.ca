@@ -259,7 +259,7 @@ function MobileBottomNav() {
             >
               <div className="relative">
                 <tab.icon size={20} />
-                {tab.badge && tab.badge > 0 && (
+                {!!tab.badge && tab.badge > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 bg-[#F15929] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                     {tab.badge}
                   </span>
