@@ -33,12 +33,21 @@ export default function Register() {
 
   const isAtLeast19 = (dob: string): boolean => {
     if (!dob) return false;
+    // Parse date parts directly to avoid timezone ambiguity (YYYY-MM-DD)
+    const parts = dob.split('-');
+    if (parts.length !== 3) return false;
+    const birthYear = parseInt(parts[0], 10);
+    const birthMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+    const birthDay = parseInt(parts[2], 10);
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return false;
+
     const today = new Date();
-    const birth = new Date(dob);
-    // Calculate age precisely — subtract 1 year if birthday hasn't occurred yet this year
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth(); // 0-indexed
+    const todayDay = today.getDate();
+
+    let age = todayYear - birthYear;
+    if (todayMonth < birthMonth || (todayMonth === birthMonth && todayDay < birthDay)) {
       age--;
     }
     return age >= 19;
@@ -93,6 +102,10 @@ export default function Register() {
 
   const handleVerifyAndRegister = async () => {
     if (otpCode.length !== 6) { setError('Please enter the 6-digit code'); return; }
+
+    // Final client-side age guard (belt-and-suspenders before server check)
+    if (!birthday) { setError('Date of birth is required. You must be 19 or older to create an account.'); return; }
+    if (!isAtLeast19(birthday)) { setError('You must be 19 years of age or older to create an account.'); return; }
 
     setLoading(true);
     setError('');
@@ -254,7 +267,14 @@ export default function Register() {
                         d.setFullYear(d.getFullYear() - 19);
                         return d.toISOString().split('T')[0];
                       })()}
+                      min="1900-01-01"
                       onChange={e => { setBirthday(e.target.value); setError(''); }}
+                      onBlur={e => {
+                        const val = e.target.value;
+                        if (val && !isAtLeast19(val)) {
+                          setError('You must be 19 years of age or older to create an account.');
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
                     />
                   </div>

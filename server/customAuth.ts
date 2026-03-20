@@ -12,12 +12,22 @@ function generateOTP(): string {
 }
 
 function isAtLeast19(birthday: string): boolean {
+  // Parse date parts directly to avoid timezone ambiguity (YYYY-MM-DD)
+  const parts = birthday.split('-');
+  if (parts.length !== 3) return false;
+  const birthYear = parseInt(parts[0], 10);
+  const birthMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+  const birthDay = parseInt(parts[2], 10);
+  if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return false;
+  if (birthYear < 1900 || birthYear > new Date().getFullYear()) return false;
+
   const today = new Date();
-  const birth = new Date(birthday);
-  if (isNaN(birth.getTime())) return false;
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth(); // 0-indexed
+  const todayDay = today.getDate();
+
+  let age = todayYear - birthYear;
+  if (todayMonth < birthMonth || (todayMonth === birthMonth && todayDay < birthDay)) {
     age--;
   }
   return age >= 19;
