@@ -1,6 +1,7 @@
 /**
  * ID Verification REST API Routes
- * Handles guest + registered user ID uploads, QR mobile bridge, and admin review.
+ * Handles guest + registered user ID uploads and QR mobile bridge.
+ * The admin review UI lives at /admin/verifications (tRPC-based, login required).
  */
 import { Router, Express } from "express";
 import multer from "multer";
@@ -47,9 +48,6 @@ export interface MobileSession {
 
 export const verifications = new Map<string, Verification>();
 export const mobileSessions = new Map<string, MobileSession>();
-
-// Admin key — must be set via ADMIN_KEY environment variable in production
-const ADMIN_KEY = process.env.ADMIN_KEY || "mylegacycannabis-admin";
 
 // ============================================================
 // FILE UPLOAD CONFIG
@@ -130,8 +128,8 @@ export function registerVerifyRoutes(router: Express | Router) {
 
       verifications.set(id, verification);
 
-      console.log(`[VERIFY] New submission #${id} from ${email} — file: ${file.filename}`);
-      console.log(`[VERIFY] Admin review URL: /admin/verify?key=${ADMIN_KEY}`);
+      console.log(`[VERIFY] New guest submission #${id} from ${email} — file: ${file.filename}`);
+      console.log(`[VERIFY] Review at: https://mylegacycannabisca-production.up.railway.app/admin/verifications`);
 
       res.json({
         success: true,
@@ -300,97 +298,6 @@ export function registerVerifyRoutes(router: Express | Router) {
     } catch (err: any) {
       console.error("[VERIFY] Mobile submit error:", err);
       res.status(500).json({ error: "Upload failed." });
-    }
-  });
-
-  // --------------------------------------------------------
-  // Admin — List all verifications
-  // --------------------------------------------------------
-  router.get("/api/admin/verifications", (req, res) => {
-    const key = req.query.key || req.headers["x-admin-key"];
-    if (key !== ADMIN_KEY) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const status = (req.query.status as string) || "all";
-    let list = Array.from(verifications.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    if (status !== "all") {
-      list = list.filter(v => v.status === status);
-    }
-
-    res.json({
-      total: list.length,
-      pending: Array.from(verifications.values()).filter(v => v.status === "pending_review").length,
-      verifications: list,
-    });
-  });
-
-  // --------------------------------------------------------
-  // Admin — Serve ID image (authenticated)
-  // --------------------------------------------------------
-  router.get("/api/admin/image/:filename", (req, res) => {
-    const key = req.query.key || req.headers["x-admin-key"];
-    if (key !== ADMIN_KEY) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const filename = path.basename(req.params.filename);
-    const filepath = path.join(uploadsDir, filename);
-
-    if (!fs.existsSync(filepath)) {
-      return res.status(404).json({ error: "File not found" });
-    }
-
-    res.sendFile(filepath);
-  });
-
-  // --------------------------------------------------------
-  // Admin — Approve or Reject
-  // --------------------------------------------------------
-  router.post("/api/admin/review", (req, res) => {
-    const key = req.body.key || req.headers["x-admin-key"];
-    if (key !== ADMIN_KEY) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const { id, decision, reason, notes } = req.body;
-    const v = verifications.get(id);
-    if (!v) return res.status(404).json({ error: "Verification not found" });
-    if (v.status !== "pending_review") {
-      return res.status(400).json({ error: "Already reviewed" });
-    }
-
-    if (decision === "approve") {
-      v.status = "approved";
-      v.reviewedBy = "admin";
-      v.reviewedAt = new Date().toISOString();
-      v.adminNotes = notes || null;
-      verifications.set(id, v);
-
-      console.log(`[ADMIN] Approved #${id} — ${v.email}`);
-      const returnUrl = `${req.protocol}://${req.get("host")}/checkout?vtoken=${v.verificationToken}`;
-      console.log(`[ADMIN] Customer return link: ${returnUrl}`);
-
-      res.json({ success: true, message: `Approved. Customer (${v.email}) has been notified.` });
-    } else if (decision === "reject") {
-      if (!reason) {
-        return res.status(400).json({ error: "Rejection reason required." });
-      }
-      v.status = "rejected";
-      v.rejectionReason = reason;
-      v.reviewedBy = "admin";
-      v.reviewedAt = new Date().toISOString();
-      v.adminNotes = notes || null;
-      verifications.set(id, v);
-
-      console.log(`[ADMIN] Rejected #${id} — ${v.email} — Reason: ${reason}`);
-
-      res.json({ success: true, message: `Rejected. Customer (${v.email}) has been notified.` });
-    } else {
-      res.status(400).json({ error: "Invalid decision" });
     }
   });
 }
