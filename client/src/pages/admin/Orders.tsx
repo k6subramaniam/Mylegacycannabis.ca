@@ -1,8 +1,12 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock } from "lucide-react";
+import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+
+// Helper: detect orders held pending ID verification
+const isIdPending = (order: any) =>
+  typeof order.notes === "string" && order.notes.includes("[ID VERIFICATION PENDING]");
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"] as const;
 const PAYMENT_OPTIONS = ["pending", "received", "confirmed", "refunded"] as const;
@@ -42,6 +46,17 @@ function OrderDetail({ id }: { id: number }) {
           <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleString("en-CA")}</p>
         </div>
       </div>
+
+      {/* ID Verification hold alert */}
+      {isIdPending(order) && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
+          <ShieldAlert size={20} className="text-orange-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-orange-800">⚠ Held — Awaiting ID Verification</p>
+            <p className="text-xs text-orange-700 mt-1">This order was placed by a guest whose ID is under review. Do not process or ship until identity is confirmed in <Link href="/admin/verifications" className="underline font-semibold">ID Verifications</Link>.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}
@@ -187,13 +202,20 @@ export default function AdminOrders({ routeId }: { routeId?: string }) {
               )) : data?.data.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400"><ShoppingCart size={24} className="mx-auto mb-2 opacity-50" />No orders found</td></tr>
               ) : data?.data.map((order: any) => (
-                <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                <tr key={order.id} className={`border-b border-gray-50 hover:bg-gray-50/50 ${isIdPending(order) ? "bg-yellow-50/40" : ""}`}>
                   <td className="px-4 py-3 font-mono text-xs font-semibold text-[#4B2D8E]">{order.orderNumber}</td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <p className="text-sm text-gray-800">{order.guestName || "—"}</p>
                     <p className="text-xs text-gray-400">{order.guestEmail}</p>
                   </td>
-                  <td className="px-4 py-3"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>{order.status}</span></td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>{order.status}</span>
+                    {isIdPending(order) && (
+                      <span className="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700">
+                        <ShieldAlert size={10} /> ID Review
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 hidden md:table-cell"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}`}>{order.paymentStatus}</span></td>
                   <td className="px-4 py-3 text-right font-semibold">${Number(order.total).toFixed(2)}</td>
                   <td className="px-4 py-3 text-right text-gray-400 text-xs hidden lg:table-cell">{new Date(order.createdAt).toLocaleDateString("en-CA")}</td>

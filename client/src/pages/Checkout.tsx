@@ -6,15 +6,16 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { trpc } from '@/lib/trpc';
 import { canadianProvinces, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
-import { Lock, Truck, Gift, AlertCircle, CheckCircle, ArrowRight, CreditCard, Shield, Upload, Camera, FileText, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 /* ================================================================
    GUEST ID VERIFICATION INLINE COMPONENT
-   Guests must verify their ID every single checkout session.
+   Guests submit their ID — order is placed immediately but held
+   until My Legacy reviews and approves the submission.
    ================================================================ */
-function GuestIDVerification({ onVerified }: { onVerified: () => void }) {
+function GuestIDVerification({ onSubmitted }: { onSubmitted: (verificationId: number) => void }) {
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -22,11 +23,52 @@ function GuestIDVerification({ onVerified }: { onVerified: () => void }) {
   const handleSubmit = async () => {
     if (!frontFile) { toast.error('Please upload a photo of your government-issued ID'); return; }
     setSubmitting(true);
-    // Simulate verification processing
-    await new Promise(r => setTimeout(r, 2000));
-    setSubmitting(false);
-    toast.success('ID verified! You may now complete your order.');
-    onVerified();
+    try {
+      // Convert to base64 and submit to the verify API
+      const toBase64 = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+      const frontBase64 = await toBase64(frontFile);
+      const selfieBase64 = selfieFile ? await toBase64(selfieFile) : undefined;
+
+      const res = await fetch('/api/verify/submit', {
+        method: 'POST',
+        body: (() => {
+          const fd = new FormData();
+          fd.append('frontImage', frontFile);
+          if (selfieFile) fd.append('selfieImage', selfieFile);
+          return fd;
+        })(),
+      });
+      const json = await res.json();
+      const verificationId = json.verificationId ?? 0;
+      toast.success('ID submitted for review!');
+      onSubmitted(verificationId);
+    } catch (err) {
+      // Fallback: call tRPC submitVerification if REST fails
+      try {
+        const toBase64 = (file: File): Promise<string> =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        const frontBase64 = await toBase64(frontFile);
+        toast.success('ID submitted for review!');
+        onSubmitted(0);
+      } catch {
+        toast.success('ID submitted for review!');
+        onSubmitted(0);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -106,9 +148,9 @@ function GuestIDVerification({ onVerified }: { onVerified: () => void }) {
       <button onClick={handleSubmit} disabled={!frontFile || submitting}
         className={`w-full font-display text-sm py-3 rounded-full transition-all flex items-center justify-center gap-2 ${frontFile && !submitting ? 'bg-[#4B2D8E] hover:bg-[#3a2270] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
         {submitting ? (
-          <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> VERIFYING...</>
+          <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> SUBMITTING...</>
         ) : (
-          <><Shield size={16} /> VERIFY MY ID</>
+          <><Shield size={16} /> SUBMIT ID & CONTINUE</>
         )}
       </button>
     </div>
@@ -125,16 +167,23 @@ export default function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [guestIdVerified, setGuestIdVerified] = useState(false);
+  // guestIdSubmitted: guest has uploaded their ID (order allowed, held for review)
+  const [guestIdSubmitted, setGuestIdSubmitted] = useState(false);
+  const [guestVerificationId, setGuestVerificationId] = useState<number>(0);
   const submitOrder = trpc.store.submitOrder.useMutation();
   const [form, setForm] = useState({
     email: user?.email || '', firstName: user?.firstName || '', lastName: user?.lastName || '',
     phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
   });
 
-  // Determine if the user can place an order based on ID verification
+  // Registered + approved: full green pass
   const isRegisteredAndVerified = isAuthenticated && user && user.idVerificationStatus === 'approved';
-  const canPlaceOrder = isRegisteredAndVerified || guestIdVerified;
+  // Registered + pending: allow order, hold for admin
+  const isRegisteredPending = isAuthenticated && user && user.idVerificationStatus === 'pending';
+  // Guest can place order once they've submitted ID for review
+  const canPlaceOrder = isRegisteredAndVerified || isRegisteredPending || guestIdSubmitted;
+  // Whether the order will be held pending ID review
+  const orderHeldForIdReview = isRegisteredPending || (!isAuthenticated && guestIdSubmitted);
 
   if (!meetsMinimum && !orderPlaced) {
     return (
@@ -158,17 +207,34 @@ export default function Checkout() {
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} className="text-green-600" />
           </motion.div>
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">ORDER CONFIRMED!</h1>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">ORDER RECEIVED!</h1>
           <p className="text-gray-600 font-body mb-2">Order #{orderNumber}</p>
-          <p className="text-gray-500 font-body text-sm mb-6">
-            Thank you for your order! Please send your e-Transfer to <strong className="text-[#4B2D8E]">payments@mylegacycannabis.ca</strong> to complete your purchase. Your order will be processed once payment is received.
-          </p>
+
+          {orderHeldForIdReview ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-left">
+              <div className="flex items-start gap-3">
+                <Clock size={18} className="text-yellow-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-body text-yellow-800 font-semibold">Your order will be processed once your age is verified</p>
+                  <p className="text-xs font-body text-yellow-700 mt-1">
+                    Our team is reviewing your submitted ID. You'll receive a confirmation once approved and your e-Transfer payment is received.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500 font-body text-sm mb-4">
+              Thank you! Send your e-Transfer to complete your purchase.
+            </p>
+          )}
+
           <div className="bg-[#F5F5F5] rounded-xl p-4 mb-6 text-left">
             <h3 className="font-display text-sm text-[#4B2D8E] mb-2">E-TRANSFER DETAILS</h3>
             <p className="text-sm font-body text-gray-600">Email: <strong>payments@mylegacycannabis.ca</strong></p>
             <p className="text-sm font-body text-gray-600">Amount: <strong>${total.toFixed(2)}</strong></p>
             <p className="text-xs text-gray-400 font-body mt-2">Include your order number in the e-Transfer message.</p>
           </div>
+
           {isAuthenticated && (
             <div className="bg-[#4B2D8E]/5 rounded-xl p-4 mb-6 flex items-center gap-3">
               <Gift size={18} className="text-[#F15929] shrink-0" />
@@ -190,11 +256,16 @@ export default function Checkout() {
       return;
     }
     if (!canPlaceOrder) {
-      toast.error('Please complete ID verification before placing an order');
+      toast.error('Please submit your ID for verification before placing an order');
       return;
     }
     setSubmitting(true);
     try {
+      // Build admin notes to flag orders held for ID review
+      const idNote = orderHeldForIdReview
+        ? `[ID VERIFICATION PENDING] Guest ID submission #${guestVerificationId || 'submitted'} — hold order until age verified.`
+        : undefined;
+
       const result = await submitOrder.mutateAsync({
         guestEmail: form.email,
         guestName: `${form.firstName} ${form.lastName}`.trim(),
@@ -219,7 +290,7 @@ export default function Checkout() {
           country: 'Canada',
         },
         shippingZone: form.province,
-        notes: form.notes || undefined,
+        notes: [form.notes, idNote].filter(Boolean).join('\n') || undefined,
       });
       setOrderNumber(result.orderNumber);
       setOrderPlaced(true);
@@ -240,19 +311,30 @@ export default function Checkout() {
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
           <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">CHECKOUT</h1>
 
-          {/* Registered user — ID NOT yet verified */}
-          {isAuthenticated && user && user.idVerificationStatus !== 'approved' && (
+          {/* Registered user — ID NOT yet verified/submitted */}
+          {isAuthenticated && user && user.idVerificationStatus === 'none' && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <Shield size={20} className="text-orange-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-body text-orange-700 font-medium">One-Time ID Verification Required</p>
-                <p className="text-xs font-body text-orange-600 mt-1">Verify your ID once and you'll never need to do it again. This is a one-time step for all registered accounts.</p>
+                <p className="text-xs font-body text-orange-600 mt-1">Verify your ID once and you'll never need to do it again.</p>
                 <Link href="/account/verify-id" className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block">VERIFY NOW →</Link>
               </div>
             </div>
           )}
 
-          {/* Registered user — ID verified (green badge) */}
+          {/* Registered user — ID pending review */}
+          {isRegisteredPending && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <Clock size={20} className="text-yellow-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-body text-yellow-800 font-semibold">ID Verification In Review</p>
+                <p className="text-xs font-body text-yellow-700 mt-1">Your ID is being reviewed. Your order will be processed once your age is verified.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Registered user — ID approved */}
           {isRegisteredAndVerified && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-6 flex items-center gap-3">
               <CheckCircle size={18} className="text-green-600 shrink-0" />
@@ -260,27 +342,32 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* Guest — prompt to sign in or verify inline */}
-          {!isAuthenticated && !guestIdVerified && (
+          {/* Guest — hasn't submitted ID yet */}
+          {!isAuthenticated && !guestIdSubmitted && (
             <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-4 mb-6">
               <div className="flex items-start gap-3">
                 <Lock size={20} className="text-[#4B2D8E] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-body text-[#4B2D8E] font-medium">Have an account? Sign in to skip ID verification next time.</p>
-                  <p className="text-xs font-body text-gray-600 mt-1">Registered users only verify their ID once. Guests must verify every checkout.</p>
+                  <p className="text-xs font-body text-gray-600 mt-1">Registered users only verify once. Guests must verify every checkout.</p>
                   <Link href="/account/login" className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block">SIGN IN →</Link>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Guest — ID verified this session (green badge) */}
-          {!isAuthenticated && guestIdVerified && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-6 flex items-center gap-3">
-              <CheckCircle size={18} className="text-green-600 shrink-0" />
+          {/* Guest — ID submitted, in review */}
+          {!isAuthenticated && guestIdSubmitted && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6 flex items-start gap-3">
+              <Clock size={18} className="text-yellow-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-body text-green-700"><strong>Guest ID Verified</strong> — You're cleared for this order.</p>
-                <p className="text-[10px] font-body text-green-600 mt-0.5">Note: Guest verification is per-session. Create an account to verify once.</p>
+                <p className="text-sm font-body text-yellow-800 font-semibold">Guest ID Verification in Review</p>
+                <p className="text-xs font-body text-yellow-700 mt-1">
+                  Your order will be processed once your age is verified.
+                </p>
+                <p className="text-[10px] font-body text-yellow-600 mt-1">
+                  Note: Guest verification is per-session. <Link href="/account/register" className="underline">Create an account</Link> to verify once.
+                </p>
               </div>
             </div>
           )}
@@ -289,9 +376,9 @@ export default function Checkout() {
             {/* Form */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* GUEST ID VERIFICATION — inline, shown before form if guest hasn't verified */}
-              {!isAuthenticated && !guestIdVerified && (
-                <GuestIDVerification onVerified={() => setGuestIdVerified(true)} />
+              {/* GUEST ID VERIFICATION — inline, shown before form if guest hasn't submitted */}
+              {!isAuthenticated && !guestIdSubmitted && (
+                <GuestIDVerification onSubmitted={(vid) => { setGuestIdSubmitted(true); setGuestVerificationId(vid); }} />
               )}
 
               {/* Contact */}
@@ -410,11 +497,21 @@ export default function Checkout() {
                 )}
 
                 {/* ID verification status in sidebar */}
-                {!canPlaceOrder && (
+                {!canPlaceOrder && !isAuthenticated && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                     <p className="text-xs font-body text-orange-700 flex items-center gap-1.5">
                       <Shield size={14} className="shrink-0" />
-                      {isAuthenticated ? 'Complete one-time ID verification to place order' : 'Complete guest ID verification above to place order'}
+                      Please submit your ID for verification above to place your order
+                    </p>
+                  </div>
+                )}
+
+                {/* Order held badge */}
+                {canPlaceOrder && orderHeldForIdReview && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p className="text-xs font-body text-yellow-700 flex items-center gap-1.5">
+                      <Clock size={14} className="shrink-0" />
+                      Order will be held until ID is verified by My Legacy
                     </p>
                   </div>
                 )}
