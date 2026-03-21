@@ -55,15 +55,15 @@ function AdminRouter() {
     <AdminLayout>
       <Suspense fallback={<PageLoader />}>
         <Switch>
-          <Route path="/admin" component={AdminDashboard} />
-          <Route path="/admin/products" component={AdminProducts} />
+          <Route path="/admin/orders/:id">{(params: any) => <AdminOrders routeId={params?.id} />}</Route>
           <Route path="/admin/orders" component={AdminOrders} />
-          <Route path="/admin/orders/:id">{(params) => <AdminOrders routeId={params.id} />}</Route>
+          <Route path="/admin/products" component={AdminProducts} />
           <Route path="/admin/verifications" component={AdminVerifications} />
           <Route path="/admin/shipping" component={AdminShipping} />
           <Route path="/admin/emails" component={AdminEmailTemplates} />
           <Route path="/admin/reports" component={AdminReports} />
           <Route path="/admin/customers" component={AdminCustomers} />
+          <Route path="/admin" component={AdminDashboard} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
