@@ -189,20 +189,18 @@ export default function IDVerification() {
           toast.error(result as string);
         }
       } else {
-        // Guest path — direct API call
+        // Guest path — REST API (saves to shared DB, admin sees it at /admin/verifications)
         const formData = new FormData();
         formData.append('id_document', frontFile);
         formData.append('email', guestEmail);
-        formData.append('userId', user?.id || '');
         formData.append('documentType', 'government_id');
 
         const res = await fetch('/api/verify/submit', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success) {
-          setSubmittedId(data.verificationId);
-          setSubmittedStatus('pending_review');
-          if (isAuthenticated) updateProfile({ idVerificationStatus: 'pending' });
+          setSubmittedId(String(data.verificationId));
+          setSubmittedStatus('pending');
           toast.success('ID submitted for review!');
         } else {
           toast.error(data.error || 'Submission failed');
@@ -264,8 +262,8 @@ export default function IDVerification() {
         const data = await res.json();
         if (data.status === 'submitted') {
           if (pollRef.current) clearInterval(pollRef.current);
-          setSubmittedId(data.verificationId);
-          setSubmittedStatus('pending_review');
+          setSubmittedId(String(data.verificationId));
+          setSubmittedStatus('pending');
           if (isAuthenticated) updateProfile({ idVerificationStatus: 'pending' });
           toast.success('ID uploaded from your phone and submitted for review!');
         } else if (data.status === 'expired') {

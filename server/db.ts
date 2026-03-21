@@ -412,11 +412,12 @@ export async function updateOrder(id: number, data: Partial<InsertOrder>): Promi
 }
 
 // ─── ID VERIFICATION HELPERS ───
-export async function getAllVerifications(opts?: { page?: number; limit?: number; status?: string }) {
+export async function getAllVerifications(opts?: { page?: number; limit?: number; status?: string; email?: string }) {
   // Normalize: records without a status field are treated as "pending"
   const allNormalized = _idVerifications.map((v: any) => ({ ...v, status: v.status || 'pending' }));
   let filtered = [...allNormalized];
   if (opts?.status) filtered = filtered.filter(v => v.status === opts.status);
+  if (opts?.email) filtered = filtered.filter((v: any) => (v.guestEmail || '').toLowerCase() === opts.email!.toLowerCase());
   const sorted = filtered.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
   const page = opts?.page ?? 1;
   const limit = opts?.limit ?? 50;

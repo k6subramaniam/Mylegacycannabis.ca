@@ -1,300 +1,218 @@
 /**
  * ID Verification REST API Routes
  * Handles guest + registered user ID uploads and QR mobile bridge.
- * The admin review UI lives at /admin/verifications (tRPC-based, login required).
+ * All submissions go into db.createVerification() — the same store
+ * the admin panel reads at /admin/verifications (tRPC-based, login required).
  */
 import { Router, Express } from "express";
 import multer from "multer";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import * as db from "./db";
+import { storagePut } from "./storage";
+import { notifyOwner } from "./_core/notification";
 
 // ============================================================
-// IN-MEMORY STORE
+// MULTER — memory storage, we forward buffer to storagePut
 // ============================================================
 
-export interface Verification {
-  id: string;
-  email: string;
-  userId: string | null;
-  status: "pending_review" | "approved" | "rejected";
-  imagePath: string;
-  documentType: string;
-  rejectionReason: string | null;
-  adminNotes: string | null;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  mobileToken: string | null;
-  verificationToken: string;
-  reminders: { hr1: boolean; hr4: boolean; hr10: boolean };
-  ip: string;
-  userAgent: string;
-  createdAt: string;
-  expiresAt: string;
-}
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Invalid file type. Upload JPG, PNG, or WebP."));
+  },
+});
+
+// ============================================================
+// QR MOBILE SESSION STORE  (short-lived, in-memory)
+// ============================================================
 
 export interface MobileSession {
   token: string;
   email: string;
-  userId: string | null;
+  userId: number | null;
   status: "waiting" | "submitted";
-  verificationId: string | null;
+  verificationId: number | null;
   createdAt: number;
 }
 
-export const verifications = new Map<string, Verification>();
 export const mobileSessions = new Map<string, MobileSession>();
 
-// ============================================================
-// FILE UPLOAD CONFIG
-// ============================================================
-
-const uploadsDir = path.resolve(__dirname, "..", "..", "uploads", "id-documents");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+function cleanExpiredSessions() {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [k, s] of mobileSessions) {
+    if (s.createdAt < cutoff) mobileSessions.delete(k);
+  }
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `idv_${crypto.randomUUID()}${ext}`);
-  },
-});
+// ============================================================
+// HELPERS
+// ============================================================
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Invalid file type. Upload JPG, PNG, or WebP."));
-    }
-  },
-});
+async function saveImageToStorage(buffer: Buffer, mimetype: string, prefix: string): Promise<string> {
+  const { nanoid } = await import("nanoid");
+  const ext = mimetype === "image/png" ? "png" : mimetype === "image/webp" ? "webp" : "jpg";
+  const key = `id-verifications/${prefix}-${nanoid()}.${ext}`;
+  const { url } = await storagePut(key, buffer, mimetype);
+  return url;
+}
 
 // ============================================================
 // ROUTER
 // ============================================================
 
-export function registerVerifyRoutes(router: Express | Router) {
-  // --------------------------------------------------------
-  // Submit ID for review (registered or guest)
-  // --------------------------------------------------------
-  router.post("/api/verify/submit", upload.single("id_document"), (req, res) => {
+export function registerVerifyRoutes(app: Express | Router) {
+
+  // ──────────────────────────────────────────────────────────
+  // POST /api/verify/submit
+  // Guest upload — saves to shared DB so admin sees it
+  // ──────────────────────────────────────────────────────────
+  app.post("/api/verify/submit", upload.single("id_document"), async (req, res) => {
     try {
       const file = req.file;
-      if (!file) {
-        return res.status(400).json({ error: "No file uploaded." });
-      }
+      if (!file) return res.status(400).json({ error: "No file uploaded." });
 
       const email = (req.body.email || "").trim().toLowerCase();
       if (!email || !email.includes("@")) {
-        fs.unlinkSync(file.path);
         return res.status(400).json({ error: "A valid email address is required." });
       }
 
-      const userId = req.body.userId || null;
-      const documentType = req.body.documentType || "government_id";
+      const userId    = req.body.userId ? parseInt(req.body.userId, 10) || undefined : undefined;
+      const guestName = (req.body.guestName || "").trim() || undefined;
+      const idType    = req.body.documentType || "government_id";
 
-      const id = crypto.randomUUID().slice(0, 12);
-      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const frontImageUrl = await saveImageToStorage(file.buffer, file.mimetype, "guest-front");
 
-      const verification: Verification = {
-        id,
-        email,
+      const dbId = await db.createVerification({
         userId,
-        status: "pending_review",
-        imagePath: file.filename,
-        documentType,
-        rejectionReason: null,
-        adminNotes: null,
-        reviewedBy: null,
-        reviewedAt: null,
-        mobileToken: null,
-        verificationToken,
-        reminders: { hr1: false, hr4: false, hr10: false },
-        ip: (req.headers["x-forwarded-for"] as string) || req.ip || "0.0.0.0",
-        userAgent: req.headers["user-agent"] || "",
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-      };
-
-      verifications.set(id, verification);
-
-      console.log(`[VERIFY] New guest submission #${id} from ${email} — file: ${file.filename}`);
-      console.log(`[VERIFY] Review at: https://mylegacycannabisca-production.up.railway.app/admin/verifications`);
-
-      res.json({
-        success: true,
-        verificationId: id,
-        message: "Your ID has been submitted for review. We will email you once our team has reviewed your document.",
+        guestEmail: email,
+        guestName,
+        frontImageUrl,
+        idType,
       });
+
+      notifyOwner({
+        title: "New ID Verification Submitted",
+        content: `Verification #${dbId} from ${guestName || email} needs review at /admin/verifications`,
+      }).catch(() => {});
+
+      console.log(`[VERIFY] Guest submission #${dbId} from ${email}`);
+      res.json({ success: true, verificationId: dbId, message: "Your ID has been submitted for review." });
     } catch (err: any) {
       console.error("[VERIFY] Submit error:", err);
       res.status(500).json({ error: "Upload failed. Please try again." });
     }
   });
 
-  // --------------------------------------------------------
-  // Check verification status by ID
-  // --------------------------------------------------------
-  router.get("/api/verify/status/:id", (req, res) => {
-    const v = verifications.get(req.params.id);
-    if (!v) return res.status(404).json({ error: "Not found" });
-
-    res.json({
-      id: v.id,
-      status: v.status,
-      email: v.email,
-      rejectionReason: v.rejectionReason,
-      createdAt: v.createdAt,
-      reviewedAt: v.reviewedAt,
-    });
+  // ──────────────────────────────────────────────────────────
+  // GET /api/verify/status/:id
+  // ──────────────────────────────────────────────────────────
+  app.get("/api/verify/status/:id", async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID." });
+    const v = await db.getVerificationById(id);
+    if (!v) return res.status(404).json({ error: "Not found." });
+    res.json({ id: v.id, status: v.status, email: v.guestEmail, reviewedAt: v.reviewedAt });
   });
 
-  // --------------------------------------------------------
-  // Check verification by email or token
-  // --------------------------------------------------------
-  router.get("/api/verify/check", (req, res) => {
+  // ──────────────────────────────────────────────────────────
+  // GET /api/verify/check?email=
+  // Used by IDVerification page on mount to restore status
+  // ──────────────────────────────────────────────────────────
+  app.get("/api/verify/check", async (req, res) => {
     const email = ((req.query.email as string) || "").trim().toLowerCase();
-    const token = (req.query.token as string) || "";
-
-    if (token) {
-      const v = Array.from(verifications.values()).find(v => v.verificationToken === token);
-      if (v) {
-        return res.json({ id: v.id, status: v.status, email: v.email });
-      }
-    }
 
     if (email) {
-      const matches = Array.from(verifications.values())
-        .filter(v => v.email === email)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      if (matches.length > 0) {
-        const v = matches[0];
-        return res.json({ id: v.id, status: v.status, email: v.email });
+      const result = await db.getAllVerifications({ email, limit: 1 });
+      const match = result.data[0];
+      if (match) {
+        return res.json({ id: match.id, status: match.status, email: match.guestEmail });
       }
     }
 
     res.json({ id: null, status: null });
   });
 
-  // --------------------------------------------------------
-  // QR Bridge — Create mobile upload session
-  // --------------------------------------------------------
-  router.post("/api/verify/mobile-session", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const userId = req.body.userId || null;
+  // ──────────────────────────────────────────────────────────
+  // POST /api/verify/mobile-session
+  // QR Bridge — creates a short-lived session, returns QR URL
+  // ──────────────────────────────────────────────────────────
+  app.post("/api/verify/mobile-session", (req, res) => {
+    const email  = (req.body.email  || "").trim().toLowerCase();
+    const userId = req.body.userId  ? parseInt(req.body.userId, 10) || null : null;
 
-    const token = crypto.randomBytes(16).toString("hex");
+    cleanExpiredSessions();
 
-    const session: MobileSession = {
-      token,
-      email,
-      userId,
+    const token: string = crypto.randomBytes(16).toString("hex");
+    mobileSessions.set(token, {
+      token, email, userId,
       status: "waiting",
       verificationId: null,
       createdAt: Date.now(),
-    };
-
-    mobileSessions.set(token, session);
-
-    // Clean up expired sessions (>30 min)
-    for (const [k, s] of mobileSessions) {
-      if (Date.now() - s.createdAt > 30 * 60 * 1000) mobileSessions.delete(k);
-    }
+    });
 
     const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
       ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
       : `${req.protocol}://${req.get("host")}`;
 
-    res.json({
-      success: true,
-      mobileToken: token,
-      mobileUrl: `${baseUrl}/verify-mobile?t=${token}`,
-    });
+    res.json({ success: true, mobileToken: token, mobileUrl: `${baseUrl}/verify-mobile?t=${token}` });
   });
 
-  // --------------------------------------------------------
-  // QR Bridge — Poll mobile session status
-  // --------------------------------------------------------
-  router.get("/api/verify/mobile-poll/:token", (req, res) => {
+  // ──────────────────────────────────────────────────────────
+  // GET /api/verify/mobile-poll/:token
+  // ──────────────────────────────────────────────────────────
+  app.get("/api/verify/mobile-poll/:token", (req, res) => {
     const session = mobileSessions.get(req.params.token);
-    if (!session) return res.json({ status: "expired" });
-    if (Date.now() - session.createdAt > 30 * 60 * 1000) {
-      mobileSessions.delete(req.params.token);
+    if (!session || Date.now() - session.createdAt > 30 * 60 * 1000) {
+      if (session) mobileSessions.delete(req.params.token);
       return res.json({ status: "expired" });
     }
     res.json({ status: session.status, verificationId: session.verificationId });
   });
 
-  // --------------------------------------------------------
-  // QR Bridge — Mobile submit (phone uploads here)
-  // --------------------------------------------------------
-  router.post("/api/verify/mobile-submit", upload.single("id_document"), (req, res) => {
+  // ──────────────────────────────────────────────────────────
+  // POST /api/verify/mobile-submit
+  // Phone uploads ID via QR — saves to shared DB
+  // ──────────────────────────────────────────────────────────
+  app.post("/api/verify/mobile-submit", upload.single("id_document"), async (req, res) => {
     try {
       const mobileToken = req.body.mobile_token || "";
       const session = mobileSessions.get(mobileToken);
 
-      if (!session) {
-        if (req.file) fs.unlinkSync(req.file.path);
+      if (!session || Date.now() - session.createdAt > 30 * 60 * 1000) {
         return res.status(400).json({ error: "Session expired. Generate a new QR code." });
       }
-
       if (session.status !== "waiting") {
-        if (req.file) fs.unlinkSync(req.file.path);
         return res.status(400).json({ error: "Already submitted." });
       }
-
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded." });
       }
 
       const email = (req.body.email || session.email || "").trim().toLowerCase() || "guest@unknown.com";
-      const id = crypto.randomUUID().slice(0, 12);
-      const verificationToken = crypto.randomBytes(32).toString("hex");
 
-      const verification: Verification = {
-        id,
-        email,
-        userId: session.userId,
-        status: "pending_review",
-        imagePath: req.file.filename,
-        documentType: req.body.documentType || "government_id",
-        rejectionReason: null,
-        adminNotes: null,
-        reviewedBy: null,
-        reviewedAt: null,
-        mobileToken,
-        verificationToken,
-        reminders: { hr1: false, hr4: false, hr10: false },
-        ip: (req.headers["x-forwarded-for"] as string) || req.ip || "0.0.0.0",
-        userAgent: req.headers["user-agent"] || "",
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-      };
+      const frontImageUrl = await saveImageToStorage(req.file.buffer, req.file.mimetype, "mobile-front");
 
-      verifications.set(id, verification);
+      const dbId = await db.createVerification({
+        userId: session.userId ?? undefined,
+        guestEmail: email,
+        frontImageUrl,
+        idType: "government_id",
+      });
 
-      // Update mobile session
       session.status = "submitted";
-      session.verificationId = id;
+      session.verificationId = dbId;
       mobileSessions.set(mobileToken, session);
 
-      console.log(`[VERIFY] Mobile submission #${id} from ${email} via QR bridge`);
+      notifyOwner({
+        title: "New ID Verification Submitted (Mobile QR)",
+        content: `Verification #${dbId} from ${email} via QR bridge needs review at /admin/verifications`,
+      }).catch(() => {});
 
-      res.json({
-        success: true,
-        verificationId: id,
-        message: "Your ID has been submitted. You can close this page and return to your computer.",
-      });
+      console.log(`[VERIFY] Mobile submission #${dbId} from ${email} via QR bridge`);
+      res.json({ success: true, verificationId: dbId, message: "Your ID has been submitted. You can close this page and return to your computer." });
     } catch (err: any) {
       console.error("[VERIFY] Mobile submit error:", err);
       res.status(500).json({ error: "Upload failed." });
