@@ -4,6 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { trpc } from '@/lib/trpc';
 import { canadianProvinces, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
 import { Lock, Truck, Gift, AlertCircle, CheckCircle, ArrowRight, CreditCard, Shield, Upload, Camera, FileText, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -122,7 +123,10 @@ export default function Checkout() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [guestIdVerified, setGuestIdVerified] = useState(false);
+  const submitOrder = trpc.store.submitOrder.useMutation();
   const [form, setForm] = useState({
     email: user?.email || '', firstName: user?.firstName || '', lastName: user?.lastName || '',
     phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
@@ -155,7 +159,7 @@ export default function Checkout() {
             <CheckCircle size={40} className="text-green-600" />
           </motion.div>
           <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">ORDER CONFIRMED!</h1>
-          <p className="text-gray-600 font-body mb-2">Order #MLG-{Date.now().toString().slice(-6)}</p>
+          <p className="text-gray-600 font-body mb-2">Order #{orderNumber}</p>
           <p className="text-gray-500 font-body text-sm mb-6">
             Thank you for your order! Please send your e-Transfer to <strong className="text-[#4B2D8E]">payments@mylegacycannabis.ca</strong> to complete your purchase. Your order will be processed once payment is received.
           </p>
@@ -180,7 +184,7 @@ export default function Checkout() {
     );
   }
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.postalCode) {
       toast.error('Please fill in all required fields');
       return;
@@ -189,9 +193,43 @@ export default function Checkout() {
       toast.error('Please complete ID verification before placing an order');
       return;
     }
-    setOrderPlaced(true);
-    clearCart();
-    toast.success('Order placed successfully!');
+    setSubmitting(true);
+    try {
+      const result = await submitOrder.mutateAsync({
+        guestEmail: form.email,
+        guestName: `${form.firstName} ${form.lastName}`.trim(),
+        guestPhone: form.phone || undefined,
+        items: items.map(item => ({
+          productId: Number(item.product.id),
+          productName: item.product.name,
+          productImage: item.product.image || undefined,
+          quantity: item.quantity,
+          price: item.product.price.toFixed(2),
+        })),
+        subtotal: subtotal.toFixed(2),
+        shippingCost: shippingRate.toFixed(2),
+        discount: rewardDiscount.toFixed(2),
+        pointsRedeemed: 0,
+        total: total.toFixed(2),
+        shippingAddress: {
+          street: form.address,
+          city: form.city,
+          province: form.province,
+          postalCode: form.postalCode,
+          country: 'Canada',
+        },
+        shippingZone: form.province,
+        notes: form.notes || undefined,
+      });
+      setOrderNumber(result.orderNumber);
+      setOrderPlaced(true);
+      clearCart();
+      toast.success('Order placed successfully!');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to place order. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -382,9 +420,11 @@ export default function Checkout() {
                 )}
 
                 <button onClick={handlePlaceOrder}
-                  disabled={!canPlaceOrder}
-                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
-                  <Lock size={16} /> PLACE ORDER
+                  disabled={!canPlaceOrder || submitting}
+                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder && !submitting ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                  {submitting
+                    ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> PLACING ORDER...</>
+                    : <><Lock size={16} /> PLACE ORDER</>}
                 </button>
                 <p className="text-[10px] text-gray-400 font-body text-center mt-3">By placing your order, you confirm you are 19+ and agree to our Terms & Conditions.</p>
               </div>
