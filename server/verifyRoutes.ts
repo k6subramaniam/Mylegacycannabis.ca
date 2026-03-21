@@ -48,8 +48,8 @@ export interface MobileSession {
 export const verifications = new Map<string, Verification>();
 export const mobileSessions = new Map<string, MobileSession>();
 
-// Admin key — set via env or default for prototype
-const ADMIN_KEY = process.env.ADMIN_KEY || "legacy420admin";
+// Admin key — must be set via ADMIN_KEY environment variable in production
+const ADMIN_KEY = process.env.ADMIN_KEY || "mylegacycannabis-admin";
 
 // ============================================================
 // FILE UPLOAD CONFIG
