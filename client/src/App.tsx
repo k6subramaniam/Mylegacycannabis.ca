@@ -18,6 +18,8 @@ const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Account = lazy(() => import("./pages/Account"));
 const IDVerification = lazy(() => import("./pages/IDVerification"));
+const MobileUpload = lazy(() => import("./pages/MobileUpload"));
+const AdminReview = lazy(() => import("./pages/AdminReview"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const Locations = lazy(() => import("./pages/Locations"));
 const About = lazy(() => import("./pages/About"));
@@ -87,6 +89,9 @@ function StorefrontRouter() {
           <Route path="/account/rewards" component={Account} />
           <Route path="/account/orders" component={Account} />
           <Route path="/account/verify-id" component={IDVerification} />
+          <Route path="/verify-id" component={IDVerification} />
+          <Route path="/verify-mobile" component={MobileUpload} />
+          <Route path="/admin/verify">{() => <Suspense fallback={<PageLoader />}><AdminReview /></Suspense>}</Route>
           <Route path="/rewards" component={Rewards} />
           <Route path="/locations" component={Locations} />
           <Route path="/about" component={About} />

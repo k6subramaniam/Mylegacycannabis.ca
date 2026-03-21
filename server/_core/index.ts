@@ -7,6 +7,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerCustomAuthRoutes } from "../customAuth";
+import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -40,6 +41,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)
   registerCustomAuthRoutes(app);
+  // ID Verification REST API (guest + QR bridge + admin review)
+  registerVerifyRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
