@@ -3,10 +3,8 @@ import SEOHead from '@/components/SEOHead';
 import { WaveDivider } from '@/components/Layout';
 import { rewardTiers, POINTS_PER_DOLLAR, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFEREE, MIN_REDEMPTION_POINTS, MAX_DISCOUNT_PERCENT } from '@/lib/data';
 import { Gift, Star, Users, Calendar, MessageSquare, ShoppingCart, ArrowRight, CheckCircle, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-rewards-3eSuXoWLdHAW3VzjYxZwXX.webp';
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function Rewards() {
   return (
@@ -43,25 +41,24 @@ export default function Rewards() {
       {/* How it works */}
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">HOW IT WORKS</h2>
             <p className="text-gray-600 font-body max-w-lg mx-auto">Three simple steps to start earning rewards.</p>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { step: '01', icon: Users, title: 'SIGN UP', desc: 'Create a free account and get 25 bonus points instantly. Enrollment is automatic.' },
               { step: '02', icon: ShoppingCart, title: 'EARN POINTS', desc: `Earn ${POINTS_PER_DOLLAR} point for every $1 spent. Plus bonus points for reviews, referrals, and birthdays.` },
               { step: '03', icon: Gift, title: 'REDEEM REWARDS', desc: 'Use your points for discounts up to $150 OFF. Redeem at checkout with a single click.' },
             ].map((item, i) => (
-              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.15 }}
-                className="bg-[#F5F5F5] rounded-2xl p-6 text-center relative overflow-hidden">
+              <div key={i} className="bg-[#F5F5F5] rounded-2xl p-6 text-center relative overflow-hidden">
                 <span className="absolute top-4 right-4 font-display text-5xl text-[#4B2D8E]/10">{item.step}</span>
                 <div className="w-14 h-14 rounded-full bg-[#4B2D8E] flex items-center justify-center mx-auto mb-4">
                   <item.icon size={24} className="text-white" />
                 </div>
                 <h3 className="font-display text-lg text-[#4B2D8E] mb-2">{item.title}</h3>
                 <p className="text-sm text-gray-600 font-body">{item.desc}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -70,9 +67,9 @@ export default function Rewards() {
       {/* Earning Structure */}
       <section className="bg-[#F5F5F5] py-12 md:py-16">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">WAYS TO EARN</h2>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
               { icon: ShoppingCart, label: 'Every Purchase', points: `${POINTS_PER_DOLLAR} pt / $1`, desc: 'Earn on every order (pre-tax, pre-shipping)' },
@@ -82,8 +79,7 @@ export default function Rewards() {
               { icon: Users, label: 'Refer a Friend', points: `${REFERRAL_BONUS_REFERRER} pts`, desc: `You get ${REFERRAL_BONUS_REFERRER}, friend gets ${REFERRAL_BONUS_REFEREE}` },
               { icon: Star, label: 'Special Promos', points: 'Varies', desc: 'Bonus point events throughout the year' },
             ].map((item, i) => (
-              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.08 }}
-                className="bg-white rounded-xl p-5 flex items-start gap-4">
+              <div key={i} className="bg-white rounded-xl p-5 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-[#4B2D8E]/10 flex items-center justify-center shrink-0">
                   <item.icon size={18} className="text-[#4B2D8E]" />
                 </div>
@@ -92,7 +88,7 @@ export default function Rewards() {
                   <p className="font-display text-lg text-[#F15929]">{item.points}</p>
                   <p className="text-xs text-gray-500 font-body">{item.desc}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -103,14 +99,13 @@ export default function Rewards() {
       {/* Redemption Tiers */}
       <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl text-white mb-3">REDEMPTION TIERS</h2>
             <p className="text-white/70 font-body max-w-lg mx-auto">The more points you accumulate, the bigger the discount.</p>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {rewardTiers.map((tier, i) => (
-              <motion.div key={tier.name} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.1 }}
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 text-center border border-white/10 hover:border-[#F15929]/50 transition-all">
+              <div key={tier.name} className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 text-center border border-white/10 hover:border-[#F15929]/50 transition-all">
                 <p className="font-display text-xs text-white/60 mb-1">{tier.target}</p>
                 <p className="font-display text-lg text-[#F15929]">{tier.name.toUpperCase()}</p>
                 <p className="font-display text-3xl text-white my-2">${tier.discount}</p>
@@ -119,7 +114,7 @@ export default function Rewards() {
                   <p className="font-mono-legacy text-sm text-white">{tier.pointsRequired} pts</p>
                   <p className="text-xs text-white/50 font-body">{tier.effectiveValue} value</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -130,7 +125,7 @@ export default function Rewards() {
       {/* Policies */}
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container max-w-3xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+          <div>
             <h2 className="font-display text-3xl text-[#4B2D8E] mb-6 text-center">PROGRAM DETAILS</h2>
             <div className="space-y-4">
               {[
@@ -148,7 +143,7 @@ export default function Rewards() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 

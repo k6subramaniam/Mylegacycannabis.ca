@@ -2,9 +2,6 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
 import { Truck, Package, Clock, Shield, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function ShippingPolicy() {
   return (
@@ -26,15 +23,14 @@ export default function ShippingPolicy() {
       <section className="bg-white py-12">
         <div className="container max-w-4xl">
           {/* Free shipping banner */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="bg-[#F15929] rounded-2xl p-6 text-white text-center mb-8">
+          <div className="bg-[#F15929] rounded-2xl p-6 text-white text-center mb-8">
             <Truck size={32} className="mx-auto mb-2" />
             <h2 className="font-display text-2xl mb-1">FREE SHIPPING</h2>
             <p className="font-body text-white/90">On all orders over <strong>${FREE_SHIPPING_THRESHOLD}</strong> — anywhere in Canada!</p>
-          </motion.div>
+          </div>
 
           {/* Shipping Rates Table */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mb-8">
+          <div className="mb-8">
             <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">SHIPPING RATES</h2>
             <div className="bg-[#F5F5F5] rounded-2xl overflow-hidden">
               <div className="grid grid-cols-3 bg-[#4B2D8E] text-white font-display text-xs p-4">
@@ -51,10 +47,10 @@ export default function ShippingPolicy() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
           {/* Key Policies */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="space-y-6">
+          <div className="space-y-6">
             <h2 className="font-display text-2xl text-[#4B2D8E]">SHIPPING DETAILS</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,7 +101,7 @@ export default function ShippingPolicy() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </>

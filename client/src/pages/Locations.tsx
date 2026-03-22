@@ -2,21 +2,13 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs, WaveDivider } from '@/components/Layout';
 import { storeLocations } from '@/lib/data';
 import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp';
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
-
-function LocationCard({ loc, index }: { loc: typeof storeLocations[0]; index: number }) {
+function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
   return (
-    <motion.article
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
-      variants={fadeUp}
-      transition={{ delay: index * 0.08 }}
+    <article
       className="bg-[#F5F5F5] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all h-full"
       itemScope
       itemType="https://schema.org/LocalBusiness"
@@ -86,7 +78,7 @@ function LocationCard({ loc, index }: { loc: typeof storeLocations[0]; index: nu
 
         <meta itemProp="openingHours" content="Mo-Su 00:00-23:59" />
       </div>
-    </motion.article>
+    </article>
   );
 }
 
@@ -198,7 +190,7 @@ export default function Locations() {
                   key={loc.id}
                   className="flex-[0_0_85%] sm:flex-[0_0_70%] md:flex-[0_0_48%] lg:flex-[0_0_48%]"
                 >
-                  <LocationCard loc={loc} index={i} />
+                  <LocationCard loc={loc} />
                 </div>
               ))}
             </div>

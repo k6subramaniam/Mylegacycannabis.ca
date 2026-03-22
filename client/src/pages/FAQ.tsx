@@ -5,8 +5,6 @@ import { Link } from 'wouter';
 import { ChevronDown, Search, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
-
 const faqCategories = [
   {
     name: 'Ordering',
@@ -119,7 +117,7 @@ export default function FAQ() {
 
           <div className="space-y-6">
             {filtered.map(cat => (
-              <motion.div key={cat.name} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+              <div key={cat.name}>
                 <button onClick={() => setOpenCategory(openCategory === cat.name ? null : cat.name)}
                   className="w-full flex items-center justify-between bg-[#4B2D8E] text-white font-display text-lg px-5 py-3 rounded-xl mb-2">
                   {cat.name.toUpperCase()}
@@ -153,7 +151,7 @@ export default function FAQ() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             ))}
           </div>
 

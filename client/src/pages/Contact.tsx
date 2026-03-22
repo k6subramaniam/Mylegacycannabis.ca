@@ -4,10 +4,7 @@ import { Breadcrumbs } from '@/components/Layout';
 import { storeLocations } from '@/lib/data';
 import { Link } from 'wouter';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
@@ -40,7 +37,7 @@ export default function Contact() {
         <div className="container">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Form */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+            <div>
               {submitted ? (
                 <div className="bg-[#F5F5F5] rounded-2xl p-8 text-center">
                   <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
@@ -94,10 +91,10 @@ export default function Contact() {
                   </button>
                 </form>
               )}
-            </motion.div>
+            </div>
 
             {/* Contact Info */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }} className="space-y-6">
+            <div className="space-y-6">
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
                 <h2 className="font-display text-xl text-[#4B2D8E] mb-4">GET IN TOUCH</h2>
                 <div className="space-y-4">
@@ -141,7 +138,7 @@ export default function Contact() {
                 </div>
                 <Link href="/locations" className="text-sm text-[#4B2D8E] hover:text-[#F15929] font-display mt-3 inline-block">VIEW ALL LOCATIONS →</Link>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
