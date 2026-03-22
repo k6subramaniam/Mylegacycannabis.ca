@@ -18,6 +18,29 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Vendor: React + React-DOM (always needed)
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          // Vendor: framer-motion (large, shared)
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-motion';
+          }
+          // Vendor: @tanstack/react-query + @trpc (data layer)
+          if (id.includes('node_modules/@tanstack') || id.includes('node_modules/@trpc') || id.includes('node_modules/superjson')) {
+            return 'vendor-query';
+          }
+          // Vendor: remaining node_modules
+          if (id.includes('node_modules/')) {
+            return 'vendor-misc';
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,

@@ -24,14 +24,31 @@
     <meta name="geo.placename" content="Mississauga" />
     <meta name="google-site-verification" content="1tKBuWGG5Jf1KdItmVMBR-LgyNhceCAoizuRJiazj50" />
     <title>My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa</title>
-    <!-- Preload LCP hero image so the browser fetches it at highest priority -->
-    <link rel="preload" as="image" href="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp" fetchpriority="high" />
-
-    <!-- Non-blocking Google Fonts: load as print, swap to all on load -->
+    <!-- Preconnect to critical third-party origins — eliminates connection latency -->
+    <link rel="preconnect" href="https://d2xsxph8kpxj0f.cloudfront.net" crossorigin />
+    <link rel="dns-prefetch" href="https://d2xsxph8kpxj0f.cloudfront.net" />
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- Preload LCP hero image so the browser fetches it at highest priority -->
+    <link rel="preload" as="image" href="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp" fetchpriority="high" type="image/webp" />
+    <!-- Preload logo to prevent header CLS on first paint -->
+    <link rel="preload" as="image" href="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png" fetchpriority="high" />
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
+
+    <!-- Critical inline CSS: reserve header + main space before React loads to prevent CLS -->
+    <style>
+      /* Prevent FOUC while React loads */
+      body { background: #fff; margin: 0; }
+      /* Reserve space for the hero section before React hydrates */
+      #root { min-height: 100vh; }
+      /* Stable aspect-ratio container for hero image — prevents CLS during image load */
+      .hero-img-wrap { aspect-ratio: 1440 / 600; max-height: 600px; }
+    </style>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",

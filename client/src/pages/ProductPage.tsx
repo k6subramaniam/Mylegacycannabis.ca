@@ -6,7 +6,6 @@ import { shippingZones, FREE_SHIPPING_THRESHOLD, calculatePointsEarned } from '@
 import { ShoppingCart, Minus, Plus, Truck, Star, Shield, Clock, Gift, ArrowRight, Loader } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 
 export default function ProductPage() {
@@ -136,13 +135,13 @@ export default function ProductPage() {
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: product.category, href: `/shop/${(product as any).categorySlug || product.category.toLowerCase().replace(/\s+/g, '-')}` }, { label: product.name }]} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-            {/* Product Image */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-center bg-[#F5F5F5] rounded-2xl aspect-square overflow-hidden">
+            {/* Product Image — no initial opacity:0 to prevent CLS */}
+            <div className="flex items-center justify-center bg-[#F5F5F5] rounded-2xl aspect-square overflow-hidden">
               <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=600'} alt={product.name} className="w-full h-full object-cover" loading="eager" width="600" height="600" fetchPriority="high" />
-            </motion.div>
+            </div>
 
             {/* Product Details */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <div>
               <div className="mb-4">
                 <span className="inline-block bg-[#F15929] text-white font-display text-xs px-3 py-1 rounded-full mb-3">{product.strainType}</span>
                 <h1 className="font-display text-4xl md:text-5xl text-[#4B2D8E] mb-2">{product.name.toUpperCase()}</h1>
@@ -211,7 +210,7 @@ export default function ProductPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>

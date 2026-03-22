@@ -20,11 +20,11 @@ export default function Rewards() {
       {/* Hero */}
       <section className="relative bg-[#4B2D8E] overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="My Legacy Rewards loyalty program" className="w-full h-full object-cover opacity-30" loading="eager" />
+          <img src={HERO_IMG} alt="My Legacy Rewards loyalty program" className="w-full h-full object-cover opacity-30" loading="eager" width="1440" height="400" fetchPriority="high" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
         <div className="container relative z-10 py-8 md:py-14">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} className="max-w-2xl">
+          <div className="max-w-2xl">
             <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">LOYALTY PROGRAM</span>
             <h1 className="font-display text-4xl md:text-5xl text-white leading-tight mb-4">
               MY LEGACY<br /><span className="text-[#F15929]">REWARDS</span>
@@ -35,7 +35,7 @@ export default function Rewards() {
             <Link href="/account/register" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 px-8 rounded-full transition-all hover:scale-105">
               JOIN NOW — GET {WELCOME_BONUS} POINTS FREE <ArrowRight size={18} />
             </Link>
-          </motion.div>
+          </div>
         </div>
         <WaveDivider color="#ffffff" />
       </section>

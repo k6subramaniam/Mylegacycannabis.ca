@@ -4,13 +4,10 @@ import { useCart } from '@/contexts/CartContext';
 import { products, categories, storeLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
 import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp';
-
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function Home() {
   const { addItem } = useCart();
@@ -24,14 +21,23 @@ export default function Home() {
         canonical="https://mylegacycannabisca-production.up.railway.app/"
       />
 
-      {/* HERO SECTION */}
-      <section className="relative bg-[#4B2D8E] overflow-hidden">
+      {/* HERO SECTION — no animations, content immediately visible for LCP */}
+      <section className="relative bg-[#4B2D8E] overflow-hidden" style={{ minHeight: '400px' }}>
         <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="Premium cannabis products from My Legacy Cannabis dispensary" className="w-full h-full object-cover opacity-40" loading="eager" width="1440" height="600" fetchPriority="high" />
+          <img
+            src={HERO_IMG}
+            alt="Premium cannabis products from My Legacy Cannabis dispensary"
+            className="w-full h-full object-cover opacity-40"
+            loading="eager"
+            width="1440"
+            height="600"
+            fetchPriority="high"
+            decoding="async"
+            style={{ display: 'block' }}
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
         <div className="container relative z-10 py-16 md:py-24 lg:py-32">
-          {/* Hero text — no animation so content is immediately visible for LCP */}
           <div className="max-w-2xl">
             <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">OPEN 24/7 — 5 LOCATIONS</span>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-4">
@@ -56,7 +62,7 @@ export default function Home() {
         <WaveDivider color="#ffffff" />
       </section>
 
-      {/* TRUST BADGES — no animation, renders immediately below hero */}
+      {/* TRUST BADGES — static, no animation, immediately visible */}
       <section className="bg-white py-8 -mt-1">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -80,26 +86,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CATEGORY GRID */}
+      {/* CATEGORY GRID — static headings, lazy-loaded images below fold */}
       <section className="bg-white py-12 md:py-16">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">FIND YOUR LEGACY</h2>
             <p className="text-gray-600 font-body max-w-lg mx-auto">Browse our curated selection of premium cannabis products.</p>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map((cat, i) => (
-              <motion.div key={cat.slug} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.08 }}>
-                <Link href={`/shop/${cat.slug}`}
-                  className="group block relative rounded-2xl overflow-hidden bg-[#F5F5F5] aspect-[4/3] hover:shadow-xl transition-all">
-                  <img src={cat.image} alt={`${cat.name} cannabis products`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="300" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#4B2D8E]/90 via-[#4B2D8E]/30 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="font-display text-lg md:text-xl text-white">{cat.name.toUpperCase()}</h3>
-                    <p className="text-white/70 text-xs font-body mt-1">{cat.productCount} Products</p>
-                  </div>
-                </Link>
-              </motion.div>
+            {categories.map((cat) => (
+              <Link key={cat.slug} href={`/shop/${cat.slug}`}
+                className="group block relative rounded-2xl overflow-hidden bg-[#F5F5F5] aspect-[4/3] hover:shadow-xl transition-all">
+                <img
+                  src={cat.image}
+                  alt={`${cat.name} cannabis products`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                  width="400"
+                  height="300"
+                  decoding="async"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#4B2D8E]/90 via-[#4B2D8E]/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="font-display text-lg md:text-xl text-white">{cat.name.toUpperCase()}</h3>
+                  <p className="text-white/70 text-xs font-body mt-1">{cat.productCount} Products</p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -107,20 +119,27 @@ export default function Home() {
 
       <WaveDivider color="#4B2D8E" />
 
-      {/* FEATURED PRODUCTS */}
+      {/* FEATURED PRODUCTS — static grid, no opacity-0 animations */}
       <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl text-white mb-3">FEATURED PRODUCTS</h2>
             <p className="text-white/70 font-body max-w-lg mx-auto">Hand-picked favourites from our collection.</p>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {featured.map((product, i) => (
-              <motion.div key={product.id} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
+            {featured.map((product) => (
+              <div key={product.id} className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-shadow">
                 <Link href={`/product/${product.slug}`} className="block">
                   <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                      width="400"
+                      height="400"
+                      decoding="async"
+                    />
                     {product.isNew && (
                       <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
                     )}
@@ -135,9 +154,11 @@ export default function Home() {
                   <p className="text-xs text-gray-400 font-mono-legacy mb-3">THC: {product.thc}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-display text-lg text-[#4B2D8E]">${product.price.toFixed(2)}</span>
-                    <button onClick={(e) => { e.preventDefault(); addItem(product); toast.success(`${product.name} added to cart`); }}
+                    <button
+                      onClick={(e) => { e.preventDefault(); addItem(product); toast.success(`${product.name} added to cart`); }}
                       className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
-                      aria-label={`Add ${product.name} to cart`}>
+                      aria-label={`Add ${product.name} to cart`}
+                    >
                       <ShoppingCart size={16} />
                     </button>
                   </div>
@@ -145,7 +166,7 @@ export default function Home() {
                     <Star size={10} className="text-[#F15929]" /> Earn {product.price} points with this purchase
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
           <div className="text-center mt-8">
@@ -158,11 +179,10 @@ export default function Home() {
 
       <WaveDivider color="#F5F5F5" />
 
-      {/* SHIPPING BANNER */}
+      {/* SHIPPING BANNER — static, no opacity-0 initial state */}
       <section className="bg-[#F5F5F5] py-12 -mt-1">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-gray-100">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="w-16 h-16 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
                 <Truck size={28} className="text-white" />
@@ -176,19 +196,22 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <Link href="/shipping" className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-6 rounded-full transition-all hover:scale-105 shrink-0">
+              <Link
+                href="/shipping"
+                className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-6 rounded-full transition-all hover:scale-105 shrink-0"
+                aria-label="Learn more about our nationwide shipping policy"
+              >
                 LEARN MORE
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* REWARDS BANNER */}
+      {/* REWARDS BANNER — static */}
       <section className="bg-[#F5F5F5] pb-12">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="bg-[#4B2D8E] rounded-2xl p-6 md:p-10 text-white overflow-hidden relative">
+          <div className="bg-[#4B2D8E] rounded-2xl p-6 md:p-10 text-white overflow-hidden relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#F15929]/20 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
               <div className="w-16 h-16 rounded-full bg-[#F15929] flex items-center justify-center shrink-0">
@@ -202,23 +225,22 @@ export default function Home() {
                 JOIN NOW
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       <WaveDivider color="#ffffff" />
 
-      {/* LOCATIONS */}
+      {/* LOCATIONS — static grid, no opacity-0 */}
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">OUR LOCATIONS</h2>
             <p className="text-gray-600 font-body max-w-lg mx-auto">Visit any of our 5 locations across the GTA and Ottawa — open 24/7.</p>
-          </motion.div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {storeLocations.slice(0, 3).map((loc, i) => (
-              <motion.div key={loc.id} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.1 }}
-                className="bg-[#F5F5F5] rounded-2xl p-5 hover:shadow-lg transition-all">
+            {storeLocations.slice(0, 3).map((loc) => (
+              <div key={loc.id} className="bg-[#F5F5F5] rounded-2xl p-5 hover:shadow-lg transition-shadow">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
                     <MapPin size={18} className="text-white" />
@@ -236,7 +258,7 @@ export default function Home() {
                   <a href={`tel:${loc.phone.replace(/\D/g, '')}`} aria-label={`Call My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#4B2D8E] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#3a2270] transition-colors">CALL NOW</a>
                   <a href={loc.directionsUrl} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#F15929] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#d94d22] transition-colors">DIRECTIONS</a>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
           <div className="text-center mt-6">
@@ -250,12 +272,12 @@ export default function Home() {
       {/* NEWSLETTER */}
       <section className="bg-[#F15929] py-12 md:py-16">
         <div className="container">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto text-center">
             <Leaf size={32} className="text-white/50 mx-auto mb-4" />
             <h2 className="font-display text-3xl text-white mb-3">STAY IN THE LOOP</h2>
             <p className="text-white/80 font-body mb-6">Subscribe for exclusive deals, new product drops, and rewards program updates.</p>
             <NewsletterForm />
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -273,8 +295,15 @@ function NewsletterForm() {
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
       <div className="relative">
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email"
-          className="w-full px-6 py-4 rounded-xl bg-[#F15929]/70 border border-white/30 text-white placeholder-white/50 font-mono-legacy text-base focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-[#F15929]/80 transition-all" required aria-label="Email address" />
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="Enter your email"
+          className="w-full px-6 py-4 rounded-xl bg-[#F15929]/70 border border-white/30 text-white placeholder-white/50 font-mono-legacy text-base focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-[#F15929]/80 transition-all"
+          required
+          aria-label="Email address"
+        />
         <button type="submit" className="mt-4 w-full bg-[#4B2D8E] hover:bg-[#3a2270] text-white font-display py-3.5 px-8 rounded-xl transition-all hover:scale-105 active:scale-95">
           SUBSCRIBE
         </button>

@@ -4,7 +4,6 @@ import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { categories } from '@/lib/data';
 import { ShoppingCart, SlidersHorizontal, X, ChevronDown, Star, Loader } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
@@ -61,9 +60,9 @@ export default function Shop() {
         </div>
         <div className="container relative z-10">
           <Breadcrumbs items={breadcrumbs} variant="dark" />
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-4xl md:text-5xl text-white mt-4">
+          <h1 className="font-display text-4xl md:text-5xl text-white mt-4">
             {pageTitle.toUpperCase()}
-          </motion.h1>
+          </h1>
         </div>
       </section>
 
@@ -151,7 +150,7 @@ export default function Shop() {
                   ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                       {filtered.map((product, i) => (
-                        <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
+                        <div key={product.id}
                           className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
                           <Link href={`/product/${product.slug}`} className="block">
                             <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
@@ -180,7 +179,7 @@ export default function Shop() {
                               <Star size={10} className="text-[#F15929]" /> Earn {parseFloat(product.price.toString()).toFixed(0)} points
                             </p>
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                     </div>
                   )}
