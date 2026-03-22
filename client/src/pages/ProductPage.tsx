@@ -33,6 +33,82 @@ export default function ProductPage() {
   }
 
   const points = calculatePointsEarned(parseFloat(product.price.toString()) * quantity);
+  const priceNum = parseFloat(product.price.toString()).toFixed(2);
+  const canonicalUrl = `https://mylegacycannabis.ca/product/${product.slug}`;
+
+  // Product JSON-LD for Google rich results
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    '@id': `${canonicalUrl}#product`,
+    name: product.name,
+    description: product.shortDescription || product.description || '',
+    image: product.image
+      ? [product.image]
+      : ['https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png'],
+    sku: `MLC-${product.id}`,
+    mpn: `MLC-${product.slug}`,
+    brand: {
+      '@type': 'Brand',
+      name: 'My Legacy Cannabis',
+    },
+    category: product.category,
+    offers: {
+      '@type': 'Offer',
+      url: canonicalUrl,
+      priceCurrency: 'CAD',
+      price: priceNum,
+      priceValidUntil: '2027-01-01',
+      availability: product.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: 'My Legacy Cannabis',
+        url: 'https://mylegacycannabis.ca',
+      },
+      shippingDetails: {
+        '@type': 'OfferShippingDetails',
+        shippingRate: {
+          '@type': 'MonetaryAmount',
+          value: '0',
+          currency: 'CAD',
+        },
+        shippingDestination: {
+          '@type': 'DefinedRegion',
+          addressCountry: 'CA',
+        },
+        deliveryTime: {
+          '@type': 'ShippingDeliveryTime',
+          businessDays: {
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          },
+          cutoffTime: '17:00-05:00',
+          handlingTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 0,
+            maxValue: 1,
+            unitCode: 'DAY',
+          },
+          transitTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 1,
+            maxValue: 5,
+            unitCode: 'DAY',
+          },
+        },
+      },
+    },
+    additionalProperty: product.thc ? [
+      {
+        '@type': 'PropertyValue',
+        name: 'THC',
+        value: product.thc,
+      },
+    ] : undefined,
+  };
 
   const handleAddToCart = () => {
     addItem(product as any, quantity);
@@ -45,8 +121,14 @@ export default function ProductPage() {
       <SEOHead
         title={`${product.name} — ${product.category}`}
         description={product.shortDescription || product.description || ''}
-        canonical={`https://mylegacycannabis.ca/product/${product.slug}`}
+        canonical={canonicalUrl}
         ogType="product"
+      />
+
+      {/* Product JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
 
       <section className="bg-white py-6 md:py-10">
@@ -56,7 +138,7 @@ export default function ProductPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             {/* Product Image */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-center bg-[#F5F5F5] rounded-2xl aspect-square overflow-hidden">
-              <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=600'} alt={product.name} className="w-full h-full object-cover" />
+              <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=600'} alt={product.name} className="w-full h-full object-cover" loading="eager" width="600" height="600" fetchPriority="high" />
             </motion.div>
 
             {/* Product Details */}
@@ -69,7 +151,7 @@ export default function ProductPage() {
 
               <div className="mb-6 pb-6 border-b border-gray-200">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="font-display text-4xl text-[#4B2D8E]">${parseFloat(product.price.toString()).toFixed(2)}</span>
+                  <span className="font-display text-4xl text-[#4B2D8E]">${priceNum}</span>
                   <span className="text-sm text-gray-500 font-body">THC: {product.thc}</span>
                 </div>
                 <p className="text-[#F15929] font-display text-sm">Earn {points} points with this purchase</p>

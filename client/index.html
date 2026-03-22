@@ -6,7 +6,6 @@
     <meta name="theme-color" content="#4B2D8E" />
     <meta name="description" content="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
-    <meta name="keywords" content="cannabis dispensary GTA, buy weed online Canada, 24/7 cannabis dispensary, cannabis delivery Ottawa, weed dispensary Toronto, My Legacy Cannabis" />
     <link rel="canonical" href="https://mylegacycannabis.ca/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="My Legacy Cannabis" />
@@ -14,6 +13,8 @@
     <meta property="og:description" content="Premium cannabis dispensary with 5 locations across the GTA and Ottawa. Shop flower, pre-rolls, edibles, and more. Free shipping on orders over $150." />
     <meta property="og:url" content="https://mylegacycannabis.ca/" />
     <meta property="og:image" content="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_CA" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa" />
@@ -23,16 +24,29 @@
     <meta name="geo.placename" content="Mississauga" />
     <meta name="google-site-verification" content="1tKBuWGG5Jf1KdItmVMBR-LgyNhceCAoizuRJiazj50" />
     <title>My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa</title>
+    <!-- Preload LCP hero image so the browser fetches it at highest priority -->
+    <link rel="preload" as="image" href="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp" fetchpriority="high" />
+
+    <!-- Non-blocking Google Fonts: load as print, swap to all on load -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": "https://mylegacycannabis.ca/#organization",
       "name": "My Legacy Cannabis",
       "url": "https://mylegacycannabis.ca",
-      "logo": "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
+      "logo": {
+        "@type": "ImageObject",
+        "@id": "https://mylegacycannabis.ca/#logo",
+        "url": "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
+        "width": 300,
+        "height": 80,
+        "caption": "My Legacy Cannabis"
+      },
       "description": "24/7 cannabis dispensary serving the Greater Toronto Area and Ottawa with premium flower, pre-rolls, edibles, vapes, and concentrates. Nationwide shipping across Canada.",
       "telephone": "+14372154722",
       "email": "support@mylegacycannabis.ca",
@@ -41,9 +55,12 @@
         "streetAddress": "255 Dundas St W",
         "addressLocality": "Mississauga",
         "addressRegion": "ON",
+        "postalCode": "L5B 1H4",
         "addressCountry": "CA"
       },
-      "sameAs": [],
+      "sameAs": [
+        "https://mylegacycannabisca-production.up.railway.app"
+      ],
       "areaServed": {
         "@type": "Country",
         "name": "Canada"
@@ -64,7 +81,10 @@
       "url": "https://mylegacycannabis.ca",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://mylegacycannabis.ca/shop?q={search_term_string}",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://mylegacycannabis.ca/shop?q={search_term_string}"
+        },
         "query-input": "required name=search_term_string"
       }
     }
@@ -74,7 +94,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Analytics: configure VITE_ANALYTICS_ENDPOINT and VITE_ANALYTICS_WEBSITE_ID in .env to enable -->
-
   </body>
 </html>

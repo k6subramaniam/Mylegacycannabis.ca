@@ -224,7 +224,7 @@ export default function Locations() {
         </div>
       </section>
 
-      {/* JSON-LD for each location */}
+      {/* JSON-LD: one LocalBusiness per location — rich schema for Google Knowledge Panel */}
       {storeLocations.map((loc) => (
         <script
           key={loc.id}
@@ -233,10 +233,18 @@ export default function Locations() {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'LocalBusiness',
+              '@id': `https://mylegacycannabis.ca/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
-              image:
+              image: [
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png',
+                'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
+              ],
+              url: 'https://mylegacycannabis.ca/locations',
               telephone: loc.phone,
+              email: 'support@mylegacycannabis.ca',
+              priceRange: '$$',
+              currenciesAccepted: 'CAD',
+              paymentAccepted: 'Cash, Credit Card, Debit Card, E-Transfer',
               address: {
                 '@type': 'PostalAddress',
                 streetAddress: loc.address,
@@ -250,21 +258,29 @@ export default function Locations() {
                 latitude: loc.lat,
                 longitude: loc.lng,
               },
-              openingHoursSpecification: {
-                '@type': 'OpeningHoursSpecification',
-                dayOfWeek: [
-                  'Monday',
-                  'Tuesday',
-                  'Wednesday',
-                  'Thursday',
-                  'Friday',
-                  'Saturday',
-                  'Sunday',
-                ],
-                opens: '00:00',
-                closes: '23:59',
+              hasMap: loc.directionsUrl,
+              openingHoursSpecification: [
+                {
+                  '@type': 'OpeningHoursSpecification',
+                  dayOfWeek: [
+                    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                    'Friday', 'Saturday', 'Sunday',
+                  ],
+                  opens: '00:00',
+                  closes: '23:59',
+                },
+              ],
+              servesCuisine: undefined,
+              areaServed: {
+                '@type': 'City',
+                name: loc.city,
               },
-              url: 'https://mylegacycannabis.ca/locations',
+              parentOrganization: {
+                '@type': 'Organization',
+                '@id': 'https://mylegacycannabis.ca/#organization',
+                name: 'My Legacy Cannabis',
+                url: 'https://mylegacycannabis.ca',
+              },
             }),
           }}
         />
