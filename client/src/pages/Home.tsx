@@ -56,7 +56,7 @@ export default function Home() {
         <WaveDivider color="#ffffff" />
       </section>
 
-      {/* TRUST BADGES */}
+      {/* TRUST BADGES — no animation, renders immediately below hero */}
       <section className="bg-white py-8 -mt-1">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -66,8 +66,7 @@ export default function Home() {
               { icon: Shield, label: 'Age Verified', sub: 'Safe & secure' },
               { icon: Gift, label: 'Earn Rewards', sub: '1 point per $1' },
             ].map((badge, i) => (
-              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.1 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F5F5]">
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F5F5]">
                 <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
                   <badge.icon size={18} className="text-white" />
                 </div>
@@ -75,7 +74,7 @@ export default function Home() {
                   <p className="font-display text-xs text-[#4B2D8E]">{badge.label}</p>
                   <p className="text-xs text-gray-500 font-body">{badge.sub}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

@@ -143,6 +143,9 @@ export default function Locations() {
             alt="My Legacy Cannabis store locations"
             className="w-full h-full object-cover opacity-30"
             loading="eager"
+            width="1440"
+            height="400"
+            fetchPriority="high"
           />
           <div className="absolute inset-0 bg-[#4B2D8E]/70" />
         </div>
