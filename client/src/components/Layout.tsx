@@ -11,19 +11,21 @@ const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbS
 // AGE GATE
 // ============================================================
 function AgeGate({ onConfirm }: { onConfirm: () => void }) {
+  // Prevent body scroll shift when gate is open — eliminates CLS from scrollbar appearing
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
   return (
+    // No framer-motion animation — instant render keeps LCP unblocked and reduces JS cost
     <div className="fixed inset-0 z-[100] bg-[#4B2D8E] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl"
-      >
-        <img src={LOGO_URL} alt="My Legacy Cannabis logo" className="h-16 mx-auto mb-6" loading="eager" />
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+        <img src={LOGO_URL} alt="My Legacy Cannabis logo" className="h-16 mx-auto mb-6" loading="eager" width="240" height="64" />
         <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">WELCOME TO<br />MY LEGACY</h2>
-        <p className="text-[#333] mb-6 font-body">Before proceeding, we need you to confirm that you are of legal age (19+) in your place of residence to view cannabis products.</p>
+        <p className="text-[#333] mb-6 font-body">Before proceeding, please confirm you are of legal age (19+) in your province to view cannabis products.</p>
         <button
           onClick={onConfirm}
-          className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display text-lg py-4 px-8 rounded-full transition-all hover:scale-105 active:scale-95"
+          className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display text-lg py-4 px-8 rounded-full transition-colors"
         >
           I AM 19 OR OLDER
         </button>
@@ -33,7 +35,7 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
         >
           I am under 19 — Exit
         </button>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -72,7 +74,7 @@ function Header() {
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#4B2D8E]/95 backdrop-blur-md shadow-lg' : 'bg-[#4B2D8E]'}`}>
         <div className="container flex items-center justify-between h-16 md:h-20">
           <Link href="/" aria-label="My Legacy Cannabis Home">
-            <img src={LOGO_URL} alt="My Legacy Cannabis" className="h-10 md:h-14" loading="eager" />
+            <img src={LOGO_URL} alt="My Legacy Cannabis" className="h-10 md:h-14" loading="eager" width="200" height="56" />
           </Link>
 
           {/* Desktop Nav */}
@@ -190,8 +192,15 @@ function Footer() {
           <div>
             <h3 className="font-display text-lg mb-4 text-[#F15929]">CATEGORIES</h3>
             <ul className="space-y-2 font-body text-sm">
-              {['Flower', 'Pre-Rolls', 'Edibles', 'Vapes', 'Concentrates', 'Accessories'].map(cat => (
-                <li key={cat}><Link href={`/shop?category=${cat.toLowerCase().replace('-', '-')}`} className="text-white/70 hover:text-[#F15929] transition-colors">{cat}</Link></li>
+              {[
+                { label: 'Flower',       slug: 'flower' },
+                { label: 'Pre-Rolls',    slug: 'pre-rolls' },
+                { label: 'Edibles',      slug: 'edibles' },
+                { label: 'Vapes',        slug: 'vapes' },
+                { label: 'Concentrates', slug: 'concentrates' },
+                { label: 'Accessories',  slug: 'accessories' },
+              ].map(cat => (
+                <li key={cat.slug}><Link href={`/shop/${cat.slug}`} className="text-white/70 hover:text-[#F15929] transition-colors">{cat.label}</Link></li>
               ))}
             </ul>
           </div>
@@ -324,13 +333,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleAgeConfirm = () => {
     setAgeVerified(true);
-    localStorage.setItem('mlc-age-verified', 'true');
+    try { localStorage.setItem('mlc-age-verified', 'true'); } catch {}
   };
 
   return (
     <>
       {!ageVerified && <AgeGate onConfirm={handleAgeConfirm} />}
-      <div className="min-h-screen flex flex-col">
+      {/* min-h-screen + explicit dimensions prevent CLS from layout reflow */}
+      <div className="min-h-screen flex flex-col" style={{ contain: 'layout' }}>
         <Header />
         <main className="flex-1 mt-[calc(4rem+2rem)] md:mt-[calc(5rem+2rem)]">
           {children}

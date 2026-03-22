@@ -31,7 +31,8 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
         <div className="container relative z-10 py-16 md:py-24 lg:py-32">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ duration: 0.6 }} className="max-w-2xl">
+          {/* Hero text — no animation so content is immediately visible for LCP */}
+          <div className="max-w-2xl">
             <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">OPEN 24/7 — 5 LOCATIONS</span>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-4">
               WELCOME TO<br /><span className="text-[#F15929]">MY LEGACY</span>
@@ -50,7 +51,7 @@ export default function Home() {
                 FIND A STORE <MapPin size={18} />
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
         <WaveDivider color="#ffffff" />
       </section>
@@ -233,8 +234,8 @@ export default function Home() {
                   <a href={`tel:${loc.phone.replace(/\D/g, '')}`} className="flex items-center gap-1 text-[#F15929] hover:underline"><Phone size={14} /> {loc.phone}</a>
                 </div>
                 <div className="flex gap-2">
-                  <a href={`tel:${loc.phone.replace(/\D/g, '')}`} className="flex-1 bg-[#4B2D8E] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#3a2270] transition-colors">CALL NOW</a>
-                  <a href={loc.directionsUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-[#F15929] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#d94d22] transition-colors">DIRECTIONS</a>
+                  <a href={`tel:${loc.phone.replace(/\D/g, '')}`} aria-label={`Call My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#4B2D8E] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#3a2270] transition-colors">CALL NOW</a>
+                  <a href={loc.directionsUrl} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#F15929] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#d94d22] transition-colors">DIRECTIONS</a>
                 </div>
               </motion.div>
             ))}
@@ -259,20 +260,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* JSON-LD Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "My Legacy Cannabis",
-        "url": "https://mylegacycannabisca-production.up.railway.app",
-        "logo": "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
-        "description": "24/7 cannabis dispensary serving the GTA and Ottawa with nationwide shipping across Canada.",
-        "telephone": "(437) 215-4722",
-        "email": "support@mylegacycannabis.ca",
-        "address": { "@type": "PostalAddress", "streetAddress": "255 Dundas St W", "addressLocality": "Mississauga", "addressRegion": "ON", "postalCode": "L5B 1H4", "addressCountry": "CA" },
-        "sameAs": ["https://instagram.com/mylegacycannabis"],
-        "openingHoursSpecification": { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"], "opens": "00:00", "closes": "23:59" }
-      })}} />
+      {/* Organization schema lives in index.html — no duplicate here */}
     </>
   );
 }

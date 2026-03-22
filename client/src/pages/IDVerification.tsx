@@ -25,6 +25,16 @@ export default function IDVerification() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mobileTokenRef = useRef<string>('');
 
+  // Lazy-load QRious only when this page mounts — keeps it off the global bundle
+  useEffect(() => {
+    if ((window as any).QRious) return; // already loaded
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js';
+    script.async = true;
+    document.head.appendChild(script);
+    return () => { /* leave cached — no need to remove */ };
+  }, []);
+
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);

@@ -133,7 +133,7 @@ export default function ProductPage() {
 
       <section className="bg-white py-6 md:py-10">
         <div className="container">
-          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: product.category, href: `/shop?category=${product.category}` }, { label: product.name }]} />
+          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: product.category, href: `/shop/${(product as any).categorySlug || product.category.toLowerCase().replace(/\s+/g, '-')}` }, { label: product.name }]} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             {/* Product Image */}
