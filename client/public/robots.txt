@@ -15,4 +15,4 @@ Disallow: /404
 Disallow: /api/
 
 # Canonical sitemap
-Sitemap: https://mylegacycannabis.ca/sitemap.xml
+Sitemap: https://mylegacycannabisca-production.up.railway.app/sitemap.xml
