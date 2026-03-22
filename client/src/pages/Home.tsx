@@ -21,13 +21,13 @@ export default function Home() {
       <SEOHead
         title="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa"
         description="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide."
-        canonical="https://mylegacycannabis.ca/"
+        canonical="https://mylegacycannabisca-production.up.railway.app/"
       />
 
       {/* HERO SECTION */}
       <section className="relative bg-[#4B2D8E] overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="Premium cannabis products from My Legacy Cannabis dispensary" className="w-full h-full object-cover opacity-40" loading="eager" />
+          <img src={HERO_IMG} alt="Premium cannabis products from My Legacy Cannabis dispensary" className="w-full h-full object-cover opacity-40" loading="eager" width="1440" height="600" fetchPriority="high" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
         <div className="container relative z-10 py-16 md:py-24 lg:py-32">
@@ -92,7 +92,7 @@ export default function Home() {
               <motion.div key={cat.slug} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.08 }}>
                 <Link href={`/shop/${cat.slug}`}
                   className="group block relative rounded-2xl overflow-hidden bg-[#F5F5F5] aspect-[4/3] hover:shadow-xl transition-all">
-                  <img src={cat.image} alt={`${cat.name} cannabis products`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                  <img src={cat.image} alt={`${cat.name} cannabis products`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="300" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#4B2D8E]/90 via-[#4B2D8E]/30 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4">
                     <h3 className="font-display text-lg md:text-xl text-white">{cat.name.toUpperCase()}</h3>
@@ -120,7 +120,7 @@ export default function Home() {
                 className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
                 <Link href={`/product/${product.slug}`} className="block">
                   <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
                     {product.isNew && (
                       <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
                     )}
@@ -264,7 +264,7 @@ export default function Home() {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "My Legacy Cannabis",
-        "url": "https://mylegacycannabis.ca",
+        "url": "https://mylegacycannabisca-production.up.railway.app",
         "logo": "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
         "description": "24/7 cannabis dispensary serving the GTA and Ottawa with nationwide shipping across Canada.",
         "telephone": "(437) 215-4722",

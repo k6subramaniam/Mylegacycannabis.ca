@@ -25,7 +25,7 @@ export default function Contact() {
       <SEOHead
         title="Contact Us — My Legacy Cannabis"
         description="Get in touch with My Legacy Cannabis. Contact us by phone, email, or visit any of our 5 locations. Open 24/7."
-        canonical="https://mylegacycannabis.ca/contact"
+        canonical="https://mylegacycannabisca-production.up.railway.app/contact"
       />
 
       <section className="bg-[#4B2D8E] py-6">

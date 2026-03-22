@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
       <SEOHead
         title="Privacy Policy"
         description="My Legacy Cannabis privacy policy. Learn how we collect, use, and protect your personal information."
-        canonical="https://mylegacycannabis.ca/privacy-policy"
+        canonical="https://mylegacycannabisca-production.up.railway.app/privacy-policy"
       />
 
       <section className="bg-[#4B2D8E] py-6">

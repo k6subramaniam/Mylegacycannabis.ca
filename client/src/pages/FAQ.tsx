@@ -92,7 +92,7 @@ export default function FAQ() {
       <SEOHead
         title="FAQ — Frequently Asked Questions"
         description="Find answers to common questions about ordering, shipping, payment, ID verification, and the My Legacy Rewards program at My Legacy Cannabis."
-        canonical="https://mylegacycannabis.ca/faq"
+        canonical="https://mylegacycannabisca-production.up.railway.app/faq"
       />
 
       <section className="bg-[#4B2D8E] py-6">

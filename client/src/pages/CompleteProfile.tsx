@@ -56,7 +56,7 @@ export default function CompleteProfile() {
       <SEOHead
         title="Complete Your Profile — My Legacy Cannabis"
         description="Add your phone number to complete your My Legacy Cannabis account setup."
-        canonical="https://mylegacycannabis.ca/complete-profile"
+        canonical="https://mylegacycannabisca-production.up.railway.app/complete-profile"
       />
 
       <div className="min-h-screen bg-gradient-to-br from-[#4B2D8E] via-[#3a2270] to-[#2a1855] flex items-center justify-center p-4">

@@ -12,7 +12,7 @@ export default function ShippingPolicy() {
       <SEOHead
         title="Shipping Policy — Nationwide Cannabis Delivery"
         description="My Legacy Cannabis ships nationwide across Canada via Canada Post. Free shipping on orders over $150. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25."
-        canonical="https://mylegacycannabis.ca/shipping"
+        canonical="https://mylegacycannabisca-production.up.railway.app/shipping"
       />
 
       <section className="bg-[#4B2D8E] py-6">

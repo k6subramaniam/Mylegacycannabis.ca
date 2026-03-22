@@ -7,7 +7,7 @@ export default function Terms() {
       <SEOHead
         title="Terms & Conditions"
         description="My Legacy Cannabis terms and conditions of use. Read our policies on ordering, shipping, returns, and more."
-        canonical="https://mylegacycannabis.ca/terms"
+        canonical="https://mylegacycannabisca-production.up.railway.app/terms"
       />
 
       <section className="bg-[#4B2D8E] py-6">

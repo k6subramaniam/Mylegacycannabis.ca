@@ -132,7 +132,7 @@ export default function Login() {
       <SEOHead
         title="Sign In — My Legacy Cannabis"
         description="Sign in to your My Legacy Cannabis account to track orders, earn rewards, and shop premium cannabis."
-        canonical="https://mylegacycannabis.ca/login"
+        canonical="https://mylegacycannabisca-production.up.railway.app/login"
       />
 
       <div className="min-h-screen bg-gradient-to-br from-[#4B2D8E] via-[#3a2270] to-[#2a1855] flex items-center justify-center p-4">

@@ -34,7 +34,7 @@ export default function ProductPage() {
 
   const points = calculatePointsEarned(parseFloat(product.price.toString()) * quantity);
   const priceNum = parseFloat(product.price.toString()).toFixed(2);
-  const canonicalUrl = `https://mylegacycannabis.ca/product/${product.slug}`;
+  const canonicalUrl = `https://mylegacycannabisca-production.up.railway.app/product/${product.slug}`;
 
   // Product JSON-LD for Google rich results
   const productSchema = {
@@ -66,7 +66,7 @@ export default function ProductPage() {
       seller: {
         '@type': 'Organization',
         name: 'My Legacy Cannabis',
-        url: 'https://mylegacycannabis.ca',
+        url: 'https://mylegacycannabisca-production.up.railway.app',
       },
       shippingDetails: {
         '@type': 'OfferShippingDetails',

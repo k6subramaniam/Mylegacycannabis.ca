@@ -132,7 +132,7 @@ export default function Locations() {
       <SEOHead
         title="Store Locations — 24/7 Cannabis Dispensary"
         description="Visit any of our 5 My Legacy Cannabis locations across the GTA and Ottawa. Open 24/7. Mississauga, Hamilton, Queen St Toronto, Dundas Toronto, and Merivale Ottawa."
-        canonical="https://mylegacycannabis.ca/locations"
+        canonical="https://mylegacycannabisca-production.up.railway.app/locations"
       />
 
       {/* Hero */}
@@ -233,13 +233,13 @@ export default function Locations() {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'LocalBusiness',
-              '@id': `https://mylegacycannabis.ca/locations#${loc.id}`,
+              '@id': `https://mylegacycannabisca-production.up.railway.app/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
               image: [
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png',
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
               ],
-              url: 'https://mylegacycannabis.ca/locations',
+              url: 'https://mylegacycannabisca-production.up.railway.app/locations',
               telephone: loc.phone,
               email: 'support@mylegacycannabis.ca',
               priceRange: '$$',
@@ -277,9 +277,9 @@ export default function Locations() {
               },
               parentOrganization: {
                 '@type': 'Organization',
-                '@id': 'https://mylegacycannabis.ca/#organization',
+                '@id': 'https://mylegacycannabisca-production.up.railway.app/#organization',
                 name: 'My Legacy Cannabis',
-                url: 'https://mylegacycannabis.ca',
+                url: 'https://mylegacycannabisca-production.up.railway.app',
               },
             }),
           }}

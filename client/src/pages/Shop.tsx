@@ -51,12 +51,12 @@ export default function Shop() {
 
   return (
     <>
-      <SEOHead title={pageTitle} description={activeCat ? activeCat.description : 'Browse our full selection of premium cannabis products — flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.'} canonical={`https://mylegacycannabis.ca/shop${selectedCategory ? '/' + selectedCategory : ''}`} />
+      <SEOHead title={pageTitle} description={activeCat ? activeCat.description : 'Browse our full selection of premium cannabis products — flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.'} canonical={`https://mylegacycannabisca-production.up.railway.app/shop${selectedCategory ? '/' + selectedCategory : ''}`} />
 
       {/* Hero */}
       <section className="relative bg-[#4B2D8E] py-6 md:py-10 overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="Shop cannabis products" className="w-full h-full object-cover opacity-40" loading="eager" />
+          <img src={HERO_IMG} alt="Shop cannabis products" className="w-full h-full object-cover opacity-40" loading="eager" width="1440" height="400" fetchPriority="high" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
         <div className="container relative z-10">
@@ -155,7 +155,7 @@ export default function Shop() {
                           className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
                           <Link href={`/product/${product.slug}`} className="block">
                             <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
-                              <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=400'} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                              <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=400'} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
                               {product.isNew && (
                                 <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
                               )}

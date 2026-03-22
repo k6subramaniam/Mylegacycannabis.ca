@@ -14,7 +14,7 @@ export default function Rewards() {
       <SEOHead
         title="My Legacy Rewards — Loyalty Program"
         description="Earn 1 point for every $1 spent at My Legacy Cannabis. Redeem for discounts up to $150 OFF. Get 25 bonus points just for signing up. Birthday bonuses, referral rewards, and more."
-        canonical="https://mylegacycannabis.ca/rewards"
+        canonical="https://mylegacycannabisca-production.up.railway.app/rewards"
       />
 
       {/* Hero */}
@@ -167,7 +167,7 @@ export default function Rewards() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "WebPage", "name": "My Legacy Rewards — Loyalty Program",
         "description": "Earn points on every purchase at My Legacy Cannabis. Redeem for discounts up to $150 OFF.",
-        "url": "https://mylegacycannabis.ca/rewards"
+        "url": "https://mylegacycannabisca-production.up.railway.app/rewards"
       })}} />
     </>
   );
