@@ -6,6 +6,7 @@ import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
 import { sendOTPEmail, sendOTPSms } from "./emailService";
+import rateLimit from "express-rate-limit";
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -51,6 +52,13 @@ async function setSessionCookie(res: Response, req: Request, openId: string, nam
 }
 
 export function registerCustomAuthRoutes(app: Express) {
+  const completeProfileLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // limit each IP to 20 complete-profile requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
 
   // ─── SEND OTP (Email or SMS) ───
   app.post("/api/auth/send-otp", async (req: Request, res: Response) => {
@@ -392,7 +400,7 @@ export function registerCustomAuthRoutes(app: Express) {
   });
 
   // ─── COMPLETE PROFILE (add mandatory phone) ───
-  app.post("/api/auth/complete-profile", async (req: Request, res: Response) => {
+  app.post("/api/auth/complete-profile", completeProfileLimiter, async (req: Request, res: Response) => {
     try {
       // Get current user from session
       let user;
