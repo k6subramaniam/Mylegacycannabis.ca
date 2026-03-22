@@ -108,6 +108,12 @@
     "patchedDependencies": {
       "wouter@3.7.1": "patches/wouter@3.7.1.patch"
     },
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "better-sqlite3",
+      "sharp"
+    ],
     "overrides": {
       "tailwindcss>nanoid": "3.3.7",
       "fast-xml-parser": ">=5.5.8",
