@@ -17,6 +17,29 @@ export interface User {
   orders: Order[];
 }
 
+/**
+ * Persist a sanitized version of the user to localStorage.
+ * Sensitive fields (such as birthday) are omitted from persistent storage.
+ */
+function persistUserToLocalStorage(user: User | null) {
+  if (typeof window === 'undefined') return;
+  const key = 'mlc-user';
+  if (!user) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // ignore storage errors
+    }
+    return;
+  }
+  const { birthday, ...rest } = user;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(rest));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export interface RewardsHistoryEntry {
   id: string;
   date: string;
@@ -104,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!userData || userData.authMethod !== 'email') return;
           const transformedUser = transformBackendUser(userData);
           setUser(transformedUser);
-          localStorage.setItem('mlc-user', JSON.stringify(transformedUser));
+          persistUserToLocalStorage(transformedUser);
         }
       } catch {
         // No active session — that's fine
@@ -246,7 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(prev => {
             if (!prev) return prev;
             const updated = { ...prev, idVerificationStatus: 'pending' as const };
-            localStorage.setItem('mlc-user', JSON.stringify(updated));
+            persistUserToLocalStorage(updated);
             return updated;
           });
           return true;
