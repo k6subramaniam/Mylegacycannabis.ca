@@ -1,0 +1,993 @@
+/**
+ * Email template seed data — converted from WordPress PHP templates.
+ * Each template uses {{variable_name}} placeholders for dynamic content.
+ */
+export interface EmailTemplateSeed {
+  slug: string;
+  name: string;
+  subject: string;
+  bodyHtml: string;
+  variables: string[];
+  isActive: boolean;
+}
+
+export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
+  {
+    slug: "welcome-email",
+    name: "Welcome Email",
+    subject: "Welcome to MyLegacy Cannabis, {{customer_name}}!",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to MyLegacy Cannabis</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    
+                    <!-- HEADER -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:28px; font-weight:bold;">
+                                🎉 Welcome to MyLegacy Cannabis!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- BODY -->
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Hi <strong>{{customer_name}}</strong>,
+                            </p>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Thank you for creating an account with MyLegacy Cannabis - GTA's premier cannabis delivery service! 🌿
+                            </p>
+                            
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 15px 0;">
+                                    <strong>📋 NEXT STEP: Verify Your Age</strong>
+                                </p>
+                                <p style="color:#333333; font-size:14px; line-height:1.6; margin:0 0 10px 0;">
+                                    To complete your account setup and start shopping, please upload a valid government-issued ID showing you are 19+ years of age.
+                                </p>
+                                <p style="color:#666666; font-size:13px; line-height:1.5; margin:0;">
+                                    <em>Accepted ID types: Driver's License, Passport, Ontario Photo Card, or Provincial ID</em>
+                                </p>
+                            </div>
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{account_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">
+                                            📸 Upload Your ID Now
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:14px; line-height:1.6; margin:0 0 10px 0;">
+                                    <strong>🔒 Your Privacy is Protected:</strong>
+                                </p>
+                                <ul style="color:#666666; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
+                                    <li>Your ID is encrypted and stored securely</li>
+                                    <li>Used only for age verification (required by law)</li>
+                                    <li>Never shared with third parties</li>
+                                    <li>Verification typically completed within 24 hours</li>
+                                </ul>
+                            </div>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">
+                                Questions? Reply to this email or contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">
+                                MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>
+                                📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily
+                            </p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">
+                                © 2026 MyLegacy Cannabis. All rights reserved.<br>
+                                <a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | 
+                                <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a> | 
+                                <a href="{{terms_url}}" style="color:#720eec; text-decoration:none;">Terms of Service</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","account_url","unsubscribe_url","privacy_url","terms_url"],
+    isActive: true,
+  },
+  {
+    slug: "admin-id-pending",
+    name: "Admin: ID Verification Pending",
+    subject: "New ID Verification Required — {{customer_name}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New ID Verification Pending</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    
+                    <!-- HEADER -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">
+                                🆔 New ID Verification Required
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- BODY -->
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Hi Admin,
+                            </p>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                A new customer has uploaded their ID for age verification review.
+                            </p>
+                            
+                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Customer:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{customer_name}} ({{customer_email}})</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">User ID:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{user_id}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Submitted:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{submission_date}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">ID Document:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{id_type}}</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{admin_review_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">
+                                            👁️ Review ID Document
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:13px; line-height:1.5; margin:0;">
+                                    <strong>⏱️ Response Time Target:</strong> Please review within 24 hours to maintain excellent customer service.
+                                </p>
+                            </div>
+                            
+                            <p style="color:#666666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">
+                                This is an automated notification from your MyLegacy Cannabis admin dashboard.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0;">
+                                MyLegacy Cannabis - Admin Notification System<br>
+                                © 2026 MyLegacy Cannabis. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","customer_email","user_id","submission_date","id_type","admin_review_url"],
+    isActive: true,
+  },
+  {
+    slug: "id-rejected",
+    name: "ID Verification Rejected",
+    subject: "ID Verification Update — MyLegacy Cannabis",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Verification Failed - MyLegacy Cannabis</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    
+                    <!-- HEADER -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #F44336 0%, #E91E63 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">
+                                ⚠️ ID Verification Failed
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- BODY -->
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Hi <strong>{{customer_name}}</strong>,
+                            </p>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                We were unable to verify your age with the ID document you submitted.
+                            </p>
+                            
+                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0 0 15px 0;">
+                                    <strong>❌ Verification Issue:</strong>
+                                </p>
+                                <p style="color:#666666; font-size:14px; line-height:1.6; margin:0;">
+                                    {{rejection_reason}}
+                                </p>
+                            </div>
+                            
+                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0 0 10px 0;">
+                                    <strong>📋 Please resubmit with a valid ID showing:</strong>
+                                </p>
+                                <ul style="color:#666666; font-size:14px; line-height:1.6; margin:0; padding-left:20px;">
+                                    <li>Clear, readable photo (not blurry)</li>
+                                    <li>All four corners visible</li>
+                                    <li>Your date of birth clearly shown</li>
+                                    <li>Document not expired</li>
+                                    <li>Government-issued ID (Driver's License, Passport, Ontario Photo Card)</li>
+                                </ul>
+                            </div>
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{resubmit_url}}" style="display:inline-block; background-color:#F44336; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">
+                                            🔄 Upload New ID Document
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:14px; line-height:1.6; margin:0 0 10px 0;">
+                                    <strong>💡 Tips for a Successful Verification:</strong>
+                                </p>
+                                <ul style="color:#666666; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
+                                    <li>Take photo in good lighting</li>
+                                    <li>Lay ID flat on a dark surface</li>
+                                    <li>Avoid glare or shadows</li>
+                                    <li>Capture the entire document</li>
+                                    <li>Use a high-resolution camera</li>
+                                </ul>
+                            </div>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">
+                                Need help? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">
+                                MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>
+                                📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily
+                            </p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">
+                                © 2026 MyLegacy Cannabis. All rights reserved.<br>
+                                <a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | 
+                                <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","rejection_reason","resubmit_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "id-verified",
+    name: "ID Verification Approved",
+    subject: "Your Account is Verified — MyLegacy Cannabis",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Verified - MyLegacy Cannabis</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:28px; font-weight:bold;">
+                                ✅ Your Account is Verified!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Hi <strong>{{customer_name}}</strong>,
+                            </p>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Great news! Your ID has been verified and your MyLegacy Cannabis account is now <strong>ACTIVE</strong>. 🎉
+                            </p>
+                            
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 15px 0;">
+                                    <strong>🎁 You're Ready to Shop!</strong>
+                                </p>
+                                <p style="color:#666666; font-size:14px; line-height:1.6; margin:0;">
+                                    Browse our premium cannabis selection and enjoy fast, discreet delivery across the GTA.
+                                </p>
+                            </div>
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{shop_url}}" style="display:inline-block; background-color:#4CAF50; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">
+                                            🛒 Start Shopping Now
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:14px; line-height:1.6; margin:0 0 10px 0;">
+                                    <strong>💎 Your Account Benefits:</strong>
+                                </p>
+                                <ul style="color:#666666; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
+                                    <li><strong>Earn 1 point per $1</strong> spent on every order</li>
+                                    <li>Redeem points for discounts on future orders</li>
+                                    <li>Track your order history and deliveries</li>
+                                    <li>Save delivery addresses for faster checkout</li>
+                                    <li>Exclusive member-only promotions</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:13px; line-height:1.5; margin:0;">
+                                    📍 <strong>Delivery Zone:</strong> GTA-wide (Downtown: $5, Scarborough: $10, Mississauga: $12)<br>
+                                    💰 <strong>Minimum Order:</strong> $40<br>
+                                    🕒 <strong>Operating Hours:</strong> 10 AM - 10 PM Daily
+                                </p>
+                            </div>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">
+                                Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">
+                                MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>
+                                📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily
+                            </p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">
+                                © 2026 MyLegacy Cannabis. All rights reserved.<br>
+                                <a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | 
+                                <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","shop_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "order-confirmation",
+    name: "Order Confirmation",
+    subject: "Order Confirmed — #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">
+                                📦 Order Confirmed!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Hi <strong>{{customer_name}}</strong>,
+                            </p>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
+                                Thank you for your order! We've received your order <strong>#{{order_id}}</strong> and it's ready for payment.
+                            </p>
+                            
+                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:4px;">
+                                <h3 style="color:#333333; margin:0 0 15px 0; font-size:18px;">📋 Order Summary</h3>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Order Number:</strong>
+                                            <span style="color:#666666; font-size:14px;">#{{order_id}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Total Amount:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{order_total}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:10px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Items:</strong><br>
+                                            <span style="color:#666666; font-size:13px;">{{order_items}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Delivery Address:</strong><br>
+                                            <span style="color:#666666; font-size:13px;">{{delivery_address}}</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <h3 style="color:#333333; margin:0 0 15px 0; font-size:16px;">💰 Next Step: Send Payment via Interac e-Transfer</h3>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Send To:</strong>
+                                            <span style="color:#666666; font-size:14px;">payments@mylegacycannabis.ca</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Amount:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{payment_amount}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:5px 0;">
+                                            <strong style="color:#333333; font-size:14px;">Reference:</strong>
+                                            <span style="color:#666666; font-size:14px;">{{payment_reference}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:10px 0 0 0;">
+                                            <em style="color:#666666; font-size:12px;">⚠️ IMPORTANT: Include the reference number in your e-transfer message</em>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:13px; line-height:1.5; margin:0;">
+                                    <strong>⏱️ Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours will be automatically cancelled.
+                                </p>
+                            </div>
+                            
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">
+                                Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">
+                                MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>
+                                📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily
+                            </p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">
+                                © 2026 MyLegacy Cannabis. All rights reserved.<br>
+                                <a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | 
+                                <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "payment-received-customer",
+    name: "Payment Received (Customer)",
+    subject: "Payment Received — Order #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">✅ Payment Received</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Payment Received]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "payment-received-admin",
+    name: "Admin: Payment Received",
+    subject: "New Payment Received — Order #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Payment Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">💰 New Payment Received</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for New Payment Received]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-order-placed",
+    name: "Guest Order Placed",
+    subject: "Order Received — #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">📦 Order Received</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Order Received]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-id-pending-admin",
+    name: "Admin: Guest ID Pending",
+    subject: "New Guest ID Verification — Order #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Guest Order</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">🆔 New Guest Order</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for New Guest Order]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-id-rejected",
+    name: "Guest ID Verification Rejected",
+    subject: "ID Verification Failed — MyLegacy Cannabis",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Verification Failed</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #F44336 0%, #E91E63 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">⚠️ ID Verification Failed</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for ID Verification Failed]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-id-verified",
+    name: "Guest ID Verified",
+    subject: "ID Verified — Your Order is Being Processed",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Verified</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">✅ ID Verified</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for ID Verified]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-payment-received",
+    name: "Guest Payment Received",
+    subject: "Payment Received — Order #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">✅ Payment Received</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Payment Received]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "guest-payment-admin",
+    name: "Admin: Guest Payment Received",
+    subject: "Guest Payment Received — Order #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Payment Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">💰 Guest Payment Received</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Guest Payment Received]</p>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+];
