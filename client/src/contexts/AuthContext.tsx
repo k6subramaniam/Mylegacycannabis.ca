@@ -103,11 +103,33 @@ function transformBackendUser(userData: Record<string, unknown>, fallbackEmail?:
   };
 }
 
+// Age gate helper — shared across client
+function isAtLeast19(dob: string): boolean {
+  if (!dob) return true; // no birthday = skip check (optional field)
+  const parts = dob.split('-');
+  if (parts.length !== 3) return true;
+  const birthYear = parseInt(parts[0], 10);
+  const birthMonth = parseInt(parts[1], 10) - 1;
+  const birthDay = parseInt(parts[2], 10);
+  if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return true;
+  const today = new Date();
+  let age = today.getFullYear() - birthYear;
+  if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
+  return age >= 19;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('mlc-user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      // Clear invalid underage birthday from cached profile
+      if (parsed?.birthday && !isAtLeast19(parsed.birthday)) {
+        parsed.birthday = '';
+        localStorage.setItem('mlc-user', JSON.stringify(parsed));
+      }
+      return parsed;
     } catch { return null; }
   });
 
@@ -218,6 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback((data: Partial<User>) => {
+    // Block saving an underage birthday
+    if (data.birthday && !isAtLeast19(data.birthday)) {
+      return;
+    }
     setUser(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...data };

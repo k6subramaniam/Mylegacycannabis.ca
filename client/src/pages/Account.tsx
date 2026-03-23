@@ -113,13 +113,21 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
   const [phone, setPhone] = useState(user.phone || '');
-  const [birthday, setBirthday] = useState(user.birthday || '');
+  // If the stored birthday is underage, clear it so the user must re-enter a valid date
+  const [birthday, setBirthday] = useState(() => {
+    const stored = user.birthday || '';
+    if (stored && !isAtLeast19(stored)) return '';
+    return stored;
+  });
+  const [birthdayError, setBirthdayError] = useState('');
 
   const handleSave = () => {
     if (birthday && !isAtLeast19(birthday)) {
+      setBirthdayError('You must be 19 years of age or older.');
       toast.error('You must be 19 years of age or older.');
       return;
     }
+    setBirthdayError('');
     updateProfile({ firstName, lastName, phone, birthday });
     toast.success('Profile updated');
   };
@@ -146,9 +154,9 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Birthday <span className="text-[#F15929]">(earn {BIRTHDAY_BONUS} bonus points!)</span></label>
-            <input type="date" value={birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => setBirthday(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
-            {birthday && !isAtLeast19(birthday) && <p className="text-xs text-red-500 font-body mt-1">You must be 19 years of age or older.</p>}
+            <label className="text-xs text-gray-500 font-body block mb-1">Birthday <span className="text-[#F15929]">(must be 19+ — earn {BIRTHDAY_BONUS} bonus points!)</span></label>
+            <input type="date" value={birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => { setBirthday(e.target.value); setBirthdayError(''); }} className={`w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-2 focus:ring-2 focus:ring-[#4B2D8E] ${birthdayError ? 'border-red-400' : 'border-transparent'}`} />
+            {(birthdayError || (birthday && !isAtLeast19(birthday))) && <p className="text-xs text-red-500 font-body mt-1">{birthdayError || 'You must be 19 years of age or older.'}</p>}
           </div>
         </div>
         <button onClick={handleSave} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all">SAVE CHANGES</button>
