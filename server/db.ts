@@ -20,25 +20,14 @@ let _sql: ReturnType<typeof postgres> | null = null;
 function getDb(): PostgresJsDatabase<typeof schema> {
   if (!_db) {
     if (!DATABASE_URL) throw new Error("DATABASE_URL is not configured");
-    // Parse the URL manually to handle special characters in password (e.g. #, /)
-    // that may not survive URL-encoding through Railway's env var injection.
-    try {
-      const parsed = new URL(DATABASE_URL);
-      _sql = postgres({
-        host: parsed.hostname,
-        port: parsed.port ? parseInt(parsed.port) : 5432,
-        database: parsed.pathname.replace(/^\//, ""),
-        username: decodeURIComponent(parsed.username),
-        password: decodeURIComponent(parsed.password),
-        ssl: "require",
-        max: 10,
-        idle_timeout: 20,
-        connect_timeout: 30,
-      });
-    } catch {
-      // Fallback to raw URL if parsing fails
-      _sql = postgres(DATABASE_URL, { max: 10, idle_timeout: 20, connect_timeout: 30, ssl: "require" });
-    }
+    _sql = postgres(DATABASE_URL, {
+      max: 10,
+      idle_timeout: 20,
+      connect_timeout: 10,
+      prepare: false, // Required for Supabase transaction pooler (port 6543)
+      ssl: { rejectUnauthorized: false },
+      onnotice: () => {}, // Suppress NOTICE messages (e.g. "relation already exists")
+    });
     _db = drizzle(_sql, { schema });
   }
   return _db;
@@ -54,6 +43,7 @@ export async function initializeDatabase(): Promise<void> {
     return;
   }
 
+  console.log("[DB] Connecting to PostgreSQL...");
   const db = getDb();
 
   // Create enums & tables if they don't exist
