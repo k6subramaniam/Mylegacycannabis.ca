@@ -36,55 +36,23 @@ const seedShippingZones = [
   { zoneName: "Northern Territories", provinces: ["YT", "NT", "NU"], rate: "25.00", deliveryDays: "7-14 business days", isActive: true },
 ];
 
+// NOTE: This is a legacy MySQL seeder. The canonical email templates (all 13)
+// now live in server/emailTemplateSeeds.ts and are auto-synced on server startup.
+// The templates below are kept for backward compatibility only.
 const seedEmailTemplates = [
-  {
-    slug: "order-confirmation",
-    name: "Order Confirmation",
-    subject: "Order Confirmed — {{orderNumber}}",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">Order Confirmed!</h2><p>Hi {{customerName}},</p><p>Thank you for your order <strong>{{orderNumber}}</strong>. We've received it and will begin processing once payment is confirmed.</p><h3 style="color:#4B2D8E;">Payment Instructions</h3><p>Please send an Interac e-Transfer of <strong>{{total}}</strong> to:</p><p style="background:#F5F5F5;padding:15px;border-radius:8px;"><strong>payments@mylegacycannabis.ca</strong><br/>Include your order number <strong>{{orderNumber}}</strong> in the message.</p><h3 style="color:#4B2D8E;">Order Summary</h3>{{orderItems}}<p><strong>Subtotal:</strong> {{subtotal}}<br/><strong>Shipping:</strong> {{shipping}}<br/><strong>Total:</strong> {{total}}</p><p>Questions? Reply to this email or call us at (437) 215-4722.</p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["orderNumber", "customerName", "total", "subtotal", "shipping", "orderItems"],
-    isActive: true,
-  },
-  {
-    slug: "order-shipped",
-    name: "Order Shipped",
-    subject: "Your Order {{orderNumber}} Has Shipped!",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">Your Order Has Shipped!</h2><p>Hi {{customerName}},</p><p>Great news! Your order <strong>{{orderNumber}}</strong> is on its way.</p><p style="background:#F5F5F5;padding:15px;border-radius:8px;"><strong>Tracking Number:</strong> {{trackingNumber}}<br/><a href="{{trackingUrl}}" style="color:#F15929;">Track Your Package</a></p><p>Estimated delivery: {{deliveryEstimate}}</p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["orderNumber", "customerName", "trackingNumber", "trackingUrl", "deliveryEstimate"],
-    isActive: true,
-  },
-  {
-    slug: "order-delivered",
-    name: "Order Delivered",
-    subject: "Your Order {{orderNumber}} Has Been Delivered",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">Order Delivered!</h2><p>Hi {{customerName}},</p><p>Your order <strong>{{orderNumber}}</strong> has been delivered. We hope you enjoy your products!</p><p>Don't forget — you earned <strong>{{pointsEarned}} reward points</strong> with this purchase.</p><p><a href="https://mylegacycannabis.ca/rewards" style="background:#F15929;color:#fff;padding:12px 24px;border-radius:25px;text-decoration:none;display:inline-block;">Check Your Rewards</a></p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["orderNumber", "customerName", "pointsEarned"],
-    isActive: true,
-  },
-  {
-    slug: "id-approved",
-    name: "ID Verification Approved",
-    subject: "Your ID Has Been Verified — My Legacy Cannabis",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">ID Verified!</h2><p>Hi {{customerName}},</p><p>Your ID verification has been <strong style="color:green;">approved</strong>. You can now place orders without re-verifying.</p><p><a href="https://mylegacycannabis.ca/shop" style="background:#F15929;color:#fff;padding:12px 24px;border-radius:25px;text-decoration:none;display:inline-block;">Start Shopping</a></p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["customerName"],
-    isActive: true,
-  },
-  {
-    slug: "id-rejected",
-    name: "ID Verification Rejected",
-    subject: "ID Verification Update — My Legacy Cannabis",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">ID Verification Update</h2><p>Hi {{customerName}},</p><p>Unfortunately, your ID verification was <strong style="color:red;">not approved</strong>.</p><p><strong>Reason:</strong> {{reason}}</p><p>Please resubmit a clear photo of a valid government-issued ID.</p><p><a href="https://mylegacycannabis.ca/account/verify-id" style="background:#F15929;color:#fff;padding:12px 24px;border-radius:25px;text-decoration:none;display:inline-block;">Resubmit ID</a></p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["customerName", "reason"],
-    isActive: true,
-  },
-  {
-    slug: "payment-received",
-    name: "Payment Received",
-    subject: "Payment Received for Order {{orderNumber}}",
-    bodyHtml: `<div style="font-family:Roboto,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#4B2D8E;padding:20px;text-align:center;"><h1 style="color:#fff;margin:0;">My Legacy Cannabis</h1></div><div style="padding:30px;"><h2 style="color:#4B2D8E;">Payment Received!</h2><p>Hi {{customerName}},</p><p>We've received your e-Transfer payment for order <strong>{{orderNumber}}</strong>. Your order is now being processed and will ship soon.</p></div><div style="background:#333;color:#fff;padding:15px;text-align:center;font-size:12px;">My Legacy Cannabis — Open 24/7</div></div>`,
-    variables: ["orderNumber", "customerName"],
-    isActive: true,
-  },
+  { slug: "welcome-email", name: "Welcome Email", subject: "Welcome to MyLegacy Cannabis, {{customer_name}}!", bodyHtml: "<h1>Welcome!</h1><p>Hi {{customer_name}}, welcome to MyLegacy Cannabis.</p>", variables: ["customer_name","account_url","unsubscribe_url","privacy_url","terms_url"], isActive: true },
+  { slug: "admin-id-pending", name: "Admin: ID Verification Pending", subject: "New ID Verification Required — {{customer_name}}", bodyHtml: "<h1>New ID Pending</h1><p>{{customer_name}} ({{customer_email}}) submitted ID verification.</p>", variables: ["customer_name","customer_email","user_id","submission_date","id_type","admin_review_url"], isActive: true },
+  { slug: "id-rejected", name: "ID Verification Rejected", subject: "ID Verification Update — MyLegacy Cannabis", bodyHtml: "<h1>ID Rejected</h1><p>Hi {{customer_name}}, your ID was not approved. Reason: {{rejection_reason}}</p>", variables: ["customer_name","rejection_reason","resubmit_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "id-verified", name: "Account Verified", subject: "Your Account is Verified — MyLegacy Cannabis", bodyHtml: "<h1>Verified!</h1><p>Hi {{customer_name}}, your account is now verified.</p>", variables: ["customer_name","shop_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "order-confirmation", name: "Order Confirmation", subject: "Order Confirmed — #{{order_id}}", bodyHtml: "<h1>Order Confirmed!</h1><p>Hi {{customer_name}}, order #{{order_id}} confirmed.</p>", variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "payment-received-customer", name: "Payment Received (Customer)", subject: "Payment Received — Order #{{order_id}}", bodyHtml: "<h1>Payment Received</h1><p>Hi {{customer_name}}, payment for order #{{order_id}} received.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "payment-received-admin", name: "Payment Received (Admin)", subject: "New Payment Received — Order #{{order_id}}", bodyHtml: "<h1>Payment Received</h1><p>Payment received for order #{{order_id}}.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-order-placed", name: "Guest Order Placed", subject: "Order Received — #{{order_id}}", bodyHtml: "<h1>Order Received</h1><p>Hi {{customer_name}}, your order #{{order_id}} has been received.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-id-pending-admin", name: "Guest ID Pending (Admin)", subject: "New Guest ID Verification — Order #{{order_id}}", bodyHtml: "<h1>Guest ID Pending</h1><p>Guest {{customer_name}} submitted ID for order #{{order_id}}.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-id-rejected", name: "Guest ID Rejected", subject: "ID Verification Failed — MyLegacy Cannabis", bodyHtml: "<h1>ID Rejected</h1><p>Hi {{customer_name}}, your guest ID verification failed.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-id-verified", name: "Guest ID Verified", subject: "ID Verified — Your Order is Being Processed", bodyHtml: "<h1>ID Verified</h1><p>Hi {{customer_name}}, your ID is verified. Order #{{order_id}} is being processed.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-payment-received", name: "Guest Payment Received", subject: "Payment Received — Order #{{order_id}}", bodyHtml: "<h1>Payment Received</h1><p>Hi {{customer_name}}, payment for order #{{order_id}} received.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
+  { slug: "guest-payment-admin", name: "Guest Payment (Admin)", subject: "Guest Payment Received — Order #{{order_id}}", bodyHtml: "<h1>Guest Payment</h1><p>Guest payment received for order #{{order_id}}.</p>", variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"], isActive: true },
 ];
 
 async function seed() {

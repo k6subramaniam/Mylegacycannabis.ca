@@ -10,6 +10,7 @@ import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, desc, sql, ilike, or, and, gte, lte, count } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
+import { EMAIL_TEMPLATE_SEEDS } from "./emailTemplateSeeds";
 
 // ─── CONNECTION ───
 const DATABASE_URL = process.env.DATABASE_URL || "";
@@ -249,6 +250,75 @@ export async function initializeDatabase(): Promise<void> {
     await seedPersistentData(db);
   } else {
     console.log(`[DB] Database has ${existingUsers[0].cnt} users — skipping seed`);
+  }
+
+  // Always upsert email templates (ensures new templates are added to existing DBs)
+  await syncEmailTemplates(db);
+}
+
+/**
+ * Sync all 13 email templates from the canonical seed data.
+ * - Inserts templates that don't exist yet
+ * - Updates templates that still have placeholder/basic HTML (< 500 chars)
+ *   with the full rich HTML from the PHP originals
+ * - Deactivates legacy templates superseded by new ones
+ */
+async function syncEmailTemplates(db: PostgresJsDatabase<typeof schema>) {
+  const existing = await db.select({
+    id: schema.emailTemplates.id,
+    slug: schema.emailTemplates.slug,
+    bodyHtml: schema.emailTemplates.bodyHtml,
+  }).from(schema.emailTemplates);
+
+  const existingMap = new Map(existing.map(e => [e.slug, e]));
+  let inserted = 0;
+  let updated = 0;
+
+  for (const t of EMAIL_TEMPLATE_SEEDS) {
+    const ex = existingMap.get(t.slug);
+    if (!ex) {
+      // New template — insert it
+      await db.insert(schema.emailTemplates).values({
+        slug: t.slug,
+        name: t.name,
+        subject: t.subject,
+        bodyHtml: t.bodyHtml,
+        variables: t.variables,
+        isActive: t.isActive,
+      });
+      inserted++;
+    } else if (ex.bodyHtml.length < 500) {
+      // Existing template with basic/placeholder HTML — upgrade to rich version
+      await db.update(schema.emailTemplates)
+        .set({
+          name: t.name,
+          subject: t.subject,
+          bodyHtml: t.bodyHtml,
+          variables: t.variables,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.emailTemplates.id, ex.id));
+      updated++;
+    }
+    // If bodyHtml >= 500 chars, template was already rich or admin-edited — skip
+  }
+
+  // Deactivate legacy templates that are superseded by new ones
+  const legacySlugs = ['id-verification-approved', 'order-shipped', 'order-delivered'];
+  const seedSlugs = new Set(EMAIL_TEMPLATE_SEEDS.map(t => t.slug));
+  for (const slug of legacySlugs) {
+    if (!seedSlugs.has(slug) && existingMap.has(slug)) {
+      await db.update(schema.emailTemplates)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(schema.emailTemplates.slug, slug));
+    }
+  }
+
+  const total = existing.length + inserted;
+  if (inserted > 0 || updated > 0) {
+    console.log(`[DB] Synced email templates: ${inserted} added, ${updated} upgraded (${total} total)`);
+  } else {
+    console.log(`[DB] Email templates up to date (${total} total)`);
   }
 }
 
@@ -718,11 +788,15 @@ function getSeedData() {
     { zoneName: 'Rest of Canada', provinces: ['MB','SK','NS','NB','NL','PE','NT','YT','NU'], rate: '16.99', freeThreshold: '175.00', estimatedDays: '7-10', deliveryDays: '7-10', isActive: true },
   ];
 
-  const seedEmailTemplates: schema.InsertEmailTemplate[] = [
-    { slug: 'order-confirmation', name: 'Order Confirmation', subject: 'Your My Legacy Cannabis Order #{{orderNumber}}', bodyHtml: '<h1>Thank you for your order!</h1><p>Hi {{customerName}},</p><p>Your order #{{orderNumber}} has been confirmed.</p>', isActive: true },
-    { slug: 'order-shipped', name: 'Order Shipped', subject: 'Your order #{{orderNumber}} has shipped!', bodyHtml: '<h1>Your order is on the way!</h1><p>Hi {{customerName}},</p><p>Your order #{{orderNumber}} has shipped.</p>', isActive: true },
-    { slug: 'id-verification-approved', name: 'ID Verification Approved', subject: 'Your ID has been verified — My Legacy Cannabis', bodyHtml: '<h1>ID Verified!</h1><p>Hi {{customerName}}, your ID has been successfully verified.</p>', isActive: true },
-  ];
+  // All 13 email templates converted from WordPress PHP originals
+  const seedEmailTemplates: schema.InsertEmailTemplate[] = EMAIL_TEMPLATE_SEEDS.map(t => ({
+    slug: t.slug,
+    name: t.name,
+    subject: t.subject,
+    bodyHtml: t.bodyHtml,
+    variables: t.variables,
+    isActive: t.isActive,
+  }));
 
   const seedOrders: Array<{ order: schema.InsertOrder; items: Omit<schema.InsertOrderItem, 'orderId'>[] }> = [
     { order: { orderNumber: 'ORD-2024-001', status: 'delivered', paymentStatus: 'confirmed', total: '83.00', subtotal: '83.00', shippingCost: '9.99', discount: '0', guestName: 'John Smith', guestEmail: 'john@example.com', shippingAddress: { street: '123 Main St', city: 'Toronto', province: 'ON', postalCode: 'M5H 2N2', country: 'Canada' }, trackingNumber: 'TRKEXAMPLE001' }, items: [{ productName: 'Blue Dream', price: '38.00', quantity: 1 }, { productName: 'Indica Pre-Roll Pack', price: '25.00', quantity: 1 }, { productName: 'Premium Grinder', price: '25.00', quantity: 1 }] },
