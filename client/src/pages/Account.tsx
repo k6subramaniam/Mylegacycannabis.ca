@@ -89,6 +89,26 @@ export default function Account() {
   );
 }
 
+function isAtLeast19(dob: string): boolean {
+  if (!dob) return false;
+  const parts = dob.split('-');
+  if (parts.length !== 3) return false;
+  const birthYear = parseInt(parts[0], 10);
+  const birthMonth = parseInt(parts[1], 10) - 1;
+  const birthDay = parseInt(parts[2], 10);
+  if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return false;
+  const today = new Date();
+  let age = today.getFullYear() - birthYear;
+  if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
+  return age >= 19;
+}
+
+function maxBirthdayDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 19);
+  return d.toISOString().split('T')[0];
+}
+
 function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any) => void }) {
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
@@ -96,6 +116,10 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
   const [birthday, setBirthday] = useState(user.birthday || '');
 
   const handleSave = () => {
+    if (birthday && !isAtLeast19(birthday)) {
+      toast.error('You must be 19 years of age or older.');
+      return;
+    }
     updateProfile({ firstName, lastName, phone, birthday });
     toast.success('Profile updated');
   };
@@ -123,7 +147,8 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
           </div>
           <div>
             <label className="text-xs text-gray-500 font-body block mb-1">Birthday <span className="text-[#F15929]">(earn {BIRTHDAY_BONUS} bonus points!)</span></label>
-            <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
+            <input type="date" value={birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => setBirthday(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
+            {birthday && !isAtLeast19(birthday) && <p className="text-xs text-red-500 font-body mt-1">You must be 19 years of age or older.</p>}
           </div>
         </div>
         <button onClick={handleSave} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all">SAVE CHANGES</button>
@@ -332,7 +357,12 @@ function RegisterForm() {
     e.preventDefault();
     setError('');
     if (!form.birthday) {
-      toast.error('Birthday is required');
+      toast.error('Birthday is required. You must be 19 or older.');
+      return;
+    }
+    if (!isAtLeast19(form.birthday)) {
+      toast.error('You must be 19 years of age or older to create an account.');
+      setError('You must be 19 years of age or older to create an account.');
       return;
     }
     const result = await doRegister(form as { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string });
@@ -381,8 +411,9 @@ function RegisterForm() {
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Birthday * <span className="text-[#F15929]">(earn {BIRTHDAY_BONUS} bonus pts!)</span></label>
-            <input type="date" value={form.birthday} onChange={e => setForm({...form, birthday: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
+            <label className="text-xs text-gray-500 font-body block mb-1">Birthday * <span className="text-[#F15929]">(must be 19+ — earn {BIRTHDAY_BONUS} bonus pts!)</span></label>
+            <input type="date" value={form.birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => setForm({...form, birthday: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
+            {form.birthday && !isAtLeast19(form.birthday) && <p className="text-xs text-red-500 font-body mt-1">You must be 19 years of age or older.</p>}
           </div>
           <p className="text-xs text-gray-400 font-body">You must be 19 years or older. ID verification required before first order.</p>
           {error && <p className="text-sm text-red-500 font-body text-center">{error}</p>}

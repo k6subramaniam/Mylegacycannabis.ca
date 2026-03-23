@@ -427,6 +427,12 @@ export function registerCustomAuthRoutes(app: Express) {
         return;
       }
 
+      // ─── AGE GATE: must be 19+ ───
+      if (birthday && !isAtLeast19(birthday)) {
+        res.status(403).json({ error: "You must be 19 years of age or older." });
+        return;
+      }
+
       const updates: Record<string, any> = { phone: normalizedPhone };
       if (birthday) updates.birthday = birthday;
       if (name) updates.name = name;

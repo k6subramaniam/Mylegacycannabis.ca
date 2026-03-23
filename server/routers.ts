@@ -46,6 +46,23 @@ export const appRouter = router({
       phone: z.string().min(1),
       birthday: z.string().min(1),
     })).mutation(async ({ input }) => {
+      // ─── AGE GATE: must be 19+ ───
+      if (input.birthday) {
+        const parts = input.birthday.split('-');
+        if (parts.length === 3) {
+          const birthYear = parseInt(parts[0], 10);
+          const birthMonth = parseInt(parts[1], 10) - 1;
+          const birthDay = parseInt(parts[2], 10);
+          if (!isNaN(birthYear) && !isNaN(birthMonth) && !isNaN(birthDay)) {
+            const today = new Date();
+            let age = today.getFullYear() - birthYear;
+            if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
+            if (age < 19) {
+              return { success: false, error: "You must be 19 years of age or older to create an account." };
+            }
+          }
+        }
+      }
       const existing = await db.getUserByEmail(input.email);
       if (existing && existing.authMethod === 'email') {
         return { success: false, error: "Email already registered. Please sign in instead." };
