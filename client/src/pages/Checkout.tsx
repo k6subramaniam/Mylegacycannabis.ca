@@ -162,7 +162,7 @@ function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verifi
    ================================================================ */
 export default function Checkout() {
   const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, addOrder } = useAuth();
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -294,6 +294,22 @@ export default function Checkout() {
       });
       setOrderNumber(result.orderNumber);
       setOrderPlaced(true);
+
+      // Add the order to the user's orders list so it shows on the Account > Orders tab
+      if (isAuthenticated) {
+        addOrder({
+          id: result.orderNumber,
+          date: new Date().toISOString(),
+          status: 'processing',
+          total: total,
+          items: items.map(item => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price,
+          })),
+        });
+      }
+
       clearCart();
       toast.success('Order placed successfully!');
     } catch (err: any) {

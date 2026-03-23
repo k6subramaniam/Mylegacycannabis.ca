@@ -23,6 +23,24 @@ export const appRouter = router({
       if (!user) {
         return { success: false, error: "User not found" };
       }
+      // Fetch orders for this user from the DB
+      const userOrders = await db.getUserOrders(user.id);
+      const formattedOrders = [];
+      for (const o of userOrders) {
+        const items = await db.getOrderItems(o.id);
+        formattedOrders.push({
+          id: o.orderNumber || `ORD-${o.id}`,
+          date: o.createdAt?.toISOString?.() || new Date().toISOString(),
+          status: o.status || 'processing',
+          total: parseFloat((o as any).total || '0'),
+          items: items.map((i: any) => ({
+            name: i.productName || 'Item',
+            quantity: i.quantity || 1,
+            price: parseFloat(i.price || '0'),
+          })),
+          trackingNumber: (o as any).trackingNumber || undefined,
+        });
+      }
       return {
         success: true,
         user: {
@@ -36,7 +54,7 @@ export const appRouter = router({
           rewardsPoints: user.rewardPoints || 0,
           rewardsHistory: [],
           referralCode: '',
-          orders: [],
+          orders: formattedOrders,
         },
       };
     }),

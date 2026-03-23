@@ -65,6 +65,7 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
   submitIdVerification: (frontFile: File, selfieFile?: File | null) => Promise<true | string>;
+  addOrder: (order: Order) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -256,6 +257,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const addOrder = useCallback((order: Order) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      // Avoid duplicates by order id
+      const exists = prev.orders.some(o => o.id === order.id);
+      const updated = exists ? prev : { ...prev, orders: [order, ...prev.orders] };
+      persistUserToLocalStorage(updated);
+      return updated;
+    });
+  }, []);
+
   const submitIdVerification = useCallback(async (frontFile: File, selfieFile?: File | null): Promise<true | string> => {
     try {
       // Convert files to base64
@@ -322,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       updateProfile,
       submitIdVerification,
+      addOrder,
     }}>
       {children}
     </AuthContext.Provider>
