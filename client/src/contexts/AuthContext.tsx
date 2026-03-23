@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const transformedUser = transformBackendUser(data.user, email);
         setUser(transformedUser);
-        localStorage.setItem('mlc-user', JSON.stringify(transformedUser));
+        persistUserToLocalStorage(transformedUser);
         return true;
       }
       return 'Login failed. Please try again.';
@@ -186,6 +186,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }): Promise<true | string> => {
+    // Client-side age guard before making any network request
+    if (!data.birthday || !isAtLeast19(data.birthday)) {
+      return 'You must be 19 years of age or older to create an account.';
+    }
     try {
       const response = await fetch('/api/trpc/auth.register', {
         method: 'POST',
@@ -218,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           referralCode: data.firstName.toUpperCase().slice(0, 4) + Date.now().toString().slice(-4),
         };
         setUser(newUser);
-        localStorage.setItem('mlc-user', JSON.stringify(newUser));
+        persistUserToLocalStorage(newUser);
         return true;
       }
       return 'Registration failed. Please try again.';
@@ -247,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...data };
-      localStorage.setItem('mlc-user', JSON.stringify(updated));
+      persistUserToLocalStorage(updated);
       return updated;
     });
   }, []);

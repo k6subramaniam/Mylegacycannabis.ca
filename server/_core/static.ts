@@ -14,10 +14,25 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Hashed JS/CSS assets get long-lived cache; everything else gets no-cache
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (filePath.includes('/assets/') && /[-][A-Za-z0-9_-]{6,}\.\w+$/.test(path.basename(filePath))) {
+        // Hashed asset (e.g. index-BGLpvbiN.js) — immutable
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // Non-hashed asset or HTML — never cache
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    // HTML must never be cached so browsers always get the latest hashed asset references
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

@@ -8,6 +8,8 @@ import { Link } from "wouter";
 export default function AdminDashboard() {
   const { data: stats, isLoading } = trpc.admin.stats.useQuery(undefined, {
     refetchInterval: 30_000, // re-poll every 30s so new orders/verifications appear without a refresh
+    refetchOnWindowFocus: true,
+    staleTime: 0, // always refetch when the query is invalidated or component mounts
   });
 
   if (isLoading) {

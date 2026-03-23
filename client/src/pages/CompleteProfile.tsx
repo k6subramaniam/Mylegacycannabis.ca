@@ -6,6 +6,26 @@ import { toast } from 'sonner';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
 
+function isAtLeast19(dob: string): boolean {
+  if (!dob) return true; // optional field
+  const parts = dob.split('-');
+  if (parts.length !== 3) return true;
+  const birthYear = parseInt(parts[0], 10);
+  const birthMonth = parseInt(parts[1], 10) - 1;
+  const birthDay = parseInt(parts[2], 10);
+  if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return true;
+  const today = new Date();
+  let age = today.getFullYear() - birthYear;
+  if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
+  return age >= 19;
+}
+
+function maxBirthdayDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 19);
+  return d.toISOString().split('T')[0];
+}
+
 export default function CompleteProfile() {
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
@@ -18,6 +38,10 @@ export default function CompleteProfile() {
   const handleSubmit = async () => {
     if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {
       setError('Please enter a valid 10-digit phone number');
+      return;
+    }
+    if (birthday && !isAtLeast19(birthday)) {
+      setError('You must be 19 years of age or older.');
       return;
     }
 
@@ -131,9 +155,12 @@ export default function CompleteProfile() {
                   <input
                     type="date"
                     value={birthday}
-                    onChange={e => setBirthday(e.target.value)}
+                    max={maxBirthdayDate()}
+                    min="1900-01-01"
+                    onChange={e => { setBirthday(e.target.value); setError(''); }}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
                   />
+                  {birthday && !isAtLeast19(birthday) && <p className="text-xs text-red-500 font-body mt-1">You must be 19 years of age or older.</p>}
                 </div>
               </div>
 

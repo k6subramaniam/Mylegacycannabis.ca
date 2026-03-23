@@ -159,7 +159,10 @@ export default function AdminOrders({ routeId }: { routeId?: string }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
-  const { data, isLoading } = trpc.admin.orders.list.useQuery({ page, limit: 20, search: search || undefined, status: status || undefined });
+  const { data, isLoading } = trpc.admin.orders.list.useQuery(
+    { page, limit: 20, search: search || undefined, status: status || undefined },
+    { refetchOnWindowFocus: true },
+  );
   const totalPages = Math.ceil((data?.total ?? 0) / 20);
 
   return (

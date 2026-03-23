@@ -10,17 +10,23 @@ export default function AdminVerifications() {
   const [reviewNotes, setReviewNotes] = useState("");
 
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.admin.verifications.list.useQuery({ page, limit: 20, status: status || undefined });
+  const { data, isLoading } = trpc.admin.verifications.list.useQuery(
+    { page, limit: 20, status: status || undefined },
+    { refetchOnWindowFocus: true },
+  );
   const { data: detail } = trpc.admin.verifications.get.useQuery({ id: selectedId! }, { enabled: !!selectedId });
   const reviewMutation = trpc.admin.verifications.review.useMutation({
     onSuccess: () => {
       // Invalidate all related admin queries so changes propagate across pages
-      utils.admin.verifications.list.invalidate();
-      utils.admin.verifications.get.invalidate({ id: selectedId! });
-      utils.admin.stats.invalidate();          // Dashboard: pending verification count
-      utils.admin.orders.list.invalidate();     // Orders list: ID Review badge
-      utils.admin.orders.get.invalidate();      // Order detail: held alert
-      utils.admin.activityLog.invalidate();     // Activity log: new review entry
+      // Use Promise.all to ensure all invalidations complete
+      Promise.all([
+        utils.admin.verifications.list.invalidate(),
+        utils.admin.verifications.get.invalidate({ id: selectedId! }),
+        utils.admin.stats.invalidate(),          // Dashboard: pending verification count
+        utils.admin.orders.list.invalidate(),     // Orders list: ID Review badge
+        utils.admin.orders.get.invalidate(),      // Order detail: held alert
+        utils.admin.activityLog.invalidate(),     // Activity log: new review entry
+      ]).catch(() => {}); // Invalidations are best-effort
       toast.success("Verification reviewed");
       setSelectedId(null);
       setReviewNotes("");
