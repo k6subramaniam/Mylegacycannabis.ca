@@ -123,6 +123,13 @@ export function registerVerifyRoutes(app: Express | Router) {
   // ──────────────────────────────────────────────────────────
   app.get("/api/verify/check", async (req, res) => {
     const email = ((req.query.email as string) || "").trim().toLowerCase();
+    const token = ((req.query.token as string) || "").trim();
+
+    // If a token is provided, check the verification by token (for email approval links)
+    if (token) {
+      // Token-based lookup — not implemented yet, return null
+      return res.json({ id: null, status: null });
+    }
 
     if (email) {
       const result = await db.getAllVerifications({ email, limit: 1 });

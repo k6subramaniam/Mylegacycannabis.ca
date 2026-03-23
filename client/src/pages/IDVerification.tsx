@@ -48,11 +48,14 @@ export default function IDVerification() {
       .then(data => {
         if (data.id && data.status) {
           setSubmittedId(data.id);
-          setSubmittedStatus(data.status);
+          // Normalize status: DB stores 'pending', frontend expects 'pending' or 'pending_review'
+          setSubmittedStatus(data.status === 'pending' ? 'pending_review' : data.status);
           if (data.status === 'approved') {
             updateProfile({ idVerified: true, idVerificationStatus: 'approved' });
-          } else if (data.status === 'pending_review') {
+          } else if (data.status === 'pending') {
             updateProfile({ idVerificationStatus: 'pending' });
+          } else if (data.status === 'rejected') {
+            updateProfile({ idVerificationStatus: 'rejected' });
           }
         }
       })
@@ -194,6 +197,8 @@ export default function IDVerification() {
         const selfie = null;
         const result = await submitIdVerification(frontFile, selfie);
         if (result === true) {
+          setSubmittedStatus('pending_review');
+          setSubmittedId('submitted');
           toast.success('ID submitted for review!');
         } else {
           toast.error(result as string);
@@ -210,7 +215,7 @@ export default function IDVerification() {
 
         if (data.success) {
           setSubmittedId(String(data.verificationId));
-          setSubmittedStatus('pending');
+          setSubmittedStatus('pending_review');
           toast.success('ID submitted for review!');
         } else {
           toast.error(data.error || 'Submission failed');
