@@ -9,7 +9,7 @@ import { registerCustomAuthRoutes } from "../customAuth";
 import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
+import { serveStatic } from "./static";
 
 async function startServer() {
   const app = express();
@@ -37,6 +37,10 @@ async function startServer() {
   const distPublicPath = path.resolve(import.meta.dirname, "public");
   const hasBuild = fs.existsSync(distPublicPath);
   if (!hasBuild && process.env.NODE_ENV === "development") {
+    // Dynamic import: vite.ts pulls in "vite" (a devDependency) which
+    // doesn't exist in the production Docker image. Importing it lazily
+    // ensures the production server never tries to load it.
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
     serveStatic(app);
