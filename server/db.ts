@@ -58,38 +58,22 @@ export async function initializeDatabase(): Promise<void> {
 
   // Create enums & tables if they don't exist
   // Using raw SQL for idempotent DDL (CREATE IF NOT EXISTS)
-  await _sql!`
-    DO $$ BEGIN
-      CREATE TYPE auth_method AS ENUM ('phone','email','google');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE role AS ENUM ('user','admin');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE verification_code_type AS ENUM ('sms','email');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE verification_code_purpose AS ENUM ('login','register','verify');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE product_category AS ENUM ('flower','pre-rolls','edibles','vapes','concentrates','accessories');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE strain_type AS ENUM ('Sativa','Indica','Hybrid','CBD','N/A');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE order_status AS ENUM ('pending','confirmed','processing','shipped','delivered','cancelled','refunded');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE payment_status AS ENUM ('pending','received','confirmed','refunded');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE verification_status AS ENUM ('pending','approved','rejected');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-    DO $$ BEGIN
-      CREATE TYPE rewards_type AS ENUM ('earned','redeemed','bonus','deducted','admin_add','admin_deduct');
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
-  `;
+  // Create enums individually (pooler doesn't support multi-statement queries)
+  const enumDefs = [
+    { name: 'auth_method', values: "'phone','email','google'" },
+    { name: 'role', values: "'user','admin'" },
+    { name: 'verification_code_type', values: "'sms','email'" },
+    { name: 'verification_code_purpose', values: "'login','register','verify'" },
+    { name: 'product_category', values: "'flower','pre-rolls','edibles','vapes','concentrates','accessories'" },
+    { name: 'strain_type', values: "'Sativa','Indica','Hybrid','CBD','N/A'" },
+    { name: 'order_status', values: "'pending','confirmed','processing','shipped','delivered','cancelled','refunded'" },
+    { name: 'payment_status', values: "'pending','received','confirmed','refunded'" },
+    { name: 'verification_status', values: "'pending','approved','rejected'" },
+    { name: 'rewards_type', values: "'earned','redeemed','bonus','deducted','admin_add','admin_deduct'" },
+  ];
+  for (const e of enumDefs) {
+    await _sql!.unsafe(`DO $$ BEGIN CREATE TYPE ${e.name} AS ENUM (${e.values}); EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  }
 
   // Create tables
   await _sql!`
