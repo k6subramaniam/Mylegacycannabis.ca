@@ -41,6 +41,26 @@ export const appRouter = router({
           trackingNumber: (o as any).trackingNumber || undefined,
         });
       }
+      // Determine idVerificationStatus from DB — check both userId and email
+      let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
+      if (user.idVerified) {
+        idVerificationStatus = 'approved';
+      } else {
+        // Check verification records by email
+        const verifications = await db.getAllVerifications({ email: user.email || '', limit: 1 });
+        if (verifications.data.length > 0) {
+          const latest = verifications.data[0];
+          if (latest.status === 'approved') {
+            idVerificationStatus = 'approved';
+            // Also mark user as verified in DB since we found an approved verification
+            await db.updateUser(user.id, { idVerified: true });
+          } else if (latest.status === 'pending') {
+            idVerificationStatus = 'pending';
+          } else if (latest.status === 'rejected') {
+            idVerificationStatus = 'rejected';
+          }
+        }
+      }
       return {
         success: true,
         user: {
@@ -49,8 +69,8 @@ export const appRouter = router({
           name: user.name,
           phone: user.phone,
           birthday: user.birthday,
-          idVerified: user.idVerified,
-          idVerificationStatus: 'none',
+          idVerified: user.idVerified || idVerificationStatus === 'approved',
+          idVerificationStatus,
           rewardsPoints: user.rewardPoints || 0,
           rewardsHistory: [],
           referralCode: '',
@@ -101,6 +121,24 @@ export const appRouter = router({
       if (!newUser) {
         return { success: false, error: "Failed to create user" };
       }
+      // Check if user already has a verification on file (e.g. guest submitted ID before registering)
+      let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
+      if (newUser.idVerified) {
+        idVerificationStatus = 'approved';
+      } else {
+        const verifications = await db.getAllVerifications({ email: newUser.email || '', limit: 1 });
+        if (verifications.data.length > 0) {
+          const latest = verifications.data[0];
+          if (latest.status === 'approved') {
+            idVerificationStatus = 'approved';
+            await db.updateUser(newUser.id, { idVerified: true });
+          } else if (latest.status === 'pending') {
+            idVerificationStatus = 'pending';
+          } else if (latest.status === 'rejected') {
+            idVerificationStatus = 'rejected';
+          }
+        }
+      }
       return {
         success: true,
         user: {
@@ -109,8 +147,8 @@ export const appRouter = router({
           name: newUser.name,
           phone: newUser.phone,
           birthday: newUser.birthday,
-          idVerified: newUser.idVerified,
-          idVerificationStatus: 'none',
+          idVerified: newUser.idVerified || idVerificationStatus === 'approved',
+          idVerificationStatus,
           rewardsPoints: newUser.rewardPoints || 25,
           rewardsHistory: [],
           referralCode: '',
@@ -288,10 +326,18 @@ export const appRouter = router({
           reviewedAt: new Date(),
           reviewNotes: input.notes,
         });
-        // If approved and linked to a user, mark user as verified
+        // If approved, mark linked user as verified — by userId or by email
         const verification = await db.getVerificationById(input.id);
-        if (input.status === "approved" && verification?.userId) {
-          await db.updateUser(verification.userId, { idVerified: true });
+        if (input.status === "approved" && verification) {
+          if (verification.userId) {
+            await db.updateUser(verification.userId, { idVerified: true });
+          } else if (verification.guestEmail) {
+            // Look up user by email and mark as verified
+            const linkedUser = await db.getUserByEmail(verification.guestEmail);
+            if (linkedUser) {
+              await db.updateUser(linkedUser.id, { idVerified: true });
+            }
+          }
         }
         // Clear [ID VERIFICATION PENDING] from any orders linked to this verification's email
         if (input.status === "approved" && verification) {

@@ -52,19 +52,25 @@ function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verifi
     } catch (err) {
       // Fallback: call tRPC submitVerification if REST fails
       try {
-        const toBase64 = (file: File): Promise<string> =>
+        const toBase64Fallback = (file: File): Promise<string> =>
           new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-        const frontBase64 = await toBase64(frontFile);
+        const frontBase64Fb = await toBase64Fallback(frontFile);
+        const trpcRes = await fetch('/api/trpc/store.submitVerification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: { frontImageBase64: frontBase64Fb, guestEmail: guestEmail || '', contentType: frontFile.type || 'image/jpeg' } }),
+        });
+        const trpcJson = await trpcRes.json();
+        const vId = trpcJson?.result?.data?.json?.id ?? 0;
         toast.success('ID submitted for review!');
-        onSubmitted(0);
+        onSubmitted(vId);
       } catch {
-        toast.success('ID submitted for review!');
-        onSubmitted(0);
+        toast.error('ID submission failed. Please try again.');
       }
     } finally {
       setSubmitting(false);
@@ -176,8 +182,8 @@ export default function Checkout() {
     phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
   });
 
-  // Registered + approved: full green pass
-  const isRegisteredAndVerified = isAuthenticated && user && user.idVerificationStatus === 'approved';
+  // Registered + approved: full green pass (check both idVerified flag and idVerificationStatus)
+  const isRegisteredAndVerified = isAuthenticated && user && (user.idVerified || user.idVerificationStatus === 'approved');
   // Registered + pending: allow order, hold for admin
   const isRegisteredPending = isAuthenticated && user && user.idVerificationStatus === 'pending';
   // Guest can place order once they've submitted ID for review
@@ -328,7 +334,7 @@ export default function Checkout() {
           <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">CHECKOUT</h1>
 
           {/* Registered user — ID NOT yet verified/submitted */}
-          {isAuthenticated && user && user.idVerificationStatus === 'none' && (
+          {isAuthenticated && user && !user.idVerified && user.idVerificationStatus === 'none' && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <Shield size={20} className="text-orange-500 shrink-0 mt-0.5" />
               <div>
