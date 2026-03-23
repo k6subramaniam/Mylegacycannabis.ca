@@ -258,6 +258,28 @@ export const appRouter = router({
         if (input.status === "approved" && verification?.userId) {
           await db.updateUser(verification.userId, { idVerified: true });
         }
+        // Clear [ID VERIFICATION PENDING] from any orders linked to this verification's email
+        if (input.status === "approved" && verification) {
+          const email = verification.guestEmail;
+          if (email) {
+            const allOrders = await db.getAllOrders({ limit: 1000 });
+            for (const order of allOrders.data) {
+              if (
+                order.notes &&
+                typeof order.notes === "string" &&
+                order.notes.includes("[ID VERIFICATION PENDING]") &&
+                order.guestEmail?.toLowerCase() === email.toLowerCase()
+              ) {
+                const cleanedNotes = order.notes
+                  .split("\n")
+                  .filter((line: string) => !line.includes("[ID VERIFICATION PENDING]"))
+                  .join("\n")
+                  .trim() || null;
+                await db.updateOrder(order.id, { notes: cleanedNotes } as any);
+              }
+            }
+          }
+        }
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: input.status, entityType: "verification", entityId: input.id, details: `${input.status} verification #${input.id}${input.notes ? `: ${input.notes}` : ""}` });
         await notifyOwner({ title: `ID Verification ${input.status}`, content: `Verification #${input.id} has been ${input.status}` });
         return { success: true };

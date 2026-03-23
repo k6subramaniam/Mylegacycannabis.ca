@@ -15,7 +15,7 @@ import { toast } from 'sonner';
    Guests submit their ID — order is placed immediately but held
    until My Legacy reviews and approves the submission.
    ================================================================ */
-function GuestIDVerification({ onSubmitted }: { onSubmitted: (verificationId: number) => void }) {
+function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verificationId: number) => void; guestEmail?: string }) {
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,14 +36,14 @@ function GuestIDVerification({ onSubmitted }: { onSubmitted: (verificationId: nu
       const frontBase64 = await toBase64(frontFile);
       const selfieBase64 = selfieFile ? await toBase64(selfieFile) : undefined;
 
+      const fd = new FormData();
+      fd.append('id_document', frontFile);
+      fd.append('email', guestEmail || `guest-${Date.now()}@checkout.mylegacycannabis.ca`);
+      if (selfieFile) fd.append('selfieImage', selfieFile);
+
       const res = await fetch('/api/verify/submit', {
         method: 'POST',
-        body: (() => {
-          const fd = new FormData();
-          fd.append('frontImage', frontFile);
-          if (selfieFile) fd.append('selfieImage', selfieFile);
-          return fd;
-        })(),
+        body: fd,
       });
       const json = await res.json();
       const verificationId = json.verificationId ?? 0;
@@ -378,7 +378,7 @@ export default function Checkout() {
 
               {/* GUEST ID VERIFICATION — inline, shown before form if guest hasn't submitted */}
               {!isAuthenticated && !guestIdSubmitted && (
-                <GuestIDVerification onSubmitted={(vid) => { setGuestIdSubmitted(true); setGuestVerificationId(vid); }} />
+                <GuestIDVerification guestEmail={form.email} onSubmitted={(vid) => { setGuestIdSubmitted(true); setGuestVerificationId(vid); }} />
               )}
 
               {/* Contact */}

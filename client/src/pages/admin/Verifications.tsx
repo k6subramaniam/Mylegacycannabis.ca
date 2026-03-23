@@ -14,8 +14,13 @@ export default function AdminVerifications() {
   const { data: detail } = trpc.admin.verifications.get.useQuery({ id: selectedId! }, { enabled: !!selectedId });
   const reviewMutation = trpc.admin.verifications.review.useMutation({
     onSuccess: () => {
+      // Invalidate all related admin queries so changes propagate across pages
       utils.admin.verifications.list.invalidate();
       utils.admin.verifications.get.invalidate({ id: selectedId! });
+      utils.admin.stats.invalidate();          // Dashboard: pending verification count
+      utils.admin.orders.list.invalidate();     // Orders list: ID Review badge
+      utils.admin.orders.get.invalidate();      // Order detail: held alert
+      utils.admin.activityLog.invalidate();     // Activity log: new review entry
       toast.success("Verification reviewed");
       setSelectedId(null);
       setReviewNotes("");

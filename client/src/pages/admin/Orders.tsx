@@ -25,8 +25,8 @@ const statusColors: Record<string, string> = {
 function OrderDetail({ id }: { id: number }) {
   const utils = trpc.useUtils();
   const { data: order, isLoading } = trpc.admin.orders.get.useQuery({ id });
-  const updateStatus = trpc.admin.orders.updateStatus.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Status updated"); } });
-  const updatePayment = trpc.admin.orders.updatePayment.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Payment status updated"); } });
+  const updateStatus = trpc.admin.orders.updateStatus.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); utils.admin.orders.list.invalidate(); utils.admin.stats.invalidate(); toast.success("Status updated"); } });
+  const updatePayment = trpc.admin.orders.updatePayment.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); utils.admin.orders.list.invalidate(); utils.admin.stats.invalidate(); toast.success("Payment status updated"); } });
   const addTracking = trpc.admin.orders.addTracking.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Tracking added"); } });
   const addNote = trpc.admin.orders.addNote.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Note added"); setNote(""); } });
   const [trackingNum, setTrackingNum] = useState("");
