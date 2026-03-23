@@ -10,13 +10,26 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
+import { initializeDatabase, USE_PERSISTENT_DB } from "../db";
 
 async function startServer() {
+  // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
+  await initializeDatabase();
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Health check endpoint (useful for Railway, monitoring, etc.)
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      database: USE_PERSISTENT_DB ? "postgresql" : "in-memory",
+      timestamp: new Date().toISOString(),
+    });
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)

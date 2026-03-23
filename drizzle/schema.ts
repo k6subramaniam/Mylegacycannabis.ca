@@ -1,211 +1,229 @@
 import {
-  int,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   varchar,
-  decimal,
+  numeric,
   boolean,
   json,
-} from "drizzle-orm/mysql-core";
+  serial,
+} from "drizzle-orm/pg-core";
+
+// ─── ENUMS ───
+export const authMethodEnum = pgEnum("auth_method", ["phone", "email", "google"]);
+export const roleEnum = pgEnum("role", ["user", "admin"]);
+export const verificationCodeTypeEnum = pgEnum("verification_code_type", ["sms", "email"]);
+export const verificationCodePurposeEnum = pgEnum("verification_code_purpose", ["login", "register", "verify"]);
+export const productCategoryEnum = pgEnum("product_category", [
+  "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories",
+]);
+export const strainTypeEnum = pgEnum("strain_type", ["Sativa", "Indica", "Hybrid", "CBD", "N/A"]);
+export const orderStatusEnum = pgEnum("order_status", [
+  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending", "received", "confirmed", "refunded",
+]);
+export const verificationStatusEnum = pgEnum("verification_status", ["pending", "approved", "rejected"]);
+export const rewardsTypeEnum = pgEnum("rewards_type", ["earned", "redeemed", "bonus", "deducted", "admin_add", "admin_deduct"]);
 
 // ─── USERS ───
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  openId: varchar("open_id", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 20 }),
-  phoneVerified: boolean("phoneVerified").default(false).notNull(),
-  emailVerified: boolean("emailVerified").default(false).notNull(),
-  googleId: varchar("googleId", { length: 255 }),
-  authMethod: mysqlEnum("authMethod", ["phone", "email", "google"]).default("email"),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  phoneVerified: boolean("phone_verified").default(false).notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  googleId: varchar("google_id", { length: 255 }),
+  authMethod: authMethodEnum("auth_method").default("email"),
+  loginMethod: varchar("login_method", { length: 64 }),
+  role: roleEnum("role").default("user").notNull(),
   birthday: varchar("birthday", { length: 10 }),
-  rewardPoints: int("rewardPoints").default(0).notNull(),
-  idVerified: boolean("idVerified").default(false).notNull(),
-  isLocked: boolean("isLocked").default(false).notNull(),
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  rewardPoints: integer("reward_points").default(0).notNull(),
+  idVerified: boolean("id_verified").default(false).notNull(),
+  isLocked: boolean("is_locked").default(false).notNull(),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 // ─── VERIFICATION CODES (OTP) ───
-export const verificationCodes = mysqlTable("verification_codes", {
-  id: int("id").autoincrement().primaryKey(),
-  identifier: varchar("identifier", { length: 320 }).notNull(), // phone or email
+export const verificationCodes = pgTable("verification_codes", {
+  id: serial("id").primaryKey(),
+  identifier: varchar("identifier", { length: 320 }).notNull(),
   code: varchar("code", { length: 6 }).notNull(),
-  type: mysqlEnum("type", ["sms", "email"]).notNull(),
-  purpose: mysqlEnum("purpose", ["login", "register", "verify"]).default("login").notNull(),
-  attempts: int("attempts").default(0).notNull(),
+  type: verificationCodeTypeEnum("type").notNull(),
+  purpose: verificationCodePurposeEnum("purpose").default("login").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
   verified: boolean("verified").default(false).notNull(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type VerificationCode = typeof verificationCodes.$inferSelect;
 export type InsertVerificationCode = typeof verificationCodes.$inferInsert;
 
 // ─── PRODUCTS ───
-export const products = mysqlTable("products", {
-  id: int("id").autoincrement().primaryKey(),
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
-  category: mysqlEnum("category", [
-    "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories",
-  ]).notNull(),
-  strainType: mysqlEnum("strainType", ["Sativa", "Indica", "Hybrid", "CBD", "N/A"]).default("Hybrid"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  category: productCategoryEnum("category").notNull(),
+  strainType: strainTypeEnum("strain_type").default("Hybrid"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   weight: varchar("weight", { length: 50 }),
   thc: varchar("thc", { length: 50 }),
   description: text("description"),
-  shortDescription: varchar("shortDescription", { length: 500 }),
+  shortDescription: varchar("short_description", { length: 500 }),
   image: text("image"),
   images: json("images").$type<string[]>(),
-  stock: int("stock").default(0).notNull(),
+  stock: integer("stock").default(0).notNull(),
   featured: boolean("featured").default(false).notNull(),
-  isNew: boolean("isNew").default(false).notNull(),
-  isActive: boolean("isActive").default(true).notNull(),
+  isNew: boolean("is_new").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
   flavor: varchar("flavor", { length: 100 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  rewardPoints: integer("reward_points").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 
 // ─── ORDERS ───
-export const orders = mysqlTable("orders", {
-  id: int("id").autoincrement().primaryKey(),
-  orderNumber: varchar("orderNumber", { length: 20 }).notNull().unique(),
-  userId: int("userId"),
-  guestEmail: varchar("guestEmail", { length: 320 }),
-  guestName: varchar("guestName", { length: 255 }),
-  guestPhone: varchar("guestPhone", { length: 20 }),
-  status: mysqlEnum("status", [
-    "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded",
-  ]).default("pending").notNull(),
-  paymentStatus: mysqlEnum("paymentStatus", [
-    "pending", "received", "confirmed", "refunded",
-  ]).default("pending").notNull(),
-  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  shippingCost: decimal("shippingCost", { precision: 10, scale: 2 }).default("0").notNull(),
-  discount: decimal("discount", { precision: 10, scale: 2 }).default("0").notNull(),
-  pointsRedeemed: int("pointsRedeemed").default(0).notNull(),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  shippingAddress: json("shippingAddress").$type<{
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: varchar("order_number", { length: 30 }).notNull().unique(),
+  userId: integer("user_id"),
+  guestEmail: varchar("guest_email", { length: 320 }),
+  guestName: varchar("guest_name", { length: 255 }),
+  guestPhone: varchar("guest_phone", { length: 20 }),
+  status: orderStatusEnum("status").default("pending").notNull(),
+  paymentStatus: paymentStatusEnum("payment_status").default("pending").notNull(),
+  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  shippingCost: numeric("shipping_cost", { precision: 10, scale: 2 }).default("0").notNull(),
+  discount: numeric("discount", { precision: 10, scale: 2 }).default("0").notNull(),
+  pointsRedeemed: integer("points_redeemed").default(0).notNull(),
+  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  shippingAddress: json("shipping_address").$type<{
     street: string;
     city: string;
     province: string;
     postalCode: string;
     country: string;
   }>(),
-  shippingZone: varchar("shippingZone", { length: 50 }),
-  trackingNumber: varchar("trackingNumber", { length: 100 }),
-  trackingUrl: text("trackingUrl"),
+  shippingZone: varchar("shipping_zone", { length: 50 }),
+  trackingNumber: varchar("tracking_number", { length: 100 }),
+  trackingUrl: text("tracking_url"),
   notes: text("notes"),
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = typeof orders.$inferInsert;
 
 // ─── ORDER ITEMS ───
-export const orderItems = mysqlTable("order_items", {
-  id: int("id").autoincrement().primaryKey(),
-  orderId: int("orderId").notNull(),
-  productId: int("productId"),
-  productName: varchar("productName", { length: 255 }).notNull(),
-  productImage: text("productImage"),
-  quantity: int("quantity").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(),
+  productId: integer("product_id"),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  productImage: text("product_image"),
+  quantity: integer("quantity").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = typeof orderItems.$inferInsert;
 
 // ─── ID VERIFICATIONS ───
-export const idVerifications = mysqlTable("id_verifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId"),
-  guestEmail: varchar("guestEmail", { length: 320 }),
-  guestName: varchar("guestName", { length: 255 }),
-  frontImageUrl: text("frontImageUrl").notNull(),
-  selfieImageUrl: text("selfieImageUrl"),
-  idType: varchar("idType", { length: 100 }),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
-  reviewedBy: int("reviewedBy"),
-  reviewedAt: timestamp("reviewedAt"),
-  reviewNotes: text("reviewNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const idVerifications = pgTable("id_verifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  guestEmail: varchar("guest_email", { length: 320 }),
+  guestName: varchar("guest_name", { length: 255 }),
+  frontImageUrl: text("front_image_url").notNull(),
+  selfieImageUrl: text("selfie_image_url"),
+  idType: varchar("id_type", { length: 100 }),
+  status: verificationStatusEnum("status").default("pending").notNull(),
+  reviewedBy: integer("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type IdVerification = typeof idVerifications.$inferSelect;
 export type InsertIdVerification = typeof idVerifications.$inferInsert;
 
 // ─── SHIPPING ZONES ───
-export const shippingZones = mysqlTable("shipping_zones", {
-  id: int("id").autoincrement().primaryKey(),
-  zoneName: varchar("zoneName", { length: 100 }).notNull(),
+export const shippingZones = pgTable("shipping_zones", {
+  id: serial("id").primaryKey(),
+  zoneName: varchar("zone_name", { length: 100 }).notNull(),
   provinces: json("provinces").$type<string[]>().notNull(),
-  rate: decimal("rate", { precision: 10, scale: 2 }).notNull(),
-  deliveryDays: varchar("deliveryDays", { length: 50 }).notNull(),
-  isActive: boolean("isActive").default(true).notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
+  freeThreshold: numeric("free_threshold", { precision: 10, scale: 2 }),
+  estimatedDays: varchar("estimated_days", { length: 50 }),
+  deliveryDays: varchar("delivery_days", { length: 50 }).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type ShippingZone = typeof shippingZones.$inferSelect;
 export type InsertShippingZone = typeof shippingZones.$inferInsert;
 
 // ─── EMAIL TEMPLATES ───
-export const emailTemplates = mysqlTable("email_templates", {
-  id: int("id").autoincrement().primaryKey(),
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   subject: varchar("subject", { length: 500 }).notNull(),
-  bodyHtml: text("bodyHtml").notNull(),
+  bodyHtml: text("body_html").notNull(),
   variables: json("variables").$type<string[]>(),
-  isActive: boolean("isActive").default(true).notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
 
 // ─── ADMIN ACTIVITY LOG ───
-export const adminActivityLog = mysqlTable("admin_activity_log", {
-  id: int("id").autoincrement().primaryKey(),
-  adminId: int("adminId").notNull(),
-  adminName: varchar("adminName", { length: 255 }),
+export const adminActivityLog = pgTable("admin_activity_log", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").notNull(),
+  adminName: varchar("admin_name", { length: 255 }),
   action: varchar("action", { length: 100 }).notNull(),
-  entityType: varchar("entityType", { length: 50 }).notNull(),
-  entityId: int("entityId"),
+  entityType: varchar("entity_type", { length: 50 }).notNull(),
+  entityId: integer("entity_id"),
   details: text("details"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type AdminActivityLog = typeof adminActivityLog.$inferSelect;
 export type InsertAdminActivityLog = typeof adminActivityLog.$inferInsert;
 
 // ─── REWARDS HISTORY ───
-export const rewardsHistory = mysqlTable("rewards_history", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  type: mysqlEnum("type", ["earned", "redeemed", "bonus", "deducted"]).notNull(),
-  points: int("points").notNull(),
+export const rewardsHistory = pgTable("rewards_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: rewardsTypeEnum("type").notNull(),
+  points: integer("points").notNull(),
   description: varchar("description", { length: 500 }).notNull(),
-  orderId: int("orderId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  orderId: integer("order_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type RewardsHistory = typeof rewardsHistory.$inferSelect;
