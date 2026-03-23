@@ -69,9 +69,9 @@ function StatCard({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function AdminReports() {
   const [days, setDays] = useState(30);
-  const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
-  const { data: orderStats, isLoading: orderStatsLoading } = trpc.admin.orderStats.useQuery({ days });
-  const { data: topProducts, isLoading: topLoading } = trpc.admin.topProducts.useQuery({ limit: 10 });
+  const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery(undefined, { refetchOnWindowFocus: true });
+  const { data: orderStats, isLoading: orderStatsLoading } = trpc.admin.orderStats.useQuery({ days }, { refetchOnWindowFocus: true });
+  const { data: topProducts, isLoading: topLoading } = trpc.admin.topProducts.useQuery({ limit: 10 }, { refetchOnWindowFocus: true });
 
   const isLoading = statsLoading || orderStatsLoading || topLoading;
 

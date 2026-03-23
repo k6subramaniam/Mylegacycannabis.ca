@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 export default function AdminShipping() {
   const utils = trpc.useUtils();
-  const { data: zones, isLoading } = trpc.admin.shipping.list.useQuery();
+  const { data: zones, isLoading } = trpc.admin.shipping.list.useQuery(undefined, { refetchOnWindowFocus: true });
   const updateMutation = trpc.admin.shipping.update.useMutation({ onSuccess: () => { utils.admin.shipping.list.invalidate(); toast.success("Shipping zone updated"); setEditingId(null); } });
   const createMutation = trpc.admin.shipping.create.useMutation({ onSuccess: () => { utils.admin.shipping.list.invalidate(); toast.success("Shipping zone created"); setShowNew(false); resetNewForm(); } });
 

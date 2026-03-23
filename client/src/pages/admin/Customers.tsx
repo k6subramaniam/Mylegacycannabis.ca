@@ -469,7 +469,10 @@ export default function AdminCustomers() {
   const [searchInput, setSearchInput] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  const { data, isLoading } = trpc.admin.users.list.useQuery({ page, limit: 20, search: search || undefined });
+  const { data, isLoading } = trpc.admin.users.list.useQuery(
+    { page, limit: 20, search: search || undefined },
+    { refetchOnWindowFocus: true },
+  );
   const totalPages = Math.ceil((data?.total ?? 0) / 20);
 
   const handleSearch = (e: React.FormEvent) => {

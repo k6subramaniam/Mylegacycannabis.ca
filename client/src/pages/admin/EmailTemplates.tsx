@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 export default function AdminEmailTemplates() {
   const utils = trpc.useUtils();
-  const { data: templates, isLoading } = trpc.admin.emailTemplates.list.useQuery();
+  const { data: templates, isLoading } = trpc.admin.emailTemplates.list.useQuery(undefined, { refetchOnWindowFocus: true });
   const updateMutation = trpc.admin.emailTemplates.update.useMutation({
     onSuccess: () => { utils.admin.emailTemplates.list.invalidate(); toast.success("Template updated"); setEditingTemplate(null); },
   });

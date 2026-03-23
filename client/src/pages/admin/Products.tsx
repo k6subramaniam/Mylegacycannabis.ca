@@ -14,7 +14,10 @@ export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
 
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.admin.products.list.useQuery({ page, limit: 20, search: search || undefined, category: category || undefined });
+  const { data, isLoading } = trpc.admin.products.list.useQuery(
+    { page, limit: 20, search: search || undefined, category: category || undefined },
+    { refetchOnWindowFocus: true },
+  );
   const createMutation = trpc.admin.products.create.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product created"); setShowForm(false); resetForm(); } });
   const updateMutation = trpc.admin.products.update.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product updated"); setShowForm(false); setEditingProduct(null); } });
   const deleteMutation = trpc.admin.products.delete.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product deleted"); } });
