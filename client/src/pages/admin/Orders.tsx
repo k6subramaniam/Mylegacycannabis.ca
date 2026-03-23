@@ -1,12 +1,65 @@
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
-import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
 // Helper: detect orders held pending ID verification
 const isIdPending = (order: any) =>
   typeof order.notes === "string" && order.notes.includes("[ID VERIFICATION PENDING]");
+
+/**
+ * Canada Post tracking number validation.
+ *
+ * Accepted formats (per https://www.canadapost-postescanada.ca/cpc/en/support/kb/tracking/find-your-tracking-number.page):
+ *  - 16 digits              e.g. 7023210039414604
+ *  - 13 alphanumeric (S10)  2 letters + 9 digits + CA  e.g. EE123456789CA
+ *  - 12 digits              shorter domestic PIN
+ *  - 11 alphanumeric        2 letters + 7 digits + CA  e.g. AB1234567CA
+ *
+ * Input is normalised (spaces & dashes stripped, uppercased) before testing.
+ */
+function normalizeTrackingInput(raw: string): string {
+  return raw.replace(/[\s-]/g, "").toUpperCase();
+}
+
+interface TrackingValidation {
+  valid: boolean;
+  format: string | null;
+  error: string | null;
+}
+
+function validateCanadaPostTracking(raw: string): TrackingValidation {
+  const v = normalizeTrackingInput(raw);
+  if (v.length === 0) return { valid: false, format: null, error: null }; // empty — no error yet
+
+  // 16 digits — domestic PIN
+  if (/^\d{16}$/.test(v)) return { valid: true, format: "Domestic PIN (16-digit)", error: null };
+
+  // 13 alphanumeric — S10 international (2 letters + 9 digits + CA)
+  if (/^[A-Z]{2}\d{9}CA$/.test(v)) return { valid: true, format: "International / Xpresspost (13-char)", error: null };
+
+  // 12 digits — shorter domestic PIN
+  if (/^\d{12}$/.test(v)) return { valid: true, format: "Domestic PIN (12-digit)", error: null };
+
+  // 11 alphanumeric — 2 letters + 7 digits + CA
+  if (/^[A-Z]{2}\d{7}CA$/.test(v)) return { valid: true, format: "Domestic (11-char)", error: null };
+
+  // ── Helpful error messages for near-misses ──
+  if (/^\d+$/.test(v)) {
+    if (v.length < 12) return { valid: false, format: null, error: `Too short — Canada Post PINs are 12 or 16 digits (entered ${v.length})` };
+    if (v.length > 16) return { valid: false, format: null, error: `Too long — Canada Post PINs are 12 or 16 digits (entered ${v.length})` };
+    return { valid: false, format: null, error: `Invalid length — Canada Post PINs are 12 or 16 digits (entered ${v.length})` };
+  }
+
+  if (/^[A-Z]{2}.*CA$/.test(v)) {
+    const mid = v.slice(2, -2);
+    if (!/^\d+$/.test(mid)) return { valid: false, format: null, error: "Middle characters must be digits (e.g. AB123456789CA)" };
+    if (mid.length !== 9 && mid.length !== 7) return { valid: false, format: null, error: `Alphanumeric tracking should be 11 or 13 chars ending in CA (entered ${v.length})` };
+  }
+
+  return { valid: false, format: null, error: "Not a valid Canada Post tracking number. Expected: 16 digits, 12 digits, or 2 letters + digits + CA (11 or 13 chars)." };
+}
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"] as const;
 const PAYMENT_OPTIONS = ["pending", "received", "confirmed", "refunded"] as const;
@@ -30,6 +83,8 @@ function OrderDetail({ id }: { id: number }) {
   const addTracking = trpc.admin.orders.addTracking.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Tracking added"); } });
   const addNote = trpc.admin.orders.addNote.useMutation({ onSuccess: () => { utils.admin.orders.get.invalidate({ id }); toast.success("Note added"); setNote(""); } });
   const [trackingNum, setTrackingNum] = useState("");
+  const [trackingTouched, setTrackingTouched] = useState(false);
+  const trackingValidation = useMemo(() => validateCanadaPostTracking(trackingNum), [trackingNum]);
   const [note, setNote] = useState("");
 
   if (isLoading) return <div className="p-6"><div className="animate-pulse h-8 bg-gray-200 rounded w-48" /></div>;
@@ -138,11 +193,50 @@ function OrderDetail({ id }: { id: number }) {
                 {order.trackingUrl && <a href={order.trackingUrl as string} target="_blank" rel="noopener noreferrer" className="text-xs text-[#F15929] hover:underline">Track Package</a>}
               </div>
             ) : (
-              <div className="flex gap-2">
-                <input type="text" value={trackingNum} onChange={(e) => setTrackingNum(e.target.value)} placeholder="Tracking #"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                <button onClick={() => trackingNum && addTracking.mutate({ id, trackingNumber: trackingNum })} disabled={!trackingNum}
-                  className="bg-[#F15929] text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-[#d94d22] disabled:opacity-50">Add</button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={trackingNum}
+                    onChange={(e) => { setTrackingNum(e.target.value); if (!trackingTouched) setTrackingTouched(true); }}
+                    onBlur={() => setTrackingTouched(true)}
+                    placeholder="e.g. 7023210039414604 or EE123456789CA"
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-mono tracking-wide ${
+                      trackingTouched && trackingNum && !trackingValidation.valid
+                        ? "border-red-400 focus:ring-red-200"
+                        : trackingValidation.valid
+                          ? "border-green-400 focus:ring-green-200"
+                          : "border-gray-200"
+                    } focus:outline-none focus:ring-2`}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!trackingValidation.valid) {
+                        toast.error(trackingValidation.error || "Invalid Canada Post tracking number");
+                        return;
+                      }
+                      const normalized = normalizeTrackingInput(trackingNum);
+                      addTracking.mutate({ id, trackingNumber: normalized });
+                    }}
+                    disabled={!trackingNum || !trackingValidation.valid || addTracking.isPending}
+                    className="bg-[#F15929] text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-[#d94d22] disabled:opacity-50 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {/* Validation feedback */}
+                {trackingTouched && trackingNum && (
+                  trackingValidation.valid ? (
+                    <p className="flex items-center gap-1.5 text-xs text-green-600">
+                      <CheckCircle2 size={13} /> {trackingValidation.format}
+                    </p>
+                  ) : trackingValidation.error ? (
+                    <p className="flex items-center gap-1.5 text-xs text-red-600">
+                      <AlertCircle size={13} /> {trackingValidation.error}
+                    </p>
+                  ) : null
+                )}
+                <p className="text-[11px] text-gray-400">Canada Post: 16 digits, 12 digits, or 2 letters + digits + CA (11 or 13 chars)</p>
               </div>
             )}
           </div>

@@ -286,7 +286,15 @@ export const appRouter = router({
       }),
       addTracking: publicProcedure.input(z.object({
         id: z.number(),
-        trackingNumber: z.string(),
+        trackingNumber: z.string()
+          .transform((v) => v.replace(/[\s-]/g, "").toUpperCase())
+          .refine((v) =>
+            /^\d{16}$/.test(v) ||          // 16-digit domestic PIN
+            /^\d{12}$/.test(v) ||          // 12-digit domestic PIN
+            /^[A-Z]{2}\d{9}CA$/.test(v) || // 13-char S10 international (e.g. EE123456789CA)
+            /^[A-Z]{2}\d{7}CA$/.test(v),   // 11-char domestic (e.g. AB1234567CA)
+            { message: "Invalid Canada Post tracking number. Expected: 16 digits, 12 digits, or 2 letters + digits + CA (11 or 13 chars)." }
+          ),
         trackingUrl: z.string().optional(),
       })).mutation(async ({ input, ctx }) => {
         await db.updateOrder(input.id, { trackingNumber: input.trackingNumber, trackingUrl: input.trackingUrl || `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${input.trackingNumber}` });
