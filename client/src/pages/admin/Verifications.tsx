@@ -82,7 +82,11 @@ export default function AdminVerifications() {
               {isLoading ? [...Array(3)].map((_, i) => (
                 <tr key={i} className="border-b border-gray-50"><td colSpan={6} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
               )) : data?.data.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400"><ShieldCheck size={24} className="mx-auto mb-2 opacity-50" />No verifications found</td></tr>
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                  <ShieldCheck size={24} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No verifications found</p>
+                  <p className="text-xs mt-1">Submissions appear here after users upload their ID on the storefront or at checkout.</p>
+                </td></tr>
               ) : data?.data.map((v: any) => (
                 <tr key={v.id} className={`border-b border-gray-50 hover:bg-gray-50/50 ${v.status === "pending" ? "bg-yellow-50/30" : ""}`}>
                   <td className="px-4 py-3 font-mono text-xs font-semibold">#{v.id}</td>

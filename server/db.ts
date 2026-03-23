@@ -187,7 +187,32 @@ function seedData() {
     }
   }
 
-  console.log(`[DB] Seeded ${_products.length} products, ${_shippingZones.length} shipping zones, ${_orders.length} sample orders`);
+  // Seed sample ID verifications so admin page isn't empty
+  const verifications = [
+    { userId: undefined, guestEmail: 'john@example.com', guestName: 'John Smith', frontImageUrl: '', idType: 'drivers_license', status: 'approved', reviewedBy: adminId, reviewedAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), reviewNotes: 'Valid Ontario DL confirmed' },
+    { userId: undefined, guestEmail: 'sarah@example.com', guestName: 'Sarah Johnson', frontImageUrl: '', idType: 'passport', status: 'approved', reviewedBy: adminId, reviewedAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000), reviewNotes: 'Valid Canadian passport' },
+    { userId: undefined, guestEmail: 'mike@example.com', guestName: 'Mike Williams', frontImageUrl: '', idType: 'drivers_license', status: 'pending' },
+  ];
+  for (const v of verifications) {
+    const vId = nextId();
+    _idVerifications.push({
+      id: vId,
+      userId: v.userId,
+      guestEmail: v.guestEmail,
+      guestName: v.guestName,
+      frontImageUrl: v.frontImageUrl,
+      selfieImageUrl: undefined,
+      idType: v.idType,
+      status: v.status,
+      reviewedBy: v.reviewedBy,
+      reviewedAt: v.reviewedAt,
+      reviewNotes: v.reviewNotes,
+      createdAt: new Date(now.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(),
+    });
+  }
+
+  console.log(`[DB] Seeded ${_products.length} products, ${_shippingZones.length} shipping zones, ${_orders.length} sample orders, ${_idVerifications.length} ID verifications`);
 }
 
 // Initialize seed data
