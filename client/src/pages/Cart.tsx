@@ -9,12 +9,14 @@ import { Minus, Plus, Trash2, Truck, Gift, ShoppingCart, ArrowRight, AlertCircle
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function Cart() {
   const { items, updateQuantity, removeItem, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, freeShippingProgress, amountToFreeShipping, meetsMinimum, pointsToEarn, appliedReward, applyReward, rewardDiscount } = useCart();
   const { user } = useAuth();
+  const { idVerificationEnabled } = useSiteConfig();
   const eligibleTiers = user ? getEligibleRewardTiers(user.rewardsPoints) : [];
   const { data: shippingZones } = trpc.store.shippingZones.useQuery();
 
@@ -159,13 +161,15 @@ export default function Cart() {
                   </div>
                 )}
 
-                {/* ID verification reminder */}
+                {/* ID verification reminder — only shown when feature is enabled */}
+                {idVerificationEnabled && (
                 <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-lg p-3 mb-4">
                   <p className="text-xs font-body text-[#4B2D8E] flex items-start gap-1.5">
                     <Shield size={14} className="shrink-0 mt-0.5" />
                     <span>{user?.idVerificationStatus === 'approved' ? <strong className="text-green-600">ID Verified ✓</strong> : 'ID verification required at checkout (19+)'}</span>
                   </p>
                 </div>
+                )}
 
                 <Link href={meetsMinimum ? '/checkout' : '#'}
                   className={`block w-full text-center font-display py-3.5 rounded-full transition-all ${meetsMinimum ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>

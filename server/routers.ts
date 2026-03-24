@@ -42,8 +42,12 @@ export const appRouter = router({
         });
       }
       // Determine idVerificationStatus from DB — check both userId and email
+      const idVerifEnabled = await db.isIdVerificationEnabled();
       let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
-      if (user.idVerified) {
+      if (!idVerifEnabled) {
+        // When ID verification is disabled, everyone is treated as verified
+        idVerificationStatus = 'approved';
+      } else if (user.idVerified) {
         idVerificationStatus = 'approved';
       } else {
         // Check verification records by email
@@ -69,7 +73,7 @@ export const appRouter = router({
           name: user.name,
           phone: user.phone,
           birthday: user.birthday,
-          idVerified: user.idVerified || idVerificationStatus === 'approved',
+          idVerified: !idVerifEnabled || user.idVerified || idVerificationStatus === 'approved',
           idVerificationStatus,
           rewardsPoints: user.rewardPoints || 0,
           rewardsHistory: [],
@@ -122,8 +126,11 @@ export const appRouter = router({
         return { success: false, error: "Failed to create user" };
       }
       // Check if user already has a verification on file (e.g. guest submitted ID before registering)
+      const idVerifEnabledReg = await db.isIdVerificationEnabled();
       let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
-      if (newUser.idVerified) {
+      if (!idVerifEnabledReg) {
+        idVerificationStatus = 'approved';
+      } else if (newUser.idVerified) {
         idVerificationStatus = 'approved';
       } else {
         const verifications = await db.getAllVerifications({ email: newUser.email || '', limit: 1 });
@@ -147,7 +154,7 @@ export const appRouter = router({
           name: newUser.name,
           phone: newUser.phone,
           birthday: newUser.birthday,
-          idVerified: newUser.idVerified || idVerificationStatus === 'approved',
+          idVerified: !idVerifEnabledReg || newUser.idVerified || idVerificationStatus === 'approved',
           idVerificationStatus,
           rewardsPoints: newUser.rewardPoints || 25,
           rewardsHistory: [],
@@ -370,7 +377,11 @@ export const appRouter = router({
           }
         }
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: input.status, entityType: "verification", entityId: input.id, details: `${input.status} verification #${input.id}${input.notes ? `: ${input.notes}` : ""}` });
-        await notifyOwner({ title: `ID Verification ${input.status}`, content: `Verification #${input.id} has been ${input.status}` });
+        // Only send ID verification notification emails when the feature is enabled
+        const idVerifEnabledReview = await db.isIdVerificationEnabled();
+        if (idVerifEnabledReview) {
+          await notifyOwner({ title: `ID Verification ${input.status}`, content: `Verification #${input.id} has been ${input.status}` });
+        }
         return { success: true };
       }),
     }),
@@ -434,6 +445,28 @@ export const appRouter = router({
         const id = await db.createEmailTemplate(input as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "email_template", entityId: id, details: `Created email template: ${input.name}` });
         return { id };
+      }),
+    }),
+
+    // ─── SITE SETTINGS ───
+    settings: router({
+      getAll: publicProcedure.query(async () => {
+        return db.getAllSiteSettings();
+      }),
+      update: publicProcedure.input(z.object({
+        key: z.string(),
+        value: z.string(),
+      })).mutation(async ({ input, ctx }) => {
+        await db.setSiteSetting(input.key, input.value);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "update",
+          entityType: "site_setting",
+          entityId: 0,
+          details: `Updated setting "${input.key}" to "${input.value}"`,
+        });
+        return { success: true };
       }),
     }),
 
@@ -543,6 +576,10 @@ export const appRouter = router({
 
   // ─── PUBLIC: STOREFRONT API ───
   store: router({
+    siteConfig: publicProcedure.query(async () => {
+      const idVerificationEnabled = await db.isIdVerificationEnabled();
+      return { idVerificationEnabled };
+    }),
     products: publicProcedure.input(z.object({
       page: z.number().default(1),
       limit: z.number().default(50),
@@ -619,6 +656,11 @@ export const appRouter = router({
       idType: z.string().optional(),
       contentType: z.string().default("image/jpeg"),
     })).mutation(async ({ input, ctx }) => {
+      // Check if ID verification is enabled
+      const idVerifEnabled = await db.isIdVerificationEnabled();
+      if (!idVerifEnabled) {
+        return { id: 0, status: "skipped" as const, message: "ID verification is not currently required." };
+      }
       const frontKey = `id-verifications/${nanoid()}-front.jpg`;
       const frontBuffer = Buffer.from(input.frontImageBase64, 'base64');
       const { url: frontUrl } = await storagePut(frontKey, frontBuffer, input.contentType);

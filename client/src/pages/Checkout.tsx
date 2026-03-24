@@ -9,6 +9,7 @@ import { canadianProvinces, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib
 import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 /* ================================================================
    GUEST ID VERIFICATION INLINE COMPONENT
@@ -169,6 +170,7 @@ function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verifi
 export default function Checkout() {
   const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
+  const { idVerificationEnabled } = useSiteConfig();
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -182,14 +184,16 @@ export default function Checkout() {
     phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
   });
 
+  // When ID verification is disabled, everyone can place orders freely
+  const idCheckRequired = idVerificationEnabled;
   // Registered + approved: full green pass (check both idVerified flag and idVerificationStatus)
   const isRegisteredAndVerified = isAuthenticated && user && (user.idVerified || user.idVerificationStatus === 'approved');
   // Registered + pending: allow order, hold for admin
   const isRegisteredPending = isAuthenticated && user && user.idVerificationStatus === 'pending';
   // Guest can place order once they've submitted ID for review
-  const canPlaceOrder = isRegisteredAndVerified || isRegisteredPending || guestIdSubmitted;
+  const canPlaceOrder = !idCheckRequired || isRegisteredAndVerified || isRegisteredPending || guestIdSubmitted;
   // Whether the order will be held pending ID review
-  const orderHeldForIdReview = isRegisteredPending || (!isAuthenticated && guestIdSubmitted);
+  const orderHeldForIdReview = idCheckRequired && (isRegisteredPending || (!isAuthenticated && guestIdSubmitted));
 
   if (!meetsMinimum && !orderPlaced) {
     return (
@@ -334,7 +338,7 @@ export default function Checkout() {
           <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">CHECKOUT</h1>
 
           {/* Registered user — ID NOT yet verified/submitted */}
-          {isAuthenticated && user && !user.idVerified && user.idVerificationStatus === 'none' && (
+          {idCheckRequired && isAuthenticated && user && !user.idVerified && user.idVerificationStatus === 'none' && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <Shield size={20} className="text-orange-500 shrink-0 mt-0.5" />
               <div>
@@ -346,7 +350,7 @@ export default function Checkout() {
           )}
 
           {/* Registered user — ID pending review */}
-          {isRegisteredPending && (
+          {idCheckRequired && isRegisteredPending && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <Clock size={20} className="text-yellow-600 shrink-0 mt-0.5" />
               <div>
@@ -357,7 +361,7 @@ export default function Checkout() {
           )}
 
           {/* Registered user — ID approved */}
-          {isRegisteredAndVerified && (
+          {idCheckRequired && isRegisteredAndVerified && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-6 flex items-center gap-3">
               <CheckCircle size={18} className="text-green-600 shrink-0" />
               <p className="text-sm font-body text-green-700"><strong>ID Verified</strong> — Your account is verified. No further ID checks needed.</p>
@@ -365,7 +369,7 @@ export default function Checkout() {
           )}
 
           {/* Guest — hasn't submitted ID yet */}
-          {!isAuthenticated && !guestIdSubmitted && (
+          {idCheckRequired && !isAuthenticated && !guestIdSubmitted && (
             <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-4 mb-6">
               <div className="flex items-start gap-3">
                 <Lock size={20} className="text-[#4B2D8E] shrink-0 mt-0.5" />
@@ -379,7 +383,7 @@ export default function Checkout() {
           )}
 
           {/* Guest — ID submitted, in review */}
-          {!isAuthenticated && guestIdSubmitted && (
+          {idCheckRequired && !isAuthenticated && guestIdSubmitted && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6 flex items-start gap-3">
               <Clock size={18} className="text-yellow-600 shrink-0 mt-0.5" />
               <div>
@@ -399,7 +403,7 @@ export default function Checkout() {
             <div className="lg:col-span-2 space-y-6">
 
               {/* GUEST ID VERIFICATION — inline, shown before form if guest hasn't submitted */}
-              {!isAuthenticated && !guestIdSubmitted && (
+              {idCheckRequired && !isAuthenticated && !guestIdSubmitted && (
                 <GuestIDVerification guestEmail={form.email} onSubmitted={(vid) => { setGuestIdSubmitted(true); setGuestVerificationId(vid); }} />
               )}
 
@@ -519,7 +523,7 @@ export default function Checkout() {
                 )}
 
                 {/* ID verification status in sidebar */}
-                {!canPlaceOrder && !isAuthenticated && (
+                {idCheckRequired && !canPlaceOrder && !isAuthenticated && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                     <p className="text-xs font-body text-orange-700 flex items-center gap-1.5">
                       <Shield size={14} className="shrink-0" />

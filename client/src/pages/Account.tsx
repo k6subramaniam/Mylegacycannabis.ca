@@ -7,10 +7,12 @@ import { rewardTiers, getEligibleRewardTiers, WELCOME_BONUS, BIRTHDAY_BONUS, REV
 import { User, Package, Gift, Shield, LogOut, Copy, Star, Calendar, Users, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function Account() {
   const [location, navigate] = useLocation();
   const { user, isAuthenticated, login, register, logout, updateProfile } = useAuth();
+  const { idVerificationEnabled } = useSiteConfig();
   const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
@@ -60,12 +62,14 @@ export default function Account() {
                 <p className="font-display text-2xl text-white">{user.orders.length}</p>
                 <p className="text-white/70 text-xs font-body">Orders</p>
               </div>
+              {idVerificationEnabled && (
               <div className="text-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.idVerified ? 'bg-green-500' : 'bg-orange-500'}`}>
                   <Shield size={16} className="text-white" />
                 </div>
                 <p className="text-white/70 text-[10px] font-body mt-1">{user.idVerified ? 'Verified' : 'Pending'}</p>
               </div>
+              )}
             </div>
           </div>
 
@@ -110,6 +114,7 @@ function maxBirthdayDate(): string {
 }
 
 function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any) => void }) {
+  const { idVerificationEnabled } = useSiteConfig();
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
   const [phone, setPhone] = useState(user.phone || '');
@@ -162,7 +167,8 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
         <button onClick={handleSave} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all">SAVE CHANGES</button>
       </div>
 
-      {/* ID Verification Status */}
+      {/* ID Verification Status — hidden when feature is disabled */}
+      {idVerificationEnabled && (
       <div className="bg-[#F5F5F5] rounded-2xl p-6">
         <h2 className="font-display text-lg text-[#4B2D8E] mb-4">ID VERIFICATION</h2>
         <div className="flex items-center justify-between">
@@ -182,6 +188,7 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

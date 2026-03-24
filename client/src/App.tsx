@@ -40,6 +40,7 @@ const AdminShipping = lazy(() => import("./pages/admin/Shipping"));
 const AdminEmailTemplates = lazy(() => import("./pages/admin/EmailTemplates"));
 const AdminReports = lazy(() => import("./pages/admin/Reports"));
 const AdminCustomers = lazy(() => import("./pages/admin/Customers"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 
 function PageLoader() {
   return (
@@ -85,6 +86,9 @@ function Router() {
       </Route>
       <Route path="/admin/customers">
         <AdminLayout><S><AdminCustomers /></S></AdminLayout>
+      </Route>
+      <Route path="/admin/settings">
+        <AdminLayout><S><AdminSettings /></S></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><S><AdminDashboard /></S></AdminLayout>

@@ -1,7 +1,9 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { ShieldCheck, Search, Eye, Check, X, ArrowLeft, Clock, AlertTriangle, User } from "lucide-react";
+import { ShieldCheck, ShieldOff, Search, Eye, Check, X, ArrowLeft, Clock, AlertTriangle, User, Info } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "wouter";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 export default function AdminVerifications() {
   const [page, setPage] = useState(1);
@@ -33,6 +35,7 @@ export default function AdminVerifications() {
     },
   });
 
+  const { idVerificationEnabled } = useSiteConfig();
   const totalPages = Math.ceil((data?.total ?? 0) / 20);
 
   // Treat missing/undefined status as "pending" (records created before status fix)
@@ -54,6 +57,20 @@ export default function AdminVerifications() {
         <h1 className="text-2xl font-bold text-gray-800">ID Verifications</h1>
         <p className="text-sm text-gray-500">{data?.total ?? 0} total submissions</p>
       </div>
+
+      {/* Banner when ID verification is disabled */}
+      {!idVerificationEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <ShieldOff size={20} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">ID Verification is currently disabled</p>
+            <p className="text-xs text-amber-600 mt-0.5">New customers are not required to verify their ID. You can still review existing submissions below.</p>
+          </div>
+          <Link href="/admin/settings" className="text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors shrink-0">
+            Settings
+          </Link>
+        </div>
+      )}
 
       <div className="flex gap-3">
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}

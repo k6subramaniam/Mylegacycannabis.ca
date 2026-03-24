@@ -71,6 +71,17 @@ export function registerVerifyRoutes(app: Express | Router) {
   // ──────────────────────────────────────────────────────────
   app.post("/api/verify/submit", upload.single("id_document"), async (req, res) => {
     try {
+      // Check if ID verification is enabled
+      const idVerifEnabled = await db.isIdVerificationEnabled();
+      if (!idVerifEnabled) {
+        return res.json({
+          success: true,
+          verificationId: 0,
+          message: "ID verification is not currently required. You can place orders directly.",
+          skipped: true,
+        });
+      }
+
       const file = req.file;
       if (!file) return res.status(400).json({ error: "No file uploaded." });
 
@@ -185,6 +196,17 @@ export function registerVerifyRoutes(app: Express | Router) {
   // ──────────────────────────────────────────────────────────
   app.post("/api/verify/mobile-submit", upload.single("id_document"), async (req, res) => {
     try {
+      // Check if ID verification is enabled
+      const idVerifEnabled = await db.isIdVerificationEnabled();
+      if (!idVerifEnabled) {
+        return res.json({
+          success: true,
+          verificationId: 0,
+          message: "ID verification is not currently required.",
+          skipped: true,
+        });
+      }
+
       const mobileToken = req.body.mobile_token || "";
       const session = mobileSessions.get(mobileToken);
 
