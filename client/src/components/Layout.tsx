@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
-import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, Truck, Wrench, Clock } from 'lucide-react';
+import { storeLocations } from '@/lib/data';
+import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useEmblaCarousel from 'embla-carousel-react';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
 
@@ -70,6 +72,65 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
 // ============================================================
 // MAINTENANCE MODE OVERLAY
 // ============================================================
+function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
+  return (
+    <article className="bg-[#F5F5F5] rounded-2xl overflow-hidden shadow-md h-full">
+      {/* Google Maps embed */}
+      <div className="aspect-video bg-gray-200">
+        <iframe
+          src={loc.mapUrl}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title={`Map of My Legacy Cannabis ${loc.name}`}
+        />
+      </div>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0">
+            <h3 className="font-display text-sm md:text-base text-[#4B2D8E] truncate">
+              MY LEGACY — {loc.name.toUpperCase()}
+            </h3>
+            <p className="text-xs text-gray-600 font-body mt-0.5 truncate">
+              {loc.address}, {loc.city}, {loc.province}
+            </p>
+          </div>
+          <div className="bg-[#F15929] text-white font-display text-[10px] px-2 py-1 rounded-full shrink-0 flex items-center gap-0.5">
+            <Clock size={10} /> 24/7
+          </div>
+        </div>
+
+        <a
+          href={`tel:${loc.phone.replace(/\D/g, '')}`}
+          className="flex items-center gap-1 text-xs text-[#4B2D8E] hover:text-[#F15929] font-body transition-colors mb-3"
+        >
+          <Phone size={12} /> {loc.phone}
+        </a>
+
+        <div className="flex gap-2">
+          <a
+            href={`tel:${loc.phone.replace(/\D/g, '')}`}
+            className="flex-1 bg-[#4B2D8E] hover:bg-[#3a2270] text-white text-center font-display text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-1"
+          >
+            <Phone size={13} /> CALL NOW
+          </a>
+          <a
+            href={loc.directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-[#F15929] hover:bg-[#d94d22] text-white text-center font-display text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-1"
+          >
+            <Navigation size={13} /> DIRECTIONS
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function MaintenanceOverlay({ title, message }: { title: string; message: string }) {
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -77,39 +138,160 @@ function MaintenanceOverlay({ title, message }: { title: string; message: string
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // ── Embla carousel with auto-scroll ──
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'center',
+    loop: true,
+    skipSnaps: false,
+    containScroll: false,
+  });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrev(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  // Auto-scroll every 4 seconds
+  const startAutoplay = useCallback(() => {
+    if (autoplayRef.current) clearInterval(autoplayRef.current);
+    autoplayRef.current = setInterval(() => {
+      if (emblaApi) emblaApi.scrollNext();
+    }, 4000);
+  }, [emblaApi]);
+
+  const stopAutoplay = useCallback(() => {
+    if (autoplayRef.current) { clearInterval(autoplayRef.current); autoplayRef.current = null; }
+  }, []);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+    // Pause auto-scroll on pointer interaction, resume on release
+    emblaApi.on('pointerDown', stopAutoplay);
+    emblaApi.on('pointerUp', startAutoplay);
+    startAutoplay();
+    return () => {
+      stopAutoplay();
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+      emblaApi.off('pointerDown', stopAutoplay);
+      emblaApi.off('pointerUp', startAutoplay);
+    };
+  }, [emblaApi, onSelect, startAutoplay, stopAutoplay]);
+
   return (
     <div
-      className="fixed inset-0 z-[199] bg-[#4B2D8E] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[199] bg-[#4B2D8E] overflow-y-auto"
       aria-modal="true"
       role="dialog"
       aria-label="Maintenance mode"
     >
-      <div className="bg-white rounded-2xl p-8 w-full max-w-[520px] text-center shadow-2xl">
+      <div className="min-h-full flex flex-col items-center justify-start py-6 px-4">
+        {/* ── Logo (large & prominent) ── */}
         <img
           src={LOGO_URL}
           alt="My Legacy Cannabis"
-          width="240"
-          height="64"
-          className="h-16 w-auto mx-auto mb-6"
+          width="300"
+          height="80"
+          className="h-14 sm:h-16 md:h-20 w-auto mb-6"
           loading="eager"
           decoding="sync"
         />
-        <div className="w-20 h-20 rounded-full bg-[#F15929]/10 flex items-center justify-center mx-auto mb-6">
-          <Wrench size={36} className="text-[#F15929]" />
+
+        {/* ── Maintenance card ── */}
+        <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-[520px] text-center shadow-2xl mb-8">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[#F15929]/10 flex items-center justify-center mx-auto mb-4">
+            <Wrench size={32} className="text-[#F15929]" />
+          </div>
+          <h2 className="font-display text-xl md:text-2xl text-[#4B2D8E] mb-3 uppercase">
+            {title || "WE'LL BE RIGHT BACK"}
+          </h2>
+          <p className="text-[#333] mb-5 font-body text-sm leading-relaxed whitespace-pre-wrap max-w-md mx-auto">
+            {message || "Our store is currently undergoing maintenance. Please check back soon!"}
+          </p>
+          <div className="flex items-center justify-center gap-6 text-sm text-gray-400 font-body">
+            <a href="mailto:support@mylegacycannabis.ca" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+              <Mail size={14} /> Email Us
+            </a>
+            <a href="tel:4372154722" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+              <Phone size={14} /> (437) 215-4722
+            </a>
+          </div>
         </div>
-        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4 uppercase">
-          {title || "WE'LL BE RIGHT BACK"}
-        </h2>
-        <p className="text-[#333] mb-6 font-body text-sm leading-relaxed whitespace-pre-wrap max-w-md mx-auto">
-          {message || "Our store is currently undergoing maintenance. Please check back soon!"}
-        </p>
-        <div className="flex items-center justify-center gap-6 text-sm text-gray-400 font-body">
-          <a href="mailto:support@mylegacycannabis.ca" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
-            <Mail size={14} /> Email Us
-          </a>
-          <a href="tel:4372154722" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
-            <Phone size={14} /> (437) 215-4722
-          </a>
+
+        {/* ── Locations carousel ── */}
+        <div className="w-full max-w-5xl">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <div>
+              <h3 className="font-display text-lg md:text-xl text-white">VISIT US IN PERSON</h3>
+              <p className="text-white/60 font-body text-xs md:text-sm mt-0.5">
+                5 locations across the GTA &amp; Ottawa — open 24/7
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { scrollPrev(); stopAutoplay(); startAutoplay(); }}
+                disabled={!canScrollPrev}
+                className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/20 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/30 transition-colors"
+                aria-label="Previous location"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={() => { scrollNext(); stopAutoplay(); startAutoplay(); }}
+                disabled={!canScrollNext}
+                className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F15929] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#d94d22] transition-colors"
+                aria-label="Next location"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Embla viewport */}
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex gap-4">
+              {storeLocations.map((loc) => (
+                <div
+                  key={loc.id}
+                  className="flex-[0_0_85%] sm:flex-[0_0_65%] md:flex-[0_0_48%] lg:flex-[0_0_38%]"
+                >
+                  <MaintenanceLocationCard loc={loc} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dot indicators */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {storeLocations.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { scrollTo(i); stopAutoplay(); startAutoplay(); }}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === selectedIndex
+                    ? 'w-6 bg-[#F15929]'
+                    : 'w-2 bg-white/30 hover:bg-white/50'
+                }`}
+                aria-label={`Go to location ${i + 1}`}
+              />
+            ))}
+          </div>
+          <p className="text-center text-xs text-white/40 font-body mt-2">
+            {selectedIndex + 1} of {storeLocations.length} locations
+          </p>
         </div>
       </div>
     </div>
