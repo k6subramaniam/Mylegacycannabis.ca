@@ -50,14 +50,18 @@ function getTransporter(): nodemailer.Transporter | null {
     connectionTimeout: 10_000, // 10s to connect
     greetingTimeout: 10_000,   // 10s for SMTP greeting
     socketTimeout: 10_000,     // 10s inactivity timeout
-  });
+    // Force IPv4 — Railway containers can't reach Gmail SMTP over IPv6
+    // (ENETUNREACH 2607:f8b0:4004:c1f::6d:587)
+    tls: { servername: ENV.smtpHost },
+    family: 4,
+  } as any);
 
-  // Verify connection on first use
+  // Verify connection on first use — don't null the transporter on failure
+  // so subsequent sends can retry (transient network issues)
   _transporter.verify().then(() => {
     console.log("[Email] SMTP connection verified ✓");
   }).catch((err) => {
-    console.warn("[Email] SMTP connection failed:", err.message);
-    _transporter = null;
+    console.warn("[Email] SMTP verify failed (will retry on send):", err.message);
   });
 
   return _transporter;
