@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Loader2,
-  Send, RefreshCw, Wifi, WifiOff, Clock, ArrowRight,
+  Send, RefreshCw, Wifi, WifiOff, Clock, ArrowRight, Info,
   ChevronLeft, ChevronRight, Zap, Mail, Server,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -129,6 +129,20 @@ function DashboardTab() {
           </button>
         </div>
       </div>
+
+      {/* Warnings */}
+      {data.warnings && data.warnings.length > 0 && (
+        <div className="space-y-2">
+          {data.warnings.map((warning: string, i: number) => (
+            <div key={i} className="rounded-xl p-4 border-2 border-amber-200 bg-amber-50">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">{warning}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Uptime Meters */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -508,6 +522,16 @@ function TestTab() {
                     </button>
                   </div>
 
+                  {/* Provider Warning */}
+                  {(provider as any).warning && (
+                    <div className="mt-3 rounded-lg p-3 border border-amber-200 bg-amber-50">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800">{(provider as any).warning}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Ping Result */}
                   {ping && !ping.loading && (
                     <div className={`mt-3 rounded-lg p-3 text-xs ${
@@ -537,9 +561,18 @@ function TestTab() {
       {/* Send Test Email */}
       <div>
         <h3 className="text-sm font-semibold text-gray-800 mb-1">Send Test Email</h3>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-gray-500 mb-3">
           Send a real email to verify end-to-end delivery through your active provider.
         </p>
+        <div className="rounded-lg p-3 border border-blue-200 bg-blue-50 mb-4">
+          <div className="flex items-start gap-2">
+            <Info size={14} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-800">
+              <strong>Resend free tier:</strong> Can only send to your own email ({providers?.find(p => p.name === 'resend')?.configured ? 'the address tied to your API key' : 'configure RESEND_API_KEY first'}).
+              Verify a custom domain at <a href="https://resend.com/domains" target="_blank" rel="noopener" className="underline font-medium">resend.com/domains</a> to send to any recipient.
+            </p>
+          </div>
+        </div>
 
         <div className="flex gap-3">
           <input

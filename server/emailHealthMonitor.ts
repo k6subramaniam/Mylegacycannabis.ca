@@ -48,6 +48,7 @@ export interface HealthSnapshot {
   lastFailureAt: string | null;
   lastFailureError: string | null;
   monitoringSince: string;  // ISO-8601 when monitor started
+  warnings: string[];       // actionable warnings for the admin
 }
 
 export interface PingResult {
@@ -121,6 +122,32 @@ export function getHealthDashboard(): HealthSnapshot {
   if (ENV.resendApiKey) activeProvider = "resend";
   else if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass) activeProvider = "smtp";
 
+  // Actionable warnings
+  const warnings: string[] = [];
+
+  // Detect Resend domain restriction from recent failures
+  const domainError = events.find(e =>
+    e.status === "failed" && e.error?.includes("can only send testing emails to your own email")
+  );
+  if (domainError) {
+    warnings.push(
+      `Resend free tier: can only send to ${ENV.adminEmail || "your account email"}. ` +
+      `Verify a custom domain at resend.com/domains to send to any recipient (e.g. customers).`
+    );
+  }
+
+  // SMTP port blocked
+  const smtpBlockedError = events.find(e =>
+    e.status === "failed" && e.provider === "smtp" &&
+    (e.error?.includes("ENETUNREACH") || e.error?.includes("Connection timeout"))
+  );
+  if (smtpBlockedError) {
+    warnings.push(
+      "SMTP port 587 is blocked on Railway Hobby plan. SMTP fallback will not work. " +
+      "Use Resend as primary provider or upgrade to Railway Pro."
+    );
+  }
+
   return {
     status,
     activeProvider,
@@ -131,6 +158,7 @@ export function getHealthDashboard(): HealthSnapshot {
     lastFailureAt: lastFailure?.timestamp ?? null,
     lastFailureError: lastFailure?.error ?? null,
     monitoringSince,
+    warnings,
   };
 }
 
@@ -179,23 +207,28 @@ export async function pingProvider(provider: string): Promise<PingResult> {
           result.details = "RESEND_API_KEY not configured";
           break;
         }
-        // Ping Resend API — fetch API keys endpoint (lightweight, no email sent)
+        // Ping Resend API — fetch domains endpoint to verify key + check domain status
         const res = await fetch("https://api.resend.com/domains", {
           method: "GET",
           headers: { Authorization: `Bearer ${ENV.resendApiKey}` },
           signal: AbortSignal.timeout(10_000),
         });
-        result.reachable = res.ok || res.status === 401 || res.status === 403;
-        // Even 401/403 means the API is reachable
         if (res.ok) {
-          const data = await res.json() as any;
-          const domainCount = data?.data?.length ?? 0;
-          result.details = `API reachable. ${domainCount} domain(s) configured. Status: ${res.status}`;
-        } else if (res.status === 401 || res.status === 403) {
-          result.details = `API reachable but auth issue (${res.status}). Check RESEND_API_KEY.`;
           result.reachable = true;
+          const data = await res.json() as any;
+          const domains = data?.data || [];
+          const verified = domains.filter((d: any) => d.status === "verified");
+          if (domains.length === 0) {
+            result.details = `API key valid. No custom domains — using onboarding@resend.dev (can only send to ${ENV.adminEmail || "your own email"}). Add a domain at resend.com/domains to send to any recipient.`;
+          } else if (verified.length > 0) {
+            result.details = `API key valid. ${verified.length} verified domain(s): ${verified.map((d: any) => d.name).join(", ")}. Can send to any recipient.`;
+          } else {
+            result.details = `API key valid. ${domains.length} domain(s) pending verification. Currently can only send to ${ENV.adminEmail || "your own email"}.`;
+          }
         } else {
-          result.details = `API responded with status ${res.status}`;
+          // Even non-200 means API is reachable (network works)
+          result.reachable = res.status !== 500 && res.status !== 502 && res.status !== 503;
+          result.details = `API responded with ${res.status}. ${result.reachable ? "Network OK but check RESEND_API_KEY permissions." : "Resend may be experiencing an outage."}`;
         }
         break;
       }
@@ -354,17 +387,26 @@ export function getAvailableProviders(): Array<{
   name: string;
   configured: boolean;
   envKeys: string[];
+  warning?: string;
 }> {
   return [
     {
       name: "resend",
       configured: !!ENV.resendApiKey,
       envKeys: ["RESEND_API_KEY"],
+      warning: ENV.resendApiKey
+        ? "Free tier: can only send to your own email. Add a verified domain at resend.com/domains to send to customers."
+        : undefined,
     },
     {
       name: "smtp",
       configured: !!(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass),
       envKeys: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"],
+      warning: (ENV.smtpHost && ENV.smtpUser && !ENV.smtpPass)
+        ? "SMTP_PASS is missing. SMTP transport will not work."
+        : (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass)
+          ? "Railway Hobby plan blocks SMTP ports 465/587. SMTP only works on Railway Pro or local dev."
+          : undefined,
     },
     {
       name: "sendgrid",
