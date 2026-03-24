@@ -58,6 +58,8 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
   return { title, content };
 };
 
+const NOTIFICATION_TIMEOUT_MS = 10_000; // 10 seconds max per channel
+
 /**
  * Dispatches a project-owner notification via:
  * 1. SMTP email to ADMIN_EMAIL (primary — real email delivery)
@@ -73,17 +75,23 @@ export async function notifyOwner(
   let emailSent = false;
   let forgeSent = false;
 
-  // ── 1. Send real email to admin ──
+  // ── 1. Send real email to admin (with timeout) ──
   try {
-    emailSent = await sendAdminNotification(title, content);
+    emailSent = await Promise.race([
+      sendAdminNotification(title, content),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), NOTIFICATION_TIMEOUT_MS)),
+    ]);
   } catch (err) {
     console.warn("[Notification] Email notification failed:", err);
   }
 
-  // ── 2. Forge notification API (original behavior) ──
+  // ── 2. Forge notification API (with timeout) ──
   if (ENV.forgeApiUrl && ENV.forgeApiKey) {
     try {
       const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), NOTIFICATION_TIMEOUT_MS);
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -93,7 +101,9 @@ export async function notifyOwner(
           "connect-protocol-version": "1",
         },
         body: JSON.stringify({ title, content }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (response.ok) {
         forgeSent = true;
@@ -103,8 +113,12 @@ export async function notifyOwner(
           `[Notification] Forge API failed (${response.status})${detail ? `: ${detail}` : ""}`
         );
       }
-    } catch (error) {
-      console.warn("[Notification] Forge API error:", error);
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        console.warn(`[Notification] Forge API timed out after ${NOTIFICATION_TIMEOUT_MS / 1000}s`);
+      } else {
+        console.warn("[Notification] Forge API error:", error);
+      }
     }
   }
 
@@ -113,4 +127,15 @@ export async function notifyOwner(
   }
 
   return emailSent || forgeSent;
+}
+
+/**
+ * Fire-and-forget variant — logs errors but never blocks the caller.
+ * Use this for customer-facing mutations (submitOrder, submitVerification)
+ * so the user gets an instant response.
+ */
+export function notifyOwnerAsync(payload: NotificationPayload): void {
+  notifyOwner(payload).catch((err) =>
+    console.error("[Notification] Background send failed:", err)
+  );
 }
