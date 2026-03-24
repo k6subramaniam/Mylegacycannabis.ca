@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { lookup } from "dns";
 import { ENV } from "./_core/env";
 
 /**
@@ -38,11 +39,22 @@ function getTransporter(): nodemailer.Transporter | null {
     return null; // SMTP not configured
   }
 
+  // Force IPv4 DNS resolution — Railway containers can't reach Gmail SMTP
+  // over IPv6 (ENETUNREACH 2607:f8b0:4004:c1f::6d:587).
+  // Using a custom dnsLookup is the most reliable way to enforce this at
+  // the socket level, bypassing any Nodemailer version quirks with `family`.
+  const ipv4Lookup = (hostname: string, options: any, cb: any) => {
+    if (typeof options === "function") {
+      cb = options;
+      options = {};
+    }
+    return lookup(hostname, { ...options, family: 4 }, cb);
+  };
+
   _transporter = nodemailer.createTransport({
     host: ENV.smtpHost,
     port: ENV.smtpPort,
     secure: ENV.smtpPort === 465, // true for port 465, false for 587
-    family: 4, // Force IPv4 — Railway blocks outbound IPv6 SMTP (QDISC_DROP)
     auth: {
       user: ENV.smtpUser,
       pass: ENV.smtpPass,
@@ -50,10 +62,8 @@ function getTransporter(): nodemailer.Transporter | null {
     connectionTimeout: 10_000, // 10s to connect
     greetingTimeout: 10_000,   // 10s for SMTP greeting
     socketTimeout: 10_000,     // 10s inactivity timeout
-    // Force IPv4 — Railway containers can't reach Gmail SMTP over IPv6
-    // (ENETUNREACH 2607:f8b0:4004:c1f::6d:587)
     tls: { servername: ENV.smtpHost },
-    family: 4,
+    dnsLookup: ipv4Lookup,
   } as any);
 
   // Verify connection on first use — don't null the transporter on failure
