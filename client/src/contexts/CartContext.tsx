@@ -46,12 +46,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addItem = useCallback((product: Product, quantity = 1) => {
+    // Normalize price to a number — DB returns strings like "35.00"
+    const normalizedProduct = {
+      ...product,
+      price: typeof product.price === 'string' ? parseFloat(product.price) || 0 : (product.price || 0),
+    };
     setItems(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
+      const existing = prev.find(i => i.product.id === normalizedProduct.id);
       if (existing) {
-        return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
+        return prev.map(i => i.product.id === normalizedProduct.id ? { ...i, quantity: i.quantity + quantity } : i);
       }
-      return [...prev, { product, quantity }];
+      return [...prev, { product: normalizedProduct, quantity }];
     });
   }, []);
 
@@ -73,7 +78,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => {
+    const price = typeof i.product.price === 'string' ? parseFloat(i.product.price) || 0 : (i.product.price || 0);
+    return sum + price * i.quantity;
+  }, 0);
   const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
   const freeShippingProgress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const amountToFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0);

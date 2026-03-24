@@ -153,7 +153,7 @@ export default function Home() {
                   <p className="text-xs text-gray-500 font-body mb-1">{product.flavor} · {product.weight}</p>
                   <p className="text-xs text-gray-400 font-mono-legacy mb-3">THC: {product.thc}</p>
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-lg text-[#4B2D8E]">${product.price.toFixed(2)}</span>
+                    <span className="font-display text-lg text-[#4B2D8E]">${(typeof product.price === 'string' ? parseFloat(product.price) : product.price).toFixed(2)}</span>
                     <button
                       onClick={(e) => { e.preventDefault(); addItem(product); toast.success(`${product.name} added to cart`); }}
                       className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -163,7 +163,7 @@ export default function Home() {
                     </button>
                   </div>
                   <p className="text-[10px] text-[#4B2D8E] font-body mt-2 flex items-center gap-1">
-                    <Star size={10} className="text-[#F15929]" /> Earn {product.price} points with this purchase
+                    <Star size={10} className="text-[#F15929]" /> Earn {Math.floor(typeof product.price === 'string' ? parseFloat(product.price) : product.price)} points with this purchase
                   </p>
                 </div>
               </div>

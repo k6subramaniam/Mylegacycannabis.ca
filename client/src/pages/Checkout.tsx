@@ -285,7 +285,7 @@ export default function Checkout() {
           productName: item.product.name,
           productImage: item.product.image || undefined,
           quantity: item.quantity,
-          price: item.product.price.toFixed(2),
+          price: (typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price).toFixed(2),
         })),
         subtotal: subtotal.toFixed(2),
         shippingCost: shippingRate.toFixed(2),
@@ -315,7 +315,7 @@ export default function Checkout() {
           items: items.map(item => ({
             name: item.product.name,
             quantity: item.quantity,
-            price: item.product.price,
+            price: typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price,
           })),
         });
       }
@@ -502,7 +502,7 @@ export default function Checkout() {
                         <p className="text-xs font-display text-[#333] truncate">{item.product.name}</p>
                         <p className="text-[10px] text-gray-500 font-body">Qty: {item.quantity}</p>
                       </div>
-                      <span className="text-xs font-mono-legacy text-[#333]">${(item.product.price * item.quantity).toFixed(2)}</span>
+                      <span className="text-xs font-mono-legacy text-[#333]">${((typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>

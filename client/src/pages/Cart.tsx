@@ -110,7 +110,7 @@ export default function Cart() {
                         <span className="w-8 text-center text-sm font-display">{item.quantity}</span>
                         <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-2 hover:text-[#F15929]" aria-label="Increase"><Plus size={14} /></button>
                       </div>
-                      <span className="font-display text-base text-[#4B2D8E]">${(item.product.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-display text-base text-[#4B2D8E]">${((typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price) * item.quantity).toFixed(2)}</span>
                     </div>
                   </div>
                 </motion.div>
