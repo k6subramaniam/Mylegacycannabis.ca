@@ -2,7 +2,7 @@ import { useLocation, Link, Redirect } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
-  Menu, X, Settings, ShieldAlert,
+  Menu, X, Settings, ShieldAlert, ImageUp,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbS
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: Package, label: "Products", path: "/admin/products" },
+  { icon: ImageUp, label: "Menu Import", path: "/admin/menu-import" },
   { icon: ShoppingCart, label: "Orders", path: "/admin/orders" },
   { icon: ShieldCheck, label: "ID Verification", path: "/admin/verifications" },
   { icon: Truck, label: "Shipping", path: "/admin/shipping" },

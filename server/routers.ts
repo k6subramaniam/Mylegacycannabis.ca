@@ -26,6 +26,7 @@ import {
   triggerOrderShipped,
   triggerOrderStatusUpdate,
 } from "./emailTemplateEngine";
+import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 
 export const appRouter = router({
   system: systemRouter,
@@ -625,6 +626,62 @@ export const appRouter = router({
       const buffer = Buffer.from(input.base64, 'base64');
       const { url } = await storagePut(key, buffer, input.contentType);
       return { url, key };
+    }),
+
+    // ─── MENU IMPORT (AI-powered product import from menu photos) ───
+    menuImport: router({
+      /** Parse a menu image using AI vision → return structured product list for review */
+      parse: adminProcedure.input(z.object({
+        imageBase64: z.string().min(100, "Image data is too small"),
+        mimeType: z.string().default("image/png"),
+      })).mutation(async ({ input, ctx }) => {
+        try {
+          const items = await parseMenuImage(input.imageBase64, input.mimeType);
+          await db.logAdminActivity({
+            adminId: ctx.user?.id || 0,
+            adminName: ctx.user?.name || "Admin",
+            action: "menu_parse",
+            entityType: "product",
+            details: `Parsed menu image: ${items.length} products extracted`,
+          });
+          return { success: true, items, count: items.length };
+        } catch (err: any) {
+          console.error("[MenuImport] Parse error:", err.message);
+          return { success: false, items: [] as ParsedMenuItem[], count: 0, error: err.message };
+        }
+      }),
+
+      /** Apply confirmed import — create/update products, optionally deactivate old ones */
+      confirm: adminProcedure.input(z.object({
+        items: z.array(z.object({
+          category: z.string(),
+          grade: z.string(),
+          strain: z.string(),
+          thc: z.string(),
+          isNew: z.boolean(),
+          prices: z.object({
+            "1g": z.string().nullable().optional(),
+            "3.5g": z.string().nullable().optional(),
+            "7g": z.string().nullable().optional(),
+            "14g": z.string().nullable().optional(),
+            "28g": z.string().nullable().optional(),
+          }),
+          stock: z.number().min(0).default(10),
+          include: z.boolean().default(true),
+        })),
+        deactivateOldFlower: z.boolean().default(false),
+        defaultStock: z.number().min(0).default(10),
+      })).mutation(async ({ input, ctx }) => {
+        const result = await applyMenuImport(input as MenuImportPayload);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "menu_import",
+          entityType: "product",
+          details: `Menu import applied: ${result.created} created, ${result.updated} updated, ${result.deactivated} deactivated, ${result.skipped} skipped`,
+        });
+        return { success: true, ...result };
+      }),
     }),
   }),
 
