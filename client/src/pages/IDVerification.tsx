@@ -6,9 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Shield, Upload, CheckCircle, Clock, AlertCircle, Camera, FileText, Smartphone, QrCode, Mail, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function IDVerification() {
   const { user, isAuthenticated, submitIdVerification, updateProfile } = useAuth();
+  const { idVerificationEnabled } = useSiteConfig();
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
@@ -80,6 +82,28 @@ export default function IDVerification() {
       })
       .catch(() => {});
   }, []);
+
+  // ============================================================
+  // FEATURE DISABLED — show friendly message
+  // ============================================================
+  if (!idVerificationEnabled) {
+    return (
+      <>
+        <SEOHead title="ID Verification" noindex />
+        <section className="container py-12">
+          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'ID Verification' }]} />
+          <div className="max-w-lg mx-auto text-center">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={40} className="text-green-600" />
+            </motion.div>
+            <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">NO VERIFICATION NEEDED</h1>
+            <p className="text-gray-600 font-body mb-6">ID verification is not currently required. You can place orders directly.</p>
+            <Link href="/shop" className="bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all">START SHOPPING</Link>
+          </div>
+        </section>
+      </>
+    );
+  }
 
   // ============================================================
   // APPROVED

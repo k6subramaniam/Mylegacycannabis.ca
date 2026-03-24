@@ -4,8 +4,10 @@ import {
   TrendingUp, Clock, AlertTriangle, ArrowRight, Eye,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 export default function AdminDashboard() {
+  const { idVerificationEnabled } = useSiteConfig();
   const { data: stats, isLoading } = trpc.admin.stats.useQuery(undefined, {
     refetchInterval: 30_000, // re-poll every 30s so new orders/verifications appear without a refresh
     refetchOnWindowFocus: true,
@@ -30,7 +32,8 @@ export default function AdminDashboard() {
   const statCards = [
     { label: "Total Orders", value: stats?.totalOrders ?? 0, icon: ShoppingCart, color: "bg-[#4B2D8E]", link: "/admin/orders" },
     { label: "Revenue", value: `$${(stats?.totalRevenue ?? 0).toLocaleString("en-CA", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "bg-green-600", link: "/admin/reports" },
-    { label: "Pending IDs", value: stats?.pendingVerifications ?? 0, icon: ShieldCheck, color: stats?.pendingVerifications ? "bg-[#F15929]" : "bg-gray-400", link: "/admin/verifications" },
+    // Only show Pending IDs card when verification is enabled
+    ...(idVerificationEnabled ? [{ label: "Pending IDs", value: stats?.pendingVerifications ?? 0, icon: ShieldCheck, color: stats?.pendingVerifications ? "bg-[#F15929]" : "bg-gray-400", link: "/admin/verifications" }] : []),
     { label: "Products", value: stats?.totalProducts ?? 0, icon: Package, color: "bg-blue-600", link: "/admin/products" },
     { label: "Customers", value: stats?.totalUsers ?? 0, icon: Users, color: "bg-teal-600", link: "/admin/customers" },
   ];
@@ -73,8 +76,8 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Alerts */}
-      {(stats?.pendingVerifications ?? 0) > 0 && (
+      {/* Alerts — only show pending IDs when verification is enabled */}
+      {idVerificationEnabled && (stats?.pendingVerifications ?? 0) > 0 && (
         <div className="bg-[#F15929]/10 border border-[#F15929]/30 rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle size={20} className="text-[#F15929] shrink-0" />
           <div className="flex-1">
@@ -83,6 +86,20 @@ export default function AdminDashboard() {
           </div>
           <Link href="/admin/verifications" className="bg-[#F15929] text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-[#d94d22] transition-colors shrink-0">
             Review Now
+          </Link>
+        </div>
+      )}
+
+      {/* Notification when ID verification is disabled */}
+      {!idVerificationEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+          <ShieldCheck size={20} className="text-amber-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-700">ID Verification is currently disabled</p>
+            <p className="text-xs text-amber-600 mt-0.5">All customers can place orders without ID checks.</p>
+          </div>
+          <Link href="/admin/settings" className="text-amber-700 text-xs font-semibold px-4 py-2 rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors shrink-0">
+            Settings
           </Link>
         </div>
       )}

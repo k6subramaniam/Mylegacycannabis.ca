@@ -2,7 +2,7 @@ import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
-  Menu, X,
+  Menu, X, Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -17,6 +17,7 @@ const menuItems = [
   { icon: Mail, label: "Email Templates", path: "/admin/emails" },
   { icon: BarChart3, label: "Reports", path: "/admin/reports" },
   { icon: Users, label: "Customers", path: "/admin/customers" },
+  { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

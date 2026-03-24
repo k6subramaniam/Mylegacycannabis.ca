@@ -241,6 +241,15 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) NOT NULL UNIQUE,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -254,6 +263,21 @@ export async function initializeDatabase(): Promise<void> {
 
   // Always upsert email templates (ensures new templates are added to existing DBs)
   await syncEmailTemplates(db);
+
+  // Seed default site settings if they don't exist
+  await seedDefaultSettings(db);
+}
+
+async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
+  const defaults: { key: string; value: string }[] = [
+    { key: 'id_verification_enabled', value: 'true' },
+  ];
+  for (const d of defaults) {
+    const existing = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.key, d.key)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(schema.siteSettings).values(d);
+    }
+  }
 }
 
 /**
@@ -624,6 +648,56 @@ export async function createEmailTemplate(data: schema.InsertEmailTemplate): Pro
   return result[0].id;
 }
 
+// ─── SITE SETTINGS HELPERS ───
+const _settingsCache = new Map<string, string>();
+
+export async function getSiteSetting(key: string): Promise<string | null> {
+  // Check cache first
+  if (_settingsCache.has(key)) return _settingsCache.get(key)!;
+  if (!USE_PERSISTENT_DB) {
+    const found = (_siteSettings as any[]).find((s: any) => s.key === key);
+    return found?.value ?? null;
+  }
+  const rows = await getDb().select().from(schema.siteSettings).where(eq(schema.siteSettings.key, key)).limit(1);
+  const val = rows[0]?.value ?? null;
+  if (val !== null) _settingsCache.set(key, val);
+  return val;
+}
+
+export async function setSiteSetting(key: string, value: string): Promise<void> {
+  _settingsCache.set(key, value);
+  if (!USE_PERSISTENT_DB) {
+    const existing = (_siteSettings as any[]).find((s: any) => s.key === key);
+    if (existing) { existing.value = value; existing.updatedAt = new Date(); }
+    else (_siteSettings as any[]).push({ id: nextId(), key, value, updatedAt: new Date() });
+    return;
+  }
+  const db = getDb();
+  const existing = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.key, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(schema.siteSettings).set({ value, updatedAt: new Date() }).where(eq(schema.siteSettings.key, key));
+  } else {
+    await db.insert(schema.siteSettings).values({ key, value });
+  }
+}
+
+export async function getAllSiteSettings(): Promise<Record<string, string>> {
+  if (!USE_PERSISTENT_DB) {
+    const result: Record<string, string> = {};
+    for (const s of _siteSettings as any[]) result[s.key] = s.value;
+    return result;
+  }
+  const rows = await getDb().select().from(schema.siteSettings);
+  const result: Record<string, string> = {};
+  for (const r of rows) { result[r.key] = r.value; _settingsCache.set(r.key, r.value); }
+  return result;
+}
+
+export async function isIdVerificationEnabled(): Promise<boolean> {
+  const val = await getSiteSetting('id_verification_enabled');
+  return val !== 'false'; // default true if not set
+}
+
 // ─── ADMIN ACTIVITY LOG ───
 export async function logAdminActivity(data: schema.InsertAdminActivityLog): Promise<void> {
   if (!USE_PERSISTENT_DB) { _mem_logAdminActivity(data); return; }
@@ -832,6 +906,7 @@ const _emailTemplates: any[] = [];
 const _adminActivityLog: any[] = [];
 const _rewardsHistory: any[] = [];
 const _verificationCodes: any[] = [];
+const _siteSettings: any[] = [{ id: 1, key: 'id_verification_enabled', value: 'true', updatedAt: new Date() }];
 
 function paginate<T>(arr: T[], page: number, limit: number) {
   const offset = (page - 1) * limit;
