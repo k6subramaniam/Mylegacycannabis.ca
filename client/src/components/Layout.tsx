@@ -262,11 +262,11 @@ function MaintenanceOverlay({ title, message }: { title: string; message: string
 
           {/* Embla viewport */}
           <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex gap-4">
+            <div className="flex gap-5 md:gap-6">
               {storeLocations.map((loc) => (
                 <div
                   key={loc.id}
-                  className="flex-[0_0_85%] sm:flex-[0_0_65%] md:flex-[0_0_48%] lg:flex-[0_0_38%]"
+                  className="flex-[0_0_85%] sm:flex-[0_0_65%] md:flex-[0_0_46%] lg:flex-[0_0_36%]"
                 >
                   <MaintenanceLocationCard loc={loc} />
                 </div>
