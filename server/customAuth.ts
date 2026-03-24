@@ -479,4 +479,11 @@ export function registerCustomAuthRoutes(app: Express) {
     const available = Boolean(ENV.googleClientId && ENV.googleClientSecret);
     res.json({ available });
   });
+
+  // ─── CHECK SMTP EMAIL AVAILABILITY ───
+  app.get("/api/auth/smtp-available", (_req: Request, res: Response) => {
+    const available = Boolean(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass);
+    const adminEmail = ENV.adminEmail || null;
+    res.json({ available, adminEmail: available ? adminEmail : null });
+  });
 }

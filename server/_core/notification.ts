@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
+import { sendAdminNotification } from "../emailService";
 
 export type NotificationPayload = {
   title: string;
@@ -58,51 +59,58 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Dispatches a project-owner notification through the configured notification service.
- * Returns `true` if accepted, `false` when the upstream service cannot be reached.
+ * Dispatches a project-owner notification via:
+ * 1. SMTP email to ADMIN_EMAIL (primary — real email delivery)
+ * 2. Forge notification API (secondary — in-app notification)
+ *
+ * Returns `true` if at least one channel succeeded.
  */
 export async function notifyOwner(
   payload: NotificationPayload
 ): Promise<boolean> {
   const { title, content } = validatePayload(payload);
 
-  if (!ENV.forgeApiUrl) {
-    console.warn("[Notification] Notification service URL is not configured. Skipping.");
-    return false;
-  }
+  let emailSent = false;
+  let forgeSent = false;
 
-  if (!ENV.forgeApiKey) {
-    console.warn("[Notification] Notification service API key is not configured. Skipping.");
-    return false;
-  }
-
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
-
+  // ── 1. Send real email to admin ──
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1",
-      },
-      body: JSON.stringify({ title, content }),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${
-          detail ? `: ${detail}` : ""
-        }`
-      );
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
-    return false;
+    emailSent = await sendAdminNotification(title, content);
+  } catch (err) {
+    console.warn("[Notification] Email notification failed:", err);
   }
+
+  // ── 2. Forge notification API (original behavior) ──
+  if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+    try {
+      const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${ENV.forgeApiKey}`,
+          "content-type": "application/json",
+          "connect-protocol-version": "1",
+        },
+        body: JSON.stringify({ title, content }),
+      });
+
+      if (response.ok) {
+        forgeSent = true;
+      } else {
+        const detail = await response.text().catch(() => "");
+        console.warn(
+          `[Notification] Forge API failed (${response.status})${detail ? `: ${detail}` : ""}`
+        );
+      }
+    } catch (error) {
+      console.warn("[Notification] Forge API error:", error);
+    }
+  }
+
+  if (!emailSent && !forgeSent) {
+    console.warn(`[Notification] All channels failed. Title: ${title} | Content: ${content}`);
+  }
+
+  return emailSent || forgeSent;
 }

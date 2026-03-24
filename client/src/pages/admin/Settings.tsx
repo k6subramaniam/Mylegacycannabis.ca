@@ -62,12 +62,15 @@ export default function AdminSettings() {
   // ─── AUTH PROVIDERS STATUS ───
   const [googleAvailable, setGoogleAvailable] = useState(false);
   const [smsAvailable, setSmsAvailable] = useState(false);
+  const [smtpAvailable, setSmtpAvailable] = useState(false);
+  const [smtpAdminEmail, setSmtpAdminEmail] = useState<string | null>(null);
   const [authStatusLoading, setAuthStatusLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/google-available').then(r => r.json()).then(d => setGoogleAvailable(d.available)).catch(() => {}),
       fetch('/api/auth/sms-available').then(r => r.json()).then(d => setSmsAvailable(d.available)).catch(() => {}),
+      fetch('/api/auth/smtp-available').then(r => r.json()).then(d => { setSmtpAvailable(d.available); setSmtpAdminEmail(d.adminEmail); }).catch(() => {}),
     ]).finally(() => setAuthStatusLoading(false));
   }, []);
 
@@ -684,8 +687,8 @@ export default function AdminSettings() {
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
           <Key size={20} className="text-[#4B2D8E]" />
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">Authentication Providers</h2>
-            <p className="text-sm text-gray-500">Google social login and Twilio SMS verification status.</p>
+            <h2 className="text-lg font-semibold text-gray-800">Authentication & Email Providers</h2>
+            <p className="text-sm text-gray-500">Google social login, Twilio SMS, and SMTP email configuration status.</p>
           </div>
         </div>
 
@@ -799,20 +802,77 @@ export default function AdminSettings() {
                 </div>
               </div>
 
+              {/* SMTP Email */}
+              <div className={`rounded-xl border-2 p-4 ${
+                smtpAvailable ? 'border-green-200 bg-green-50/50' : 'border-amber-200 bg-amber-50/50'
+              }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    smtpAvailable ? 'bg-green-100' : 'bg-amber-100'
+                  }`}>
+                    <MessageSquare size={24} className={smtpAvailable ? 'text-green-600' : 'text-amber-600'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-800">SMTP Email Notifications</h3>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                        smtpAvailable ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {smtpAvailable ? 'Active' : 'Not Configured'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {smtpAvailable
+                        ? `SMTP is active. OTP codes, order confirmations, and admin alerts are sent via email to ${smtpAdminEmail || 'the configured admin'}.`
+                        : 'Sends real emails for OTP codes, order notifications, and admin alerts. Requires Gmail App Password or SMTP credentials.'
+                      }
+                    </p>
+                    {!smtpAvailable && (
+                      <div className="mt-3 bg-white rounded-lg border border-amber-200 p-3">
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5">Setup Instructions (Gmail):</p>
+                        <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+                          <li>Enable 2-Step Verification on your Google Account</li>
+                          <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">Google App Passwords</a> and generate a password for "Mail"</li>
+                          <li>Set these environment variables on your server:
+                            <div className="mt-1 space-y-0.5">
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_HOST=smtp.gmail.com</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_PORT=587</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_USER=your-email@gmail.com</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_PASS=your-app-password</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_FROM=My Legacy Cannabis &lt;your-email@gmail.com&gt;</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">ADMIN_EMAIL=your-email@gmail.com</code>
+                            </div>
+                          </li>
+                          <li>Restart the server — emails will start sending automatically</li>
+                        </ol>
+                        <div className="mt-2 flex items-start gap-1.5">
+                          <Info size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-amber-600">While SMTP is not configured, OTP codes are logged to the server console for testing.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Summary */}
               <div className="bg-[#4B2D8E]/5 rounded-xl p-4">
                 <div className="flex items-start gap-2">
                   <Info size={16} className="text-[#4B2D8E] shrink-0 mt-0.5" />
                   <div className="text-sm text-gray-600">
-                    <p className="font-medium text-gray-700">Available Login Methods</p>
+                    <p className="font-medium text-gray-700">System Status</p>
                     <ul className="mt-1.5 space-y-1">
                       <li className="flex items-center gap-2">
+                        {smtpAvailable ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
+                        <span>Email Delivery — {smtpAvailable ? 'active via SMTP (real emails sent)' : 'not configured (OTP codes logged to console)'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
                         <CheckCircle size={14} className="text-green-500" />
-                        <span>Email OTP — always available (codes sent via email or logged to console)</span>
+                        <span>Email OTP Login — always available</span>
                       </li>
                       <li className="flex items-center gap-2">
                         {smsAvailable ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
-                        <span>Phone SMS OTP — {smsAvailable ? 'active via Twilio' : 'pending Twilio credentials (fallback: codes logged to console)'}</span>
+                        <span>Phone SMS OTP — {smsAvailable ? 'active via Twilio' : 'pending Twilio credentials'}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         {googleAvailable ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
