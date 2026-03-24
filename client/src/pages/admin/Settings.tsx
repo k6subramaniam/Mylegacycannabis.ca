@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Settings as SettingsIcon, Shield, ShieldOff, Save, Loader2,
   AlertTriangle, CheckCircle, Info, Wrench, WrenchIcon, Clock,
-  Eye, EyeOff, Type, MessageSquare,
+  Eye, EyeOff, Type, MessageSquare, Key, Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
@@ -26,7 +26,7 @@ const DEFAULT_HOURS: StoreHours = {
 
 /**
  * Admin Settings page.
- * Sections: ID Verification, Maintenance Mode, Hours of Operation.
+ * Sections: ID Verification, Maintenance Mode, Hours of Operation, Auth Providers.
  */
 export default function AdminSettings() {
   const utils = trpc.useUtils();
@@ -58,6 +58,18 @@ export default function AdminSettings() {
   const [storeHours, setStoreHours] = useState<StoreHours>(DEFAULT_HOURS);
   const [hoursNote, setHoursNote] = useState("Orders placed outside business hours will be processed on the next business day.");
   const [hoursHasChanges, setHoursHasChanges] = useState(false);
+
+  // ─── AUTH PROVIDERS STATUS ───
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [smsAvailable, setSmsAvailable] = useState(false);
+  const [authStatusLoading, setAuthStatusLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/auth/google-available').then(r => r.json()).then(d => setGoogleAvailable(d.available)).catch(() => {}),
+      fetch('/api/auth/sms-available').then(r => r.json()).then(d => setSmsAvailable(d.available)).catch(() => {}),
+    ]).finally(() => setAuthStatusLoading(false));
+  }, []);
 
   // Sync all local state from loaded settings
   useEffect(() => {
@@ -661,6 +673,156 @@ export default function AdminSettings() {
                 Cancel
               </button>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 4: AUTHENTICATION PROVIDERS
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+          <Key size={20} className="text-[#4B2D8E]" />
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">Authentication Providers</h2>
+            <p className="text-sm text-gray-500">Google social login and Twilio SMS verification status.</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {authStatusLoading ? (
+            <div className="flex items-center gap-2 text-gray-400">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Checking provider status...</span>
+            </div>
+          ) : (
+            <>
+              {/* Google OAuth */}
+              <div className={`rounded-xl border-2 p-4 ${
+                googleAvailable ? 'border-green-200 bg-green-50/50' : 'border-amber-200 bg-amber-50/50'
+              }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    googleAvailable ? 'bg-green-100' : 'bg-amber-100'
+                  }`}>
+                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-800">Google Social Login</h3>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                        googleAvailable ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {googleAvailable ? 'Active' : 'Not Configured'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {googleAvailable
+                        ? 'Google OAuth is active. Customers can sign in and register using their Google accounts.'
+                        : 'Allows customers to sign in with their Google account. Requires Google Cloud Console credentials.'
+                      }
+                    </p>
+                    {!googleAvailable && (
+                      <div className="mt-3 bg-white rounded-lg border border-amber-200 p-3">
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5">Setup Instructions:</p>
+                        <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+                          <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">Google Cloud Console &rarr; Credentials</a></li>
+                          <li>Create an OAuth 2.0 Client ID (Web application)</li>
+                          <li>Add your domain to Authorized redirect URIs: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[#4B2D8E]">https://yourdomain.com/api/auth/google/callback</code></li>
+                          <li>Set these environment variables on your server (e.g. Railway):
+                            <div className="mt-1 space-y-0.5">
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">GOOGLE_CLIENT_SECRET=your-client-secret</code>
+                            </div>
+                          </li>
+                          <li>Restart the server — the button will activate automatically</li>
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Twilio SMS */}
+              <div className={`rounded-xl border-2 p-4 ${
+                smsAvailable ? 'border-green-200 bg-green-50/50' : 'border-amber-200 bg-amber-50/50'
+              }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    smsAvailable ? 'bg-green-100' : 'bg-amber-100'
+                  }`}>
+                    <Smartphone size={24} className={smsAvailable ? 'text-green-600' : 'text-amber-600'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-800">Twilio SMS Verification</h3>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                        smsAvailable ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {smsAvailable ? 'Active' : 'Not Configured'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {smsAvailable
+                        ? 'Twilio SMS is active. Customers receive verification codes via text message for login and registration.'
+                        : 'Sends OTP verification codes via SMS. Requires a Twilio account with a phone number.'
+                      }
+                    </p>
+                    {!smsAvailable && (
+                      <div className="mt-3 bg-white rounded-lg border border-amber-200 p-3">
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5">Setup Instructions:</p>
+                        <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+                          <li>Sign up at <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">twilio.com</a> (free trial includes $15 credit)</li>
+                          <li>Get a Twilio phone number with SMS capability (Canadian number recommended)</li>
+                          <li>Find your Account SID and Auth Token on the <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">Twilio Console</a></li>
+                          <li>Set these environment variables on your server:
+                            <div className="mt-1 space-y-0.5">
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">TWILIO_AUTH_TOKEN=your-auth-token</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">TWILIO_PHONE_NUMBER=+1234567890</code>
+                            </div>
+                          </li>
+                          <li>Restart the server — SMS verification will activate automatically</li>
+                        </ol>
+                        <div className="mt-2 flex items-start gap-1.5">
+                          <Info size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-amber-600">While SMS is not configured, phone OTP codes are logged to the server console for testing.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-[#4B2D8E]/5 rounded-xl p-4">
+                <div className="flex items-start gap-2">
+                  <Info size={16} className="text-[#4B2D8E] shrink-0 mt-0.5" />
+                  <div className="text-sm text-gray-600">
+                    <p className="font-medium text-gray-700">Available Login Methods</p>
+                    <ul className="mt-1.5 space-y-1">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle size={14} className="text-green-500" />
+                        <span>Email OTP — always available (codes sent via email or logged to console)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        {smsAvailable ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
+                        <span>Phone SMS OTP — {smsAvailable ? 'active via Twilio' : 'pending Twilio credentials (fallback: codes logged to console)'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        {googleAvailable ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
+                        <span>Google Sign-In — {googleAvailable ? 'active' : 'pending Google OAuth credentials'}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
