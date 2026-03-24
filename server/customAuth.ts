@@ -5,7 +5,7 @@ import { sdk } from "./_core/sdk";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
-import { sendOTPEmail, sendOTPSms } from "./emailService";
+import { sendOTPEmail, sendOTPSms, getEmailProviderStatus } from "./emailService";
 import rateLimit from "express-rate-limit";
 import { buildFullUserResponse } from "./userHelpers";
 
@@ -480,20 +480,15 @@ export function registerCustomAuthRoutes(app: Express) {
     res.json({ available });
   });
 
-  // ─── CHECK SMTP EMAIL AVAILABILITY ───
+  // ─── CHECK EMAIL PROVIDER AVAILABILITY ───
   app.get("/api/auth/smtp-available", (_req: Request, res: Response) => {
-    const smtpConfigured = Boolean(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass);
-    const adminEmail = ENV.adminEmail || null;
-    const missing = [
-      !ENV.smtpHost && "SMTP_HOST",
-      !ENV.smtpUser && "SMTP_USER",
-      !ENV.smtpPass && "SMTP_PASS",
-    ].filter(Boolean);
+    const status = getEmailProviderStatus();
     res.json({
-      available: smtpConfigured,
-      adminEmail,
-      adminEmailConfigured: Boolean(adminEmail),
-      missing: smtpConfigured ? [] : missing,
+      available: status.available,
+      provider: status.provider,
+      adminEmail: status.adminEmail,
+      adminEmailConfigured: Boolean(status.adminEmail),
+      missing: status.missing,
     });
   });
 }

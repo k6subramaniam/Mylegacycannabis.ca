@@ -63,6 +63,7 @@ export default function AdminSettings() {
   const [googleAvailable, setGoogleAvailable] = useState(false);
   const [smsAvailable, setSmsAvailable] = useState(false);
   const [smtpAvailable, setSmtpAvailable] = useState(false);
+  const [emailProvider, setEmailProvider] = useState<string>("none");
   const [smtpAdminEmail, setSmtpAdminEmail] = useState<string | null>(null);
   const [smtpMissing, setSmtpMissing] = useState<string[]>([]);
   const [authStatusLoading, setAuthStatusLoading] = useState(true);
@@ -71,7 +72,7 @@ export default function AdminSettings() {
     Promise.all([
       fetch('/api/auth/google-available').then(r => r.json()).then(d => setGoogleAvailable(d.available)).catch(() => {}),
       fetch('/api/auth/sms-available').then(r => r.json()).then(d => setSmsAvailable(d.available)).catch(() => {}),
-      fetch('/api/auth/smtp-available').then(r => r.json()).then(d => { setSmtpAvailable(d.available); setSmtpAdminEmail(d.adminEmail); setSmtpMissing(d.missing || []); }).catch(() => {}),
+      fetch('/api/auth/smtp-available').then(r => r.json()).then(d => { setSmtpAvailable(d.available); setEmailProvider(d.provider || "none"); setSmtpAdminEmail(d.adminEmail); setSmtpMissing(d.missing || []); }).catch(() => {}),
     ]).finally(() => setAuthStatusLoading(false));
   }, []);
 
@@ -815,24 +816,24 @@ export default function AdminSettings() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-800">SMTP Email Notifications</h3>
+                      <h3 className="font-semibold text-gray-800">Email Notifications</h3>
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                         smtpAvailable ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {smtpAvailable ? 'Active' : 'Not Configured'}
+                        {smtpAvailable ? `Active (${emailProvider === 'resend' ? 'Resend' : 'SMTP'})` : 'Not Configured'}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
                       {smtpAvailable
-                        ? `SMTP is active. OTP codes, order confirmations, and admin alerts are sent via email to ${smtpAdminEmail || 'the configured admin'}.`
-                        : 'Sends real emails for OTP codes, order notifications, and admin alerts. Requires Gmail App Password or SMTP credentials.'
+                        ? `Emails are delivered via ${emailProvider === 'resend' ? 'Resend HTTP API' : 'SMTP'}. OTP codes, order confirmations, and admin alerts sent to ${smtpAdminEmail || 'the configured admin'}.`
+                        : 'Sends real emails for OTP codes, order notifications, and admin alerts.'
                       }
                     </p>
                     {!smtpAvailable && (
                       <div className="mt-3 bg-white rounded-lg border border-amber-200 p-3">
                         {smtpMissing.length > 0 && (
                           <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded">
-                            <p className="text-xs font-semibold text-red-700">Missing environment variables: <span className="font-mono">{smtpMissing.join(', ')}</span></p>
+                            <p className="text-xs font-semibold text-red-700">Missing: <span className="font-mono">{smtpMissing.join(' or ')}</span></p>
                           </div>
                         )}
                         {smtpAdminEmail && (
@@ -840,25 +841,32 @@ export default function AdminSettings() {
                             <p className="text-xs text-green-700">ADMIN_EMAIL: <span className="font-semibold">{smtpAdminEmail}</span></p>
                           </div>
                         )}
-                        <p className="text-xs font-semibold text-gray-700 mb-1.5">Setup Instructions (Gmail):</p>
-                        <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
-                          <li>Enable 2-Step Verification on your Google Account</li>
-                          <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">Google App Passwords</a> and generate a password for "Mail"</li>
-                          <li>Set these environment variables on your server:
+
+                        <p className="text-xs font-semibold text-green-700 mb-1.5">Option A — Resend (Recommended for Railway):</p>
+                        <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside mb-3">
+                          <li>Sign up at <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E] underline">resend.com</a> (free: 100 emails/day)</li>
+                          <li>Create an API key in the Resend dashboard</li>
+                          <li>Set these environment variables:
                             <div className="mt-1 space-y-0.5">
-                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_HOST=smtp.gmail.com</code>
-                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_PORT=587</code>
-                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_USER=your-email@gmail.com</code>
-                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_PASS=your-app-password</code>
-                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_FROM=My Legacy Cannabis &lt;your-email@gmail.com&gt;</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">RESEND_API_KEY=re_xxxxxxxx</code>
+                              <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">SMTP_FROM=My Legacy Cannabis &lt;onboarding@resend.dev&gt;</code>
                               <code className="block bg-gray-100 px-2 py-1 rounded text-[10px]">ADMIN_EMAIL=your-email@gmail.com</code>
                             </div>
                           </li>
-                          <li>Restart the server — emails will start sending automatically</li>
+                          <li>Redeploy — emails start sending immediately</li>
                         </ol>
+
+                        <p className="text-xs font-semibold text-gray-500 mb-1.5">Option B — Gmail SMTP (requires Railway Pro plan):</p>
+                        <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                          <li>Enable 2-Step Verification on your Google Account</li>
+                          <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-[#4B2D8E]/60 underline">Google App Passwords</a> and generate a password</li>
+                          <li>Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, ADMIN_EMAIL</li>
+                          <li>Note: Railway Hobby plan blocks SMTP ports 465/587. Requires Pro plan or above.</li>
+                        </ol>
+
                         <div className="mt-2 flex items-start gap-1.5">
                           <Info size={12} className="text-amber-500 shrink-0 mt-0.5" />
-                          <p className="text-[10px] text-amber-600">While SMTP is not configured, OTP codes are logged to the server console for testing.</p>
+                          <p className="text-[10px] text-amber-600">While email is not configured, OTP codes are logged to the server console for testing.</p>
                         </div>
                       </div>
                     )}

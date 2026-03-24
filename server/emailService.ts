@@ -3,20 +3,71 @@ import { lookup } from "dns";
 import { ENV } from "./_core/env";
 
 /**
- * Email service — sends OTP codes and notifications via SMTP (Gmail/any provider).
+ * Email service — sends OTP codes and notifications.
+ *
+ * Delivery priority:
+ *   1. Resend HTTP API  (works on Railway — no SMTP port needed)
+ *   2. SMTP / Nodemailer (fallback for local dev or Railway Pro plan)
+ *   3. Console log       (last resort — OTP codes always logged)
  *
  * Configuration (.env):
+ *   # Option A – Resend (recommended for Railway)
+ *   RESEND_API_KEY=re_xxxxxxxx
+ *   SMTP_FROM=My Legacy Cannabis <onboarding@resend.dev>   # or your verified domain
+ *
+ *   # Option B – Gmail SMTP (requires port 587 access)
  *   SMTP_HOST=smtp.gmail.com
  *   SMTP_PORT=587
  *   SMTP_USER=k6subramaniam@gmail.com
  *   SMTP_PASS=<Gmail App Password>
  *   SMTP_FROM="My Legacy Cannabis <k6subramaniam@gmail.com>"
- *   ADMIN_EMAIL=k6subramaniam@gmail.com
  *
- * When SMTP is not configured, OTP codes are logged to server console.
+ *   # Both options
+ *   ADMIN_EMAIL=k6subramaniam@gmail.com
  */
 
-// ─── SMTP Transport (lazy singleton) ───
+// ─── Resend HTTP API ───
+async function sendViaResend(options: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<boolean> {
+  if (!ENV.resendApiKey) return false;
+
+  try {
+    const from = ENV.smtpFrom || "My Legacy Cannabis <onboarding@resend.dev>";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ENV.resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [options.to],
+        subject: options.subject,
+        html: options.html,
+        text: options.text || options.html.replace(/<[^>]*>/g, ""),
+      }),
+      signal: AbortSignal.timeout(10_000), // 10s timeout
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error(`[Email] Resend API error (${response.status}): ${body}`);
+      return false;
+    }
+
+    console.log(`[Email] Sent via Resend to ${options.to}: ${options.subject}`);
+    return true;
+  } catch (error: any) {
+    console.error(`[Email] Resend failed for ${options.to}:`, error.message);
+    return false;
+  }
+}
+
+// ─── SMTP / Nodemailer (fallback) ───
 let _transporter: nodemailer.Transporter | null = null;
 let _smtpStatusLogged = false;
 
@@ -24,25 +75,10 @@ function getTransporter(): nodemailer.Transporter | null {
   if (_transporter) return _transporter;
 
   if (!ENV.smtpHost || !ENV.smtpUser || !ENV.smtpPass) {
-    if (!_smtpStatusLogged) {
-      _smtpStatusLogged = true;
-      const missing = [
-        !ENV.smtpHost && "SMTP_HOST",
-        !ENV.smtpUser && "SMTP_USER",
-        !ENV.smtpPass && "SMTP_PASS",
-      ].filter(Boolean).join(", ");
-      console.log(`[Email] SMTP not configured (missing: ${missing}). Emails will be logged to console only.`);
-      if (ENV.adminEmail) {
-        console.log(`[Email] ADMIN_EMAIL is set (${ENV.adminEmail}) — admin notifications will appear in console.`);
-      }
-    }
     return null; // SMTP not configured
   }
 
-  // Force IPv4 DNS resolution — Railway containers can't reach Gmail SMTP
-  // over IPv6 (ENETUNREACH 2607:f8b0:4004:c1f::6d:587).
-  // Using a custom dnsLookup is the most reliable way to enforce this at
-  // the socket level, bypassing any Nodemailer version quirks with `family`.
+  // Force IPv4 DNS resolution — Railway containers can't reach Gmail over IPv6
   const ipv4Lookup = (hostname: string, options: any, cb: any) => {
     if (typeof options === "function") {
       cb = options;
@@ -54,20 +90,18 @@ function getTransporter(): nodemailer.Transporter | null {
   _transporter = nodemailer.createTransport({
     host: ENV.smtpHost,
     port: ENV.smtpPort,
-    secure: ENV.smtpPort === 465, // true for port 465, false for 587
+    secure: ENV.smtpPort === 465,
     auth: {
       user: ENV.smtpUser,
       pass: ENV.smtpPass,
     },
-    connectionTimeout: 10_000, // 10s to connect
-    greetingTimeout: 10_000,   // 10s for SMTP greeting
-    socketTimeout: 10_000,     // 10s inactivity timeout
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
     tls: { servername: ENV.smtpHost },
     dnsLookup: ipv4Lookup,
   } as any);
 
-  // Verify connection on first use — don't null the transporter on failure
-  // so subsequent sends can retry (transient network issues)
   _transporter.verify().then(() => {
     console.log("[Email] SMTP connection verified ✓");
   }).catch((err) => {
@@ -77,19 +111,14 @@ function getTransporter(): nodemailer.Transporter | null {
   return _transporter;
 }
 
-// ─── Helper to send an email ───
-async function sendMail(options: {
+async function sendViaSMTP(options: {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }): Promise<boolean> {
   const transporter = getTransporter();
-
-  if (!transporter) {
-    console.log(`[Email] SMTP not configured. Would send to: ${options.to} | Subject: ${options.subject}`);
-    return false;
-  }
+  if (!transporter) return false;
 
   try {
     const from = ENV.smtpFrom || `My Legacy Cannabis <${ENV.smtpUser}>`;
@@ -100,12 +129,60 @@ async function sendMail(options: {
       html: options.html,
       text: options.text || options.html.replace(/<[^>]*>/g, ""),
     });
-    console.log(`[Email] Sent to ${options.to}: ${options.subject}`);
+    console.log(`[Email] Sent via SMTP to ${options.to}: ${options.subject}`);
     return true;
   } catch (error: any) {
-    console.error(`[Email] Failed to send to ${options.to}:`, error.message);
+    console.error(`[Email] SMTP failed for ${options.to}:`, error.message);
     return false;
   }
+}
+
+// ─── Unified send — tries Resend first, then SMTP, then logs ───
+let _emailStatusLogged = false;
+
+async function sendMail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<boolean> {
+  // Log config status once
+  if (!_emailStatusLogged) {
+    _emailStatusLogged = true;
+    const hasResend = Boolean(ENV.resendApiKey);
+    const hasSMTP = Boolean(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass);
+    if (hasResend) {
+      console.log("[Email] Using Resend HTTP API (primary)");
+    }
+    if (hasSMTP) {
+      console.log(`[Email] Using SMTP ${ENV.smtpHost}:${ENV.smtpPort} (${hasResend ? "fallback" : "primary"})`);
+    }
+    if (!hasResend && !hasSMTP) {
+      const missing: string[] = [];
+      if (!ENV.resendApiKey) missing.push("RESEND_API_KEY");
+      if (!ENV.smtpPass) missing.push("SMTP_PASS");
+      console.log(`[Email] No email provider configured (set ${missing.join(" or ")}). Emails will be logged to console.`);
+      if (ENV.adminEmail) {
+        console.log(`[Email] ADMIN_EMAIL is set (${ENV.adminEmail}) — admin notifications will appear in console.`);
+      }
+    }
+  }
+
+  // Try Resend first (HTTP API — works on Railway)
+  if (ENV.resendApiKey) {
+    const sent = await sendViaResend(options);
+    if (sent) return true;
+  }
+
+  // Fallback to SMTP
+  if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass) {
+    const sent = await sendViaSMTP(options);
+    if (sent) return true;
+  }
+
+  // Last resort — log to console
+  console.log(`[Email] No delivery channel available. Would send to: ${options.to} | Subject: ${options.subject}`);
+  return false;
 }
 
 // ─── OTP Email ───
@@ -175,7 +252,7 @@ export async function sendOTPEmail(
   return true; // Always return true so the auth flow continues
 }
 
-// ─── OTP SMS (Twilio — unchanged) ───
+// ─── OTP SMS (Twilio) ───
 export async function sendOTPSms(
   phone: string,
   code: string,
@@ -272,4 +349,24 @@ export async function sendCustomerEmail(
   `;
 
   return sendMail({ to, subject, html });
+}
+
+// ─── Email provider status (for admin settings page) ───
+export function getEmailProviderStatus(): {
+  provider: "resend" | "smtp" | "none";
+  available: boolean;
+  adminEmail: string | null;
+  missing: string[];
+} {
+  if (ENV.resendApiKey) {
+    return { provider: "resend", available: true, adminEmail: ENV.adminEmail || null, missing: [] };
+  }
+  if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass) {
+    return { provider: "smtp", available: true, adminEmail: ENV.adminEmail || null, missing: [] };
+  }
+  const missing = [
+    !ENV.resendApiKey && "RESEND_API_KEY",
+    !ENV.smtpPass && "SMTP_PASS",
+  ].filter(Boolean) as string[];
+  return { provider: "none", available: false, adminEmail: ENV.adminEmail || null, missing };
 }
