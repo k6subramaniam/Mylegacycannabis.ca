@@ -125,6 +125,27 @@ async function sendMail(options: {
   }
 }
 
+// ─── Provider status (used by /api/auth/smtp-available) ───
+export function getEmailProviderStatus(): {
+  available: boolean;
+  provider: "resend" | "smtp" | "none";
+  adminEmail: string;
+  missing: string[];
+} {
+  if (ENV.resendApiKey) {
+    return { available: true, provider: "resend", adminEmail: ENV.adminEmail, missing: [] };
+  }
+  const missing = [
+    !ENV.smtpHost && "SMTP_HOST",
+    !ENV.smtpUser && "SMTP_USER",
+    !ENV.smtpPass && "SMTP_PASS",
+  ].filter(Boolean) as string[];
+  if (missing.length === 0) {
+    return { available: true, provider: "smtp", adminEmail: ENV.adminEmail, missing: [] };
+  }
+  return { available: false, provider: "none", adminEmail: ENV.adminEmail, missing };
+}
+
 // ─── OTP Email ───
 export async function sendOTPEmail(
   email: string,
