@@ -134,7 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch { return null; }
   });
 
-  // Fetch user from backend on mount — only for email-registered users
+  // Fetch user from backend on mount — restores session for ALL auth methods
+  // (email, google, phone) so that page reloads retain the logged-in state.
   useEffect(() => {
     // If we already have a user in localStorage, no need to re-fetch
     const saved = localStorage.getItem('mlc-user');
@@ -146,8 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const result = await response.json();
           const userData = unwrapTrpcResponse(result);
-          // Restore session for email-registered users only
-          if (!userData || userData.authMethod !== 'email') return;
+          if (!userData) return;
           const transformedUser = transformBackendUser(userData);
           setUser(transformedUser);
           persistUserToLocalStorage(transformedUser);

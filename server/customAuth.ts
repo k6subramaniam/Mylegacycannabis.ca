@@ -51,7 +51,22 @@ async function setSessionCookie(res: Response, req: Request, openId: string, nam
   res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 }
 
+/**
+ * Resolve the public-facing base URL (protocol + host).
+ * Respects X-Forwarded-Proto / X-Forwarded-Host set by reverse proxies
+ * (Railway, Cloudflare, Nginx, etc.).
+ */
+function getBaseUrl(req: Request): string {
+  const proto = (req.get("x-forwarded-proto") || req.protocol || "http").split(",")[0].trim();
+  const host = req.get("x-forwarded-host") || req.get("host") || "localhost:3000";
+  return `${proto}://${host}`;
+}
+
 export function registerCustomAuthRoutes(app: Express) {
+  // Trust proxy headers so req.protocol and req.hostname resolve correctly
+  // behind Railway / Cloudflare / Nginx reverse proxies.
+  app.set("trust proxy", 1);
+
   const completeProfileLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 20, // limit each IP to 20 complete-profile requests per window
@@ -280,7 +295,7 @@ export function registerCustomAuthRoutes(app: Express) {
       return;
     }
 
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+    const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
     const state = req.query.returnTo as string || "/";
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     url.searchParams.set("client_id", ENV.googleClientId);
@@ -306,7 +321,7 @@ export function registerCustomAuthRoutes(app: Express) {
         return;
       }
 
-      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+      const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
 
       // Exchange code for tokens
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
