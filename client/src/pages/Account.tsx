@@ -3,9 +3,8 @@ import { Link, useLocation } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { rewardTiers, getEligibleRewardTiers, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Calendar, Users, ChevronRight, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { rewardTiers, getEligibleRewardTiers, BIRTHDAY_BONUS, REFERRAL_BONUS_REFERRER } from '@/lib/data';
+import { User, Package, Gift, Shield, LogOut, Copy, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
@@ -22,9 +21,16 @@ export default function Account() {
     else setActiveTab('profile');
   }, [location]);
 
+  // Redirect unauthenticated users to the real OTP-capable login/register pages
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      const isRegister = location.includes('/register');
+      navigate(isRegister ? '/register' : '/login', { replace: true });
+    }
+  }, [isAuthenticated, user, location, navigate]);
+
   if (!isAuthenticated || !user) {
-    const isRegister = location.includes('/register');
-    return isRegister ? <RegisterForm /> : <LoginForm />;
+    return null; // will redirect above
   }
 
   const tabs = [
@@ -126,15 +132,28 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
   });
   const [birthdayError, setBirthdayError] = useState('');
 
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
     if (birthday && !isAtLeast19(birthday)) {
       setBirthdayError('You must be 19 years of age or older.');
       toast.error('You must be 19 years of age or older.');
       return;
     }
     setBirthdayError('');
-    updateProfile({ firstName, lastName, phone, birthday });
-    toast.success('Profile updated');
+    setSaving(true);
+    try {
+      const result = await updateProfile({ firstName, lastName, phone, birthday });
+      if (result === true) {
+        toast.success('Profile saved successfully');
+      } else {
+        toast.error(result || 'Failed to save profile');
+      }
+    } catch {
+      toast.error('Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -164,7 +183,9 @@ function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any
             {(birthdayError || (birthday && !isAtLeast19(birthday))) && <p className="text-xs text-red-500 font-body mt-1">{birthdayError || 'You must be 19 years of age or older.'}</p>}
           </div>
         </div>
-        <button onClick={handleSave} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all">SAVE CHANGES</button>
+        <button onClick={handleSave} disabled={saving} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all disabled:opacity-60 flex items-center gap-2">
+          {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> SAVING...</> : 'SAVE CHANGES'}
+        </button>
       </div>
 
       {/* ID Verification Status — hidden when feature is disabled */}
@@ -310,134 +331,4 @@ function RewardsTab({ user }: { user: any }) {
   );
 }
 
-function LoginForm() {
-  const { login } = useAuth();
-  const [, navigate] = useLocation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    const result = await login(email, password);
-    if (result === true) {
-      toast.success('Welcome back!');
-      navigate('/account');
-    } else {
-      setError(result);
-      toast.error(result);
-    }
-  };
-
-  return (
-    <>
-      <SEOHead title="Sign In" description="Sign in to your My Legacy Cannabis account." noindex />
-      <section className="container py-12 max-w-md mx-auto">
-        <h1 className="font-display text-2xl text-[#4B2D8E] text-center mb-6">SIGN IN</h1>
-        <form onSubmit={handleSubmit} className="bg-[#F5F5F5] rounded-2xl p-6 space-y-4">
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Password</label>
-            <div className="relative">
-              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] pr-10" required />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-            </div>
-          </div>
-          {error && <p className="text-sm text-red-500 font-body text-center">{error}</p>}
-          <button type="submit" className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 rounded-full transition-all">SIGN IN</button>
-          <p className="text-center text-sm text-gray-500 font-body">
-            Don't have an account? <Link href="/account/register" className="text-[#4B2D8E] hover:text-[#F15929] font-medium">Create one</Link>
-          </p>
-
-        </form>
-      </section>
-    </>
-  );
-}
-
-function RegisterForm() {
-  const { register: doRegister } = useAuth();
-  const [, navigate] = useLocation();
-  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', phone: '', birthday: '' });
-  const [showPw, setShowPw] = useState(false);
-
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!form.birthday) {
-      toast.error('Birthday is required. You must be 19 or older.');
-      return;
-    }
-    if (!isAtLeast19(form.birthday)) {
-      toast.error('You must be 19 years of age or older to create an account.');
-      setError('You must be 19 years of age or older to create an account.');
-      return;
-    }
-    const result = await doRegister(form as { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string });
-    if (result === true) {
-      toast.success(`Welcome! You earned ${WELCOME_BONUS} bonus points!`);
-      navigate('/account');
-    } else {
-      const msg = typeof result === 'string' ? result : 'Registration failed. Please try again.';
-      setError(msg);
-      toast.error(msg);
-    }
-  };
-
-  return (
-    <>
-      <SEOHead title="Create Account" description="Create your My Legacy Cannabis account and earn rewards." noindex />
-      <section className="container py-12 max-w-md mx-auto">
-        <h1 className="font-display text-2xl text-[#4B2D8E] text-center mb-6">CREATE ACCOUNT</h1>
-        <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-3 mb-4 text-center">
-          <p className="text-sm font-body text-[#4B2D8E]">🎁 Get <strong>{WELCOME_BONUS} bonus points</strong> when you sign up!</p>
-        </div>
-        <form onSubmit={handleSubmit} className="bg-[#F5F5F5] rounded-2xl p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 font-body block mb-1">First Name *</label>
-              <input type="text" value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 font-body block mb-1">Last Name *</label>
-              <input type="text" value={form.lastName} onChange={e => setForm({...form, lastName: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Email *</label>
-            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Phone Number *</label>
-            <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="(437) 555-0123" className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Password *</label>
-            <div className="relative">
-              <input type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] pr-10" required minLength={6} />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Birthday * <span className="text-[#F15929]">(must be 19+ — earn {BIRTHDAY_BONUS} bonus pts!)</span></label>
-            <input type="date" value={form.birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => setForm({...form, birthday: e.target.value})} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
-            {form.birthday && !isAtLeast19(form.birthday) && <p className="text-xs text-red-500 font-body mt-1">You must be 19 years of age or older.</p>}
-          </div>
-          <p className="text-xs text-gray-400 font-body">You must be 19 years or older. ID verification required before first order.</p>
-          {error && <p className="text-sm text-red-500 font-body text-center">{error}</p>}
-          <button type="submit" className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 rounded-full transition-all">CREATE ACCOUNT</button>
-          <p className="text-center text-sm text-gray-500 font-body">
-            Already have an account? <Link href="/account/login" className="text-[#4B2D8E] hover:text-[#F15929] font-medium">Sign in</Link>
-          </p>
-        </form>
-      </section>
-    </>
-  );
-}

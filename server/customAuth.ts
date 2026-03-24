@@ -7,6 +7,7 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import { sendOTPEmail, sendOTPSms } from "./emailService";
 import rateLimit from "express-rate-limit";
+import { buildFullUserResponse } from "./userHelpers";
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -238,10 +239,14 @@ export function registerCustomAuthRoutes(app: Express) {
         }
 
         await setSessionCookie(res, req, openId, registrationData.name);
+
+        // Return full user data
+        const createdUser = await db.getUserByOpenId(openId);
+        const fullRegUser = createdUser ? await buildFullUserResponse(createdUser) : { name: registrationData.name, email: registrationData.email, phone: normalizedPhone };
         res.json({
           success: true,
           message: "Account created successfully! You earned 25 welcome bonus points.",
-          user: { name: registrationData.name, email: registrationData.email, phone: normalizedPhone },
+          user: fullRegUser,
         });
 
       } else {
@@ -275,10 +280,12 @@ export function registerCustomAuthRoutes(app: Express) {
         await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
         await setSessionCookie(res, req, user.openId, user.name || "");
 
+        // Return full user data (orders, verification status, rewards)
+        const fullUser = await buildFullUserResponse(user);
         res.json({
           success: true,
           message: "Signed in successfully!",
-          user: { name: user.name, email: user.email, phone: user.phone },
+          user: fullUser,
         });
       }
     } catch (error) {

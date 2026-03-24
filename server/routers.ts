@@ -8,11 +8,19 @@ import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { notifyOwner } from "./_core/notification";
 import { eq } from "drizzle-orm";
+import { buildFullUserResponse } from "./userHelpers";
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async (opts) => {
+      const sessionUser = opts.ctx.user;
+      if (!sessionUser) return null;
+      // Look up the full user from DB to return enriched data
+      const dbUser = await db.getUserById(sessionUser.id);
+      if (!dbUser) return null;
+      return buildFullUserResponse(dbUser);
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -23,63 +31,9 @@ export const appRouter = router({
       if (!user) {
         return { success: false, error: "User not found" };
       }
-      // Fetch orders for this user from the DB
-      const userOrders = await db.getUserOrders(user.id);
-      const formattedOrders = [];
-      for (const o of userOrders) {
-        const items = await db.getOrderItems(o.id);
-        formattedOrders.push({
-          id: o.orderNumber || `ORD-${o.id}`,
-          date: o.createdAt?.toISOString?.() || new Date().toISOString(),
-          status: o.status || 'processing',
-          total: parseFloat((o as any).total || '0'),
-          items: items.map((i: any) => ({
-            name: i.productName || 'Item',
-            quantity: i.quantity || 1,
-            price: parseFloat(i.price || '0'),
-          })),
-          trackingNumber: (o as any).trackingNumber || undefined,
-        });
-      }
-      // Determine idVerificationStatus from DB — check both userId and email
-      const idVerifEnabled = await db.isIdVerificationEnabled();
-      let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
-      if (!idVerifEnabled) {
-        // When ID verification is disabled, everyone is treated as verified
-        idVerificationStatus = 'approved';
-      } else if (user.idVerified) {
-        idVerificationStatus = 'approved';
-      } else {
-        // Check verification records by email
-        const verifications = await db.getAllVerifications({ email: user.email || '', limit: 1 });
-        if (verifications.data.length > 0) {
-          const latest = verifications.data[0];
-          if (latest.status === 'approved') {
-            idVerificationStatus = 'approved';
-            // Also mark user as verified in DB since we found an approved verification
-            await db.updateUser(user.id, { idVerified: true });
-          } else if (latest.status === 'pending') {
-            idVerificationStatus = 'pending';
-          } else if (latest.status === 'rejected') {
-            idVerificationStatus = 'rejected';
-          }
-        }
-      }
       return {
         success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          birthday: user.birthday,
-          idVerified: !idVerifEnabled || user.idVerified || idVerificationStatus === 'approved',
-          idVerificationStatus,
-          rewardsPoints: user.rewardPoints || 0,
-          rewardsHistory: [],
-          referralCode: '',
-          orders: formattedOrders,
-        },
+        user: await buildFullUserResponse(user),
       };
     }),
     register: publicProcedure.input(z.object({
@@ -125,64 +79,31 @@ export const appRouter = router({
       if (!newUser) {
         return { success: false, error: "Failed to create user" };
       }
-      // Check if user already has a verification on file (e.g. guest submitted ID before registering)
-      const idVerifEnabledReg = await db.isIdVerificationEnabled();
-      let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
-      if (!idVerifEnabledReg) {
-        idVerificationStatus = 'approved';
-      } else if (newUser.idVerified) {
-        idVerificationStatus = 'approved';
-      } else {
-        const verifications = await db.getAllVerifications({ email: newUser.email || '', limit: 1 });
-        if (verifications.data.length > 0) {
-          const latest = verifications.data[0];
-          if (latest.status === 'approved') {
-            idVerificationStatus = 'approved';
-            await db.updateUser(newUser.id, { idVerified: true });
-          } else if (latest.status === 'pending') {
-            idVerificationStatus = 'pending';
-          } else if (latest.status === 'rejected') {
-            idVerificationStatus = 'rejected';
-          }
-        }
-      }
       return {
         success: true,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          phone: newUser.phone,
-          birthday: newUser.birthday,
-          idVerified: !idVerifEnabledReg || newUser.idVerified || idVerificationStatus === 'approved',
-          idVerificationStatus,
-          rewardsPoints: newUser.rewardPoints || 25,
-          rewardsHistory: [],
-          referralCode: '',
-          orders: [],
-        },
+        user: await buildFullUserResponse(newUser),
       };
     }),
   }),
 
   // ─── ADMIN: DASHBOARD ───
   admin: router({
-    stats: publicProcedure.query(async () => {
+    stats: adminProcedure.query(async () => {
       return db.getDashboardStats();
     }),
-    orderStats: publicProcedure.input(z.object({ days: z.number().default(30) })).query(async ({ input }) => {
+    orderStats: adminProcedure.input(z.object({ days: z.number().default(30) })).query(async ({ input }) => {
       return db.getOrderStats(input.days);
     }),
-    topProducts: publicProcedure.input(z.object({ limit: z.number().default(10) })).query(async ({ input }) => {
+    topProducts: adminProcedure.input(z.object({ limit: z.number().default(10) })).query(async ({ input }) => {
       return db.getTopProducts(input.limit);
     }),
-    activityLog: publicProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(50) })).query(async ({ input }) => {
+    activityLog: adminProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(50) })).query(async ({ input }) => {
       return db.getAdminActivityLog(input);
     }),
 
     // ─── PRODUCTS ───
     products: router({
-      list: publicProcedure.input(z.object({
+      list: adminProcedure.input(z.object({
         page: z.number().default(1),
         limit: z.number().default(50),
         category: z.string().optional(),
@@ -190,10 +111,10 @@ export const appRouter = router({
       })).query(async ({ input }) => {
         return db.getAllProducts({ ...input, activeOnly: false });
       }),
-      get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getProductById(input.id);
       }),
-      create: publicProcedure.input(z.object({
+      create: adminProcedure.input(z.object({
         name: z.string().min(1),
         slug: z.string().min(1),
         category: z.enum(["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories"]),
@@ -215,7 +136,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "product", entityId: id, details: `Created product: ${input.name}` });
         return { id };
       }),
-      update: publicProcedure.input(z.object({
+      update: adminProcedure.input(z.object({
         id: z.number(),
         name: z.string().optional(),
         slug: z.string().optional(),
@@ -239,12 +160,12 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "product", entityId: id, details: `Updated product #${id}` });
         return { success: true };
       }),
-      delete: publicProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
         await db.deleteProduct(input.id);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "delete", entityType: "product", entityId: input.id, details: `Deleted product #${input.id}` });
         return { success: true };
       }),
-      bulkUpdate: publicProcedure.input(z.object({
+      bulkUpdate: adminProcedure.input(z.object({
         ids: z.array(z.number()),
         data: z.object({ isActive: z.boolean().optional(), featured: z.boolean().optional(), stock: z.number().optional() }),
       })).mutation(async ({ input, ctx }) => {
@@ -258,7 +179,7 @@ export const appRouter = router({
 
     // ─── ORDERS ───
     orders: router({
-      list: publicProcedure.input(z.object({
+      list: adminProcedure.input(z.object({
         page: z.number().default(1),
         limit: z.number().default(50),
         status: z.string().optional(),
@@ -268,13 +189,13 @@ export const appRouter = router({
       })).query(async ({ input }) => {
         return db.getAllOrders(input);
       }),
-      get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         const order = await db.getOrderById(input.id);
         if (!order) return null;
         const items = await db.getOrderItems(input.id);
         return { ...order, items };
       }),
-      updateStatus: publicProcedure.input(z.object({
+      updateStatus: adminProcedure.input(z.object({
         id: z.number(),
         status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]),
       })).mutation(async ({ input, ctx }) => {
@@ -283,7 +204,7 @@ export const appRouter = router({
         await notifyOwner({ title: `Order Status Updated`, content: `Order #${input.id} status changed to ${input.status}` });
         return { success: true };
       }),
-      updatePayment: publicProcedure.input(z.object({
+      updatePayment: adminProcedure.input(z.object({
         id: z.number(),
         paymentStatus: z.enum(["pending", "received", "confirmed", "refunded"]),
       })).mutation(async ({ input, ctx }) => {
@@ -291,7 +212,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_payment", entityType: "order", entityId: input.id, details: `Changed order #${input.id} payment to ${input.paymentStatus}` });
         return { success: true };
       }),
-      addTracking: publicProcedure.input(z.object({
+      addTracking: adminProcedure.input(z.object({
         id: z.number(),
         trackingNumber: z.string()
           .transform((v) => v.replace(/[\s-]/g, "").toUpperCase())
@@ -308,7 +229,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "add_tracking", entityType: "order", entityId: input.id, details: `Added tracking: ${input.trackingNumber}` });
         return { success: true };
       }),
-      addNote: publicProcedure.input(z.object({ id: z.number(), note: z.string() })).mutation(async ({ input, ctx }) => {
+      addNote: adminProcedure.input(z.object({ id: z.number(), note: z.string() })).mutation(async ({ input, ctx }) => {
         const order = await db.getOrderById(input.id);
         const existingNotes = order?.adminNotes || "";
         const timestamp = new Date().toISOString();
@@ -320,17 +241,17 @@ export const appRouter = router({
 
     // ─── ID VERIFICATIONS ───
     verifications: router({
-      list: publicProcedure.input(z.object({
+      list: adminProcedure.input(z.object({
         page: z.number().default(1),
         limit: z.number().default(50),
         status: z.string().optional(),
       })).query(async ({ input }) => {
         return db.getAllVerifications(input);
       }),
-      get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getVerificationById(input.id);
       }),
-      review: publicProcedure.input(z.object({
+      review: adminProcedure.input(z.object({
         id: z.number(),
         status: z.enum(["approved", "rejected"]),
         notes: z.string().optional(),
@@ -388,10 +309,10 @@ export const appRouter = router({
 
     // ─── SHIPPING ZONES ───
     shipping: router({
-      list: publicProcedure.query(async () => {
+      list: adminProcedure.query(async () => {
         return db.getAllShippingZones();
       }),
-      update: publicProcedure.input(z.object({
+      update: adminProcedure.input(z.object({
         id: z.number(),
         rate: z.string().optional(),
         deliveryDays: z.string().optional(),
@@ -402,7 +323,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "shipping_zone", entityId: id, details: `Updated shipping zone #${id}` });
         return { success: true };
       }),
-      create: publicProcedure.input(z.object({
+      create: adminProcedure.input(z.object({
         zoneName: z.string(),
         provinces: z.array(z.string()),
         rate: z.string(),
@@ -417,13 +338,13 @@ export const appRouter = router({
 
     // ─── EMAIL TEMPLATES ───
     emailTemplates: router({
-      list: publicProcedure.query(async () => {
+      list: adminProcedure.query(async () => {
         return db.getAllEmailTemplates();
       }),
-      get: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+      get: adminProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
         return db.getEmailTemplateBySlug(input.slug);
       }),
-      update: publicProcedure.input(z.object({
+      update: adminProcedure.input(z.object({
         id: z.number(),
         subject: z.string().optional(),
         bodyHtml: z.string().optional(),
@@ -434,7 +355,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "email_template", entityId: id, details: `Updated email template #${id}` });
         return { success: true };
       }),
-      create: publicProcedure.input(z.object({
+      create: adminProcedure.input(z.object({
         slug: z.string(),
         name: z.string(),
         subject: z.string(),
@@ -450,10 +371,10 @@ export const appRouter = router({
 
     // ─── SITE SETTINGS ───
     settings: router({
-      getAll: publicProcedure.query(async () => {
+      getAll: adminProcedure.query(async () => {
         return db.getAllSiteSettings();
       }),
-      update: publicProcedure.input(z.object({
+      update: adminProcedure.input(z.object({
         key: z.string(),
         value: z.string(),
       })).mutation(async ({ input, ctx }) => {
@@ -472,17 +393,17 @@ export const appRouter = router({
 
     // ─── USERS ───
     users: router({
-      list: publicProcedure.input(z.object({
+      list: adminProcedure.input(z.object({
         page: z.number().default(1),
         limit: z.number().default(20),
         search: z.string().optional(),
       })).query(async ({ input }) => {
         return db.getAllUsers(input.page, input.limit, input.search);
       }),
-      get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getUserById(input.id);
       }),
-      update: publicProcedure.input(z.object({
+      update: adminProcedure.input(z.object({
         id: z.number(),
         name: z.string().optional(),
         email: z.string().email().optional(),
@@ -498,7 +419,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "user", entityId: id, details: `Updated customer #${id}` });
         return { success: true };
       }),
-      lock: publicProcedure.input(z.object({
+      lock: adminProcedure.input(z.object({
         id: z.number(),
         locked: z.boolean(),
         reason: z.string().optional(),
@@ -514,7 +435,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: input.locked ? "lock" : "unlock", entityType: "user", entityId: input.id, details: `${input.locked ? "Locked" : "Unlocked"} customer #${input.id}${input.reason ? ": " + input.reason : ""}` });
         return { success: true };
       }),
-      resetPassword: publicProcedure.input(z.object({
+      resetPassword: adminProcedure.input(z.object({
         id: z.number(),
         newPassword: z.string().min(8, "Password must be at least 8 characters"),
       })).mutation(async ({ input, ctx }) => {
@@ -532,7 +453,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "reset_password", entityType: "user", entityId: input.id, details: `Reset password for customer #${input.id}` });
         return { success: true };
       }),
-      delete: publicProcedure.input(z.object({
+      delete: adminProcedure.input(z.object({
         id: z.number(),
         confirm: z.literal(true),
       })).mutation(async ({ input, ctx }) => {
@@ -542,7 +463,7 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "delete", entityType: "user", entityId: input.id, details: `Deleted customer #${input.id} (${user.email || user.phone || "unknown"})` });
         return { success: true };
       }),
-      adjustPoints: publicProcedure.input(z.object({
+      adjustPoints: adminProcedure.input(z.object({
         id: z.number(),
         delta: z.number().int(),
         reason: z.string().min(1, "Reason is required"),
@@ -555,13 +476,13 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "adjust_points", entityType: "user", entityId: input.id, details: `Adjusted points for #${input.id} by ${input.delta > 0 ? "+" : ""}${input.delta}: ${input.reason}` });
         return { success: true, newPoints };
       }),
-      orders: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      orders: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getUserOrders(input.id);
       }),
     }),
 
     // ─── FILE UPLOAD ───
-    upload: publicProcedure.input(z.object({
+    upload: adminProcedure.input(z.object({
       fileName: z.string(),
       base64: z.string(),
       contentType: z.string(),
@@ -576,6 +497,56 @@ export const appRouter = router({
 
   // ─── PUBLIC: STOREFRONT API ───
   store: router({
+    // ─── UPDATE PROFILE (authenticated users) ───
+    updateProfile: protectedProcedure.input(z.object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      birthday: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error("Not authenticated");
+
+      // Age gate on birthday update
+      if (input.birthday) {
+        const parts = input.birthday.split('-');
+        if (parts.length === 3) {
+          const birthYear = parseInt(parts[0], 10);
+          const birthMonth = parseInt(parts[1], 10) - 1;
+          const birthDay = parseInt(parts[2], 10);
+          if (!isNaN(birthYear) && !isNaN(birthMonth) && !isNaN(birthDay)) {
+            const today = new Date();
+            let age = today.getFullYear() - birthYear;
+            if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
+            if (age < 19) {
+              throw new Error("You must be 19 years of age or older.");
+            }
+          }
+        }
+      }
+
+      const updates: Record<string, any> = {};
+      if (input.name !== undefined) updates.name = input.name;
+      if (input.phone !== undefined) updates.phone = input.phone;
+      if (input.birthday !== undefined) updates.birthday = input.birthday;
+
+      if (Object.keys(updates).length > 0) {
+        await db.updateUser(userId, updates);
+      }
+
+      const updatedUser = await db.getUserById(userId);
+      if (!updatedUser) throw new Error("User not found");
+      return { success: true, user: await buildFullUserResponse(updatedUser) };
+    }),
+
+    // ─── REFRESH USER (authenticated users — re-fetch latest data incl. ID verification status) ───
+    refreshUser: protectedProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) return null;
+      const dbUser = await db.getUserById(userId);
+      if (!dbUser) return null;
+      return buildFullUserResponse(dbUser);
+    }),
+
     siteConfig: publicProcedure.query(async () => {
       const [idVerificationEnabled, maintenance, storeHoursConfig] = await Promise.all([
         db.isIdVerificationEnabled(),
