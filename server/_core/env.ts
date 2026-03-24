@@ -14,7 +14,11 @@ export const ENV = {
   // Google OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-  // SMTP Email (Gmail or any SMTP provider)
+  // Email delivery — pick one:
+  //   Option A (recommended): Resend HTTP API (works on Railway, no SMTP needed)
+  //   Option B: SMTP (requires port 587 access — blocked on Railway Hobby plan)
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  // SMTP fallback (for local dev or Railway Pro plan)
   smtpHost: process.env.SMTP_HOST ?? "",
   smtpPort: parseInt(process.env.SMTP_PORT ?? "587", 10),
   smtpUser: process.env.SMTP_USER ?? "",
