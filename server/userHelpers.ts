@@ -52,6 +52,7 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
     name: user.name,
     phone: user.phone,
     birthday: user.birthday,
+    role: user.role || 'user',
     idVerified: !idVerifEnabled || user.idVerified || idVerificationStatus === 'approved',
     idVerificationStatus,
     rewardsPoints: user.rewardPoints || 0,

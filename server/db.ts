@@ -844,17 +844,17 @@ export async function getTopProducts(limit = 10) {
 async function seedPersistentData(db: PostgresJsDatabase<typeof schema>) {
   const { seedProducts, seedShippingZones, seedEmailTemplates, seedOrders, seedVerifications } = getSeedData();
 
-  // Admin user
+  // Admin user (primary owner)
   const [admin] = await db.insert(schema.users).values({
     openId: "admin_owner_001",
-    name: "Admin User",
-    email: "admin@mylegacycannabis.ca",
-    phone: "+14372154722",
+    name: "Satheeskumar Subramaniam",
+    email: "k6subramaniam@gmail.com",
+    phone: "+14375592056",
     phoneVerified: true,
     emailVerified: true,
     authMethod: "email",
     role: "admin",
-    birthday: "1990-01-01",
+    birthday: "1990-01-15",
     rewardPoints: 500,
     idVerified: true,
   }).returning({ id: schema.users.id });
@@ -1001,9 +1001,9 @@ function seedInMemoryData() {
 
   const adminId = nextId();
   _users.push({
-    id: adminId, openId: 'admin_owner_001', name: 'Admin User', email: 'admin@mylegacycannabis.ca',
-    phone: '+14372154722', phoneVerified: true, emailVerified: true, googleId: null,
-    authMethod: 'email', loginMethod: 'email', role: 'admin', birthday: '1990-01-01',
+    id: adminId, openId: 'admin_owner_001', name: 'Satheeskumar Subramaniam', email: 'k6subramaniam@gmail.com',
+    phone: '+14375592056', phoneVerified: true, emailVerified: true, googleId: null,
+    authMethod: 'email', loginMethod: 'email', role: 'admin', birthday: '1990-01-15',
     rewardPoints: 500, idVerified: true, isLocked: false, adminNotes: null,
     createdAt: now, updatedAt: now, lastSignedIn: now,
   });

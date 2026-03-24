@@ -9,6 +9,7 @@ export interface User {
   name?: string;
   phone?: string;
   birthday?: string;
+  role?: 'user' | 'admin';
   idVerified: boolean;
   idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected';
   rewardsPoints: number;
@@ -60,6 +61,7 @@ export interface Order {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<true | string>;
   register: (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }) => Promise<true | string>;
   logout: () => void;
@@ -96,6 +98,7 @@ function transformBackendUser(userData: Record<string, unknown>, fallbackEmail?:
     name,
     phone: (userData.phone as string) || '',
     birthday: (userData.birthday as string) || '',
+    role: (userData.role as 'user' | 'admin') || 'user',
     idVerified: (userData.idVerified as boolean) || false,
     idVerificationStatus: (userData.idVerificationStatus as User['idVerificationStatus']) || 'none',
     rewardsPoints: (userData.rewardsPoints as number) || 0,
@@ -417,6 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
+      isAdmin: !!user && user.role === 'admin',
       login,
       register,
       logout,

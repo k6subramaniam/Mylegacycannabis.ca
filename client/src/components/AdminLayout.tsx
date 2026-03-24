@@ -1,10 +1,11 @@
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, Redirect } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
-  Menu, X, Settings,
+  Menu, X, Settings, ShieldAlert,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png";
 
@@ -24,10 +25,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, isAdmin } = useAuth();
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
+
+  // Redirect unauthenticated users to login
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  // Block non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md mx-4">
+          <ShieldAlert size={48} className="mx-auto text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h1>
+          <p className="text-gray-500 mb-6">You don't have admin privileges to access this area.</p>
+          <Link href="/" className="inline-block px-6 py-2.5 bg-[#4B2D8E] text-white rounded-xl font-medium hover:bg-[#3d2574] transition-colors">
+            Back to Store
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const isActive = (path: string) => {
     if (path === "/admin") return location === "/admin";
@@ -61,11 +84,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {sidebarOpen ? (
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#4B2D8E] flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                A
+                {(user?.name || 'A').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">Admin</p>
-                <p className="text-xs text-gray-400 truncate">My Legacy Cannabis</p>
+                <p className="text-sm font-medium text-gray-800 truncate">{user?.name || 'Admin'}</p>
+                <p className="text-xs text-gray-400 truncate">{user?.email || 'My Legacy Cannabis'}</p>
               </div>
               <Link href="/" className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-[#4B2D8E] transition-colors" title="Back to Store">
                 <LogOut size={16} />
