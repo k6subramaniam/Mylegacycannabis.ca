@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import nodemailer from "nodemailer";
 import { ENV } from "./_core/env";
+import { recordEmailEvent, type EmailProvider } from "./emailHealthMonitor";
 
 /**
  * Email service — sends OTP codes and notifications.
@@ -8,11 +9,14 @@ import { ENV } from "./_core/env";
  * Primary:  Resend API (HTTPS, works on Railway — set RESEND_API_KEY)
  * Fallback: SMTP/Gmail (set SMTP_HOST, SMTP_USER, SMTP_PASS)
  *
+ * Every send attempt is recorded by the Email Health Monitor for
+ * outage detection and admin visibility.
+ *
  * Configuration (.env):
- *   RESEND_API_KEY=re_xxxx              ← preferred (no port blocking)
+ *   RESEND_API_KEY=re_xxxx              <-- preferred (no port blocking)
  *   RESEND_FROM=My Legacy Cannabis <noreply@mylegacycannabis.ca>
  *
- *   SMTP_HOST=smtp.gmail.com            ← fallback
+ *   SMTP_HOST=smtp.gmail.com            <-- fallback
  *   SMTP_PORT=587
  *   SMTP_USER=k6subramaniam@gmail.com
  *   SMTP_PASS=<Gmail App Password>
@@ -67,12 +71,14 @@ function getTransporter(): nodemailer.Transporter | null {
 }
 
 // ─── Core send function — Resend first, SMTP fallback ───
+// Instrumented: records every attempt in the Health Monitor
 async function sendMail(options: {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }): Promise<boolean> {
+  const start = Date.now();
   const resend = getResend();
 
   // ── Try Resend (primary) ──
@@ -89,13 +95,39 @@ async function sendMail(options: {
       });
       if (error) {
         console.warn(`[Email] Resend error for ${options.to}:`, error.message);
+        recordEmailEvent({
+          timestamp: new Date().toISOString(),
+          provider: "resend",
+          to: options.to,
+          subject: options.subject,
+          status: "failed",
+          error: error.message,
+          latencyMs: Date.now() - start,
+        });
         // Fall through to SMTP
       } else {
         console.log(`[Email] Sent via Resend to ${options.to}: ${options.subject}`);
+        recordEmailEvent({
+          timestamp: new Date().toISOString(),
+          provider: "resend",
+          to: options.to,
+          subject: options.subject,
+          status: "sent",
+          latencyMs: Date.now() - start,
+        });
         return true;
       }
     } catch (err: any) {
       console.warn(`[Email] Resend exception for ${options.to}:`, err.message);
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "resend",
+        to: options.to,
+        subject: options.subject,
+        status: "failed",
+        error: err.message,
+        latencyMs: Date.now() - start,
+      });
       // Fall through to SMTP
     }
   }
@@ -104,6 +136,18 @@ async function sendMail(options: {
   const transporter = getTransporter();
   if (!transporter) {
     console.log(`[Email] No delivery method configured. Would send to: ${options.to} | Subject: ${options.subject}`);
+    // Only record if there was no Resend attempt (otherwise it was already recorded)
+    if (!resend) {
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "unknown",
+        to: options.to,
+        subject: options.subject,
+        status: "failed",
+        error: "No email provider configured",
+        latencyMs: Date.now() - start,
+      });
+    }
     return false;
   }
 
@@ -117,12 +161,125 @@ async function sendMail(options: {
       text: options.text || options.html.replace(/<[^>]*>/g, ""),
     });
     console.log(`[Email] Sent via SMTP to ${options.to}: ${options.subject}`);
+    recordEmailEvent({
+      timestamp: new Date().toISOString(),
+      provider: "smtp",
+      to: options.to,
+      subject: options.subject,
+      status: "sent",
+      latencyMs: Date.now() - start,
+    });
     return true;
   } catch (error: any) {
     console.error(`[Email] Failed to send to ${options.to}:`, error.message);
+    recordEmailEvent({
+      timestamp: new Date().toISOString(),
+      provider: "smtp",
+      to: options.to,
+      subject: options.subject,
+      status: "failed",
+      error: error.message,
+      latencyMs: Date.now() - start,
+    });
     _transporter = null;
     return false;
   }
+}
+
+/**
+ * Tracked send — used by the Health Monitor test email feature.
+ * Returns structured result with provider info.
+ */
+export async function sendMailTracked(options: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<{ success: boolean; provider: EmailProvider; error?: string }> {
+  const start = Date.now();
+  const resend = getResend();
+
+  // Try Resend
+  if (resend) {
+    try {
+      const from = process.env.RESEND_FROM ||
+        (ENV.smtpFrom ? ENV.smtpFrom : "My Legacy Cannabis <noreply@mylegacycannabis.ca>");
+      const { error } = await resend.emails.send({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text || options.html.replace(/<[^>]*>/g, ""),
+      });
+      if (!error) {
+        recordEmailEvent({
+          timestamp: new Date().toISOString(),
+          provider: "resend",
+          to: options.to,
+          subject: options.subject,
+          status: "sent",
+          latencyMs: Date.now() - start,
+        });
+        return { success: true, provider: "resend" };
+      }
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "resend",
+        to: options.to,
+        subject: options.subject,
+        status: "failed",
+        error: error.message,
+        latencyMs: Date.now() - start,
+      });
+      // Fall through
+    } catch (err: any) {
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "resend",
+        to: options.to,
+        subject: options.subject,
+        status: "failed",
+        error: err.message,
+        latencyMs: Date.now() - start,
+      });
+    }
+  }
+
+  // Try SMTP
+  const transporter = getTransporter();
+  if (transporter) {
+    try {
+      const from = ENV.smtpFrom || `My Legacy Cannabis <${ENV.smtpUser}>`;
+      await transporter.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "smtp",
+        to: options.to,
+        subject: options.subject,
+        status: "sent",
+        latencyMs: Date.now() - start,
+      });
+      return { success: true, provider: "smtp" };
+    } catch (err: any) {
+      recordEmailEvent({
+        timestamp: new Date().toISOString(),
+        provider: "smtp",
+        to: options.to,
+        subject: options.subject,
+        status: "failed",
+        error: err.message,
+        latencyMs: Date.now() - start,
+      });
+      return { success: false, provider: "smtp", error: err.message };
+    }
+  }
+
+  return { success: false, provider: "unknown", error: "No email provider configured" };
 }
 
 // ─── Provider status (used by /api/auth/smtp-available) ───
@@ -309,4 +466,3 @@ export async function sendCustomerEmail(
 
   return sendMail({ to, subject, html });
 }
-
