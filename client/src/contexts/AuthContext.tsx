@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { WELCOME_BONUS } from '@/lib/data';
 
 export interface User {
@@ -63,9 +63,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<true | string>;
   register: (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }) => Promise<true | string>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<true | string>;
   submitIdVerification: (frontFile: File, selfieFile?: File | null) => Promise<true | string>;
   addOrder: (order: Order) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -134,30 +135,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch { return null; }
   });
 
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /**
+   * Fetch the latest user data from the server.
+   * Called on mount (session restore), after login, and periodically
+   * to pick up ID verification status changes from admin actions.
+   */
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await fetch('/api/trpc/auth.me', { credentials: 'include' });
+      if (response.ok) {
+        const result = await response.json();
+        const userData = unwrapTrpcResponse(result);
+        if (!userData) return;
+        const transformedUser = transformBackendUser(userData);
+        setUser(prev => {
+          // Preserve locally-set fields that server doesn't return (like birthday from localStorage)
+          const merged = prev ? { ...prev, ...transformedUser } : transformedUser;
+          persistUserToLocalStorage(merged);
+          return merged;
+        });
+      }
+    } catch {
+      // No active session — that's fine
+    }
+  }, []);
+
   // Fetch user from backend on mount — restores session for ALL auth methods
   // (email, google, phone) so that page reloads retain the logged-in state.
   useEffect(() => {
-    // If we already have a user in localStorage, no need to re-fetch
-    const saved = localStorage.getItem('mlc-user');
-    if (saved) return;
+    // Always fetch from server to get latest data (orders, verification status, etc.)
+    refreshUser();
+  }, [refreshUser]);
 
-    const fetchUser = async () => {
-      try {
-        const response = await fetch('/api/trpc/auth.me', { credentials: 'include' });
-        if (response.ok) {
-          const result = await response.json();
-          const userData = unwrapTrpcResponse(result);
-          if (!userData) return;
-          const transformedUser = transformBackendUser(userData);
-          setUser(transformedUser);
-          persistUserToLocalStorage(transformedUser);
-        }
-      } catch {
-        // No active session — that's fine
+  // Periodically refresh user data every 60 seconds to pick up
+  // ID verification status changes from admin actions.
+  useEffect(() => {
+    if (!user) {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Only poll if user has pending verification (to catch admin approval)
+    if (user.idVerificationStatus === 'pending' || !user.idVerified) {
+      refreshIntervalRef.current = setInterval(refreshUser, 60_000); // every 60s
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
-    fetchUser();
-  }, []);
+  }, [user?.idVerificationStatus, user?.idVerified, refreshUser]);
 
   const login = useCallback(async (email: string, _password: string): Promise<true | string> => {
     try {
@@ -216,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastName: data.lastName,
           phone: data.phone,
           birthday: data.birthday,
-          rewardsPoints: WELCOME_BONUS,
+          rewardsPoints: resData.user.rewardsPoints ?? WELCOME_BONUS,
           rewardsHistory: [
             { id: 'rh-welcome', date: new Date().toISOString().split('T')[0], type: 'bonus', points: WELCOME_BONUS, description: 'Welcome Bonus — Thanks for joining!' },
           ],
@@ -244,18 +278,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }).catch(console.error);
   }, []);
 
-  const updateProfile = useCallback((data: Partial<User>) => {
+  /**
+   * Update profile — persists to server (store.updateProfile) AND updates local state.
+   * Returns true on success, or an error string on failure.
+   */
+  const updateProfile = useCallback(async (data: Partial<User>): Promise<true | string> => {
     // Block saving an underage birthday
     if (data.birthday && !isAtLeast19(data.birthday)) {
-      return;
+      return 'You must be 19 years of age or older.';
     }
-    setUser(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...data };
-      persistUserToLocalStorage(updated);
-      return updated;
-    });
-  }, []);
+
+    // Build the server payload
+    const serverPayload: Record<string, unknown> = {};
+    if (data.firstName !== undefined || data.lastName !== undefined || data.name !== undefined) {
+      // Combine first + last name for server (server stores single "name" field)
+      const firstName = data.firstName ?? user?.firstName ?? '';
+      const lastName = data.lastName ?? user?.lastName ?? '';
+      serverPayload.name = data.name || `${firstName} ${lastName}`.trim();
+    }
+    if (data.phone !== undefined) serverPayload.phone = data.phone;
+    if (data.birthday !== undefined) serverPayload.birthday = data.birthday;
+
+    // Persist to server
+    try {
+      const response = await fetch('/api/trpc/store.updateProfile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: trpcBody(serverPayload),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const resData = unwrapTrpcResponse(result);
+        if (resData?.success && resData?.user) {
+          // Use the server-returned user data as the source of truth
+          const updatedUser = transformBackendUser(resData.user);
+          // Merge with any local-only fields
+          setUser(prev => {
+            const merged = prev ? { ...prev, ...updatedUser } : updatedUser;
+            persistUserToLocalStorage(merged);
+            return merged;
+          });
+          return true;
+        }
+      }
+
+      // Server call failed — still update localStorage as fallback
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...data };
+        persistUserToLocalStorage(updated);
+        return updated;
+      });
+      return true;
+    } catch (error) {
+      console.error('Profile update error:', error);
+      // Fallback: update locally
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...data };
+        persistUserToLocalStorage(updated);
+        return updated;
+      });
+      return true;
+    }
+  }, [user]);
 
   const addOrder = useCallback((order: Order) => {
     setUser(prev => {
@@ -335,6 +423,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateProfile,
       submitIdVerification,
       addOrder,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>
