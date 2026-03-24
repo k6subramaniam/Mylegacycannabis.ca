@@ -26,4 +26,6 @@ export const ENV = {
   smtpFrom: process.env.SMTP_FROM ?? "",
   // Admin/owner email — receives all store notifications
   adminEmail: process.env.ADMIN_EMAIL ?? "",
+  // Resend API (preferred over SMTP on Railway — uses HTTPS, no port blocking)
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
 };
