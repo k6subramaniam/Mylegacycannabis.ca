@@ -450,6 +450,12 @@ export async function sendCustomerEmail(
   subject: string,
   bodyHtml: string
 ): Promise<boolean> {
+  // If bodyHtml is a full HTML document (from templates), send it raw
+  if (bodyHtml.trimStart().startsWith("<!DOCTYPE") || bodyHtml.trimStart().startsWith("<html")) {
+    return sendMail({ to, subject, html: bodyHtml });
+  }
+
+  // Otherwise wrap in a simple layout (for inline content)
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
@@ -465,4 +471,17 @@ export async function sendCustomerEmail(
   `;
 
   return sendMail({ to, subject, html });
+}
+
+// ─── Raw Admin Email (for templated admin emails) ───
+export async function sendAdminTemplatedEmail(
+  subject: string,
+  fullHtml: string
+): Promise<boolean> {
+  const adminEmail = ENV.adminEmail;
+  if (!adminEmail) {
+    console.log(`[Notification] No ADMIN_EMAIL configured. Subject: ${subject}`);
+    return false;
+  }
+  return sendMail({ to: adminEmail, subject, html: fullHtml });
 }

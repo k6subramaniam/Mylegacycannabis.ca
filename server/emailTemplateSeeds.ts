@@ -590,14 +590,22 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     <tr>
                         <td style="padding:40px 30px;">
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Payment Received]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! We've received your payment for order <strong>#{{order_id}}</strong>. Your order is now confirmed and being prepared.</p>
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Payment Confirmed</strong></p>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Total Paid:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Received</span></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:14px; line-height:1.6; margin:0;"><strong>What happens next?</strong><br>Our team will process your order and prepare it for shipping. You'll receive a tracking number once your package is on its way via Canada Post.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Your Order</a>
                                     </td>
                                 </tr>
                             </table>
@@ -642,25 +650,32 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     </tr>
                     <tr>
                         <td style="padding:40px 30px;">
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for New Payment Received]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A payment has been received for order <strong>#{{order_id}}</strong>. Please verify the e-Transfer and update the order status.</p>
+                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Marked Received</span></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:13px; line-height:1.5; margin:0;"><strong>Action Required:</strong> Verify the Interac e-Transfer was deposited, then change order status to "Confirmed" and begin fulfillment.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Review Order</a>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#666666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
                         </td>
                     </tr>
                     <tr>
                         <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
-                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
-                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0;">MyLegacy Cannabis - Admin Notification System<br>© 2026 MyLegacy Cannabis. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>
@@ -696,23 +711,32 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     <tr>
                         <td style="padding:40px 30px;">
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Order Received]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Thank you for your order with MyLegacy Cannabis! We've received order <strong>#{{order_id}}</strong> and it's ready for payment.</p>
+                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:4px;">
+                                <h3 style="color:#333333; margin:0 0 15px 0; font-size:18px;">Order Summary</h3>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order Number:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Total Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                </table>
                             </div>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
-                                <tr>
-                                    <td align="center">
-                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
-                                    </td>
-                                </tr>
-                            </table>
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                                <h3 style="color:#333333; margin:0 0 15px 0; font-size:16px;">Next Step: Send Payment via Interac e-Transfer</h3>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">payments@mylegacycannabis.ca</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Reference:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the order number in your e-transfer message</em></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333333; font-size:13px; line-height:1.5; margin:0;"><strong>Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours may be automatically cancelled.</p>
+                            </div>
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>
                     <tr>
                         <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
-                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>Serving the Greater Toronto Area | 10 AM - 10 PM Daily</p>
                             <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
                         </td>
                     </tr>
@@ -748,25 +772,31 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     </tr>
                     <tr>
                         <td style="padding:40px 30px;">
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for New Guest Order]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A guest customer has submitted an ID for age verification. Please review and approve or reject.</p>
+                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Guest Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}} ({{customer_email}})</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Submitted:</strong> <span style="color:#666; font-size:14px;">{{submission_date}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">ID Type:</strong> <span style="color:#666; font-size:14px;">{{id_type}}</span></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Response Time Target:</strong> Please review within 24 hours to maintain excellent customer service. The customer's order is on hold pending verification.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                        <a href="{{action_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Review ID Document</a>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#666666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
                         </td>
                     </tr>
                     <tr>
                         <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
-                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>📍 Serving the Greater Toronto Area | 🕒 10 AM - 10 PM Daily</p>
-                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">© 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0;">MyLegacy Cannabis - Admin Notification System<br>© 2026 MyLegacy Cannabis. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>
@@ -775,7 +805,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     </table>
 </body>
 </html>`,
-    variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    variables: ["customer_name","customer_email","submission_date","id_type","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
     isActive: true,
   },
   {
@@ -802,9 +832,20 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     <tr>
                         <td style="padding:40px 30px;">
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for ID Verification Failed]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Unfortunately, we were unable to verify your age with the ID document you submitted. Your order is on hold until verification is complete.</p>
+                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Verification Issue:</strong></p>
+                                <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">{{rejection_reason}}</p>
+                            </div>
+                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Please resubmit with a valid ID showing:</strong></p>
+                                <ul style="color:#666; font-size:14px; line-height:1.6; margin:0; padding-left:20px;">
+                                    <li>Clear, readable photo (not blurry)</li>
+                                    <li>All four corners visible</li>
+                                    <li>Your date of birth clearly shown</li>
+                                    <li>Document not expired</li>
+                                    <li>Government-issued ID (Driver's License, Passport, Ontario Photo Card)</li>
+                                </ul>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
@@ -855,9 +896,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     <tr>
                         <td style="padding:40px 30px;">
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for ID Verified]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! Your ID has been verified and your order is now being processed.</p>
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 10px 0;"><strong>Your ID is Verified!</strong></p>
+                                <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">Your age verification is complete. If you've already sent payment, your order will be prepared and shipped shortly. You'll receive a tracking number via email once shipped.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
@@ -902,15 +944,23 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                 <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                         <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
-                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">✅ Payment Received</h1>
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">Payment Received</h1>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding:40px 30px;">
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Payment Received]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! We've received your payment for order <strong>#{{order_id}}</strong>. Your order is now confirmed and being prepared for shipping.</p>
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Payment Confirmed</strong></p>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Total Paid:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Received</span></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:14px; line-height:1.6; margin:0;"><strong>What happens next?</strong><br>Our team will process your order and prepare it for shipping via Canada Post. You'll receive a tracking number once your package is on its way.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
@@ -960,10 +1010,17 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                     </tr>
                     <tr>
                         <td style="padding:40px 30px;">
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
-                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">[Email content for Guest Payment Received]</p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
-                                <p style="color:#333333; font-size:15px; line-height:1.6; margin:0;"><strong>Order #{{order_id}}</strong><br>{{order_total}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A guest customer's payment has been received for order <strong>#{{order_id}}</strong>. Please verify the e-Transfer and begin fulfillment.</p>
+                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Guest Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
+                                </table>
+                            </div>
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Action Required:</strong> Verify the Interac e-Transfer, confirm order status, and prepare for shipping.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
@@ -988,6 +1045,118 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
 </body>
 </html>`,
     variables: ["customer_name","order_id","order_total","action_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "order-shipped",
+    name: "Order Shipped",
+    subject: "Your Order Has Shipped — #{{order_id}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Shipped</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #2196F3 0%, #03A9F4 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">Your Order Has Shipped!</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Your order <strong>#{{order_id}}</strong> has been shipped via Canada Post and is on its way to you!</p>
+                            <div style="background-color:#E3F2FD; border:2px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">
+                                <h3 style="color:#333; margin:0 0 15px 0; font-size:18px;">Tracking Information</h3>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Tracking Number:</strong> <span style="color:#666; font-size:14px;">{{tracking_number}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Carrier:</strong> <span style="color:#666; font-size:14px;">Canada Post</span></td></tr>
+                                </table>
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{tracking_url}}" style="display:inline-block; background-color:#2196F3; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Track Your Package</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:4px;">
+                                <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Estimated Delivery:</strong> Canada Post typically delivers within 2-5 business days depending on your location. Tracking updates may take 24 hours to appear.</p>
+                            </div>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>Serving the Greater Toronto Area</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">&copy; 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","tracking_number","tracking_url","unsubscribe_url","privacy_url"],
+    isActive: true,
+  },
+  {
+    slug: "order-status-update",
+    name: "Order Status Update",
+    subject: "Order Update — #{{order_id}} is now {{order_status}}",
+    bodyHtml: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <h1 style="color:#FFFFFF; margin:0; font-size:26px; font-weight:bold;">Order Update</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:40px 30px;">
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Your order <strong>#{{order_id}}</strong> has been updated.</p>
+                            <div style="background-color:#E3F2FD; border-left:4px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">New Status:</strong> <span style="color:#720eec; font-size:14px; font-weight:bold;">{{order_status}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Updated:</strong> <span style="color:#666; font-size:14px;">{{update_date}}</span></td></tr>
+                                </table>
+                            </div>
+                            <p style="color:#666; font-size:14px; line-height:1.6; margin:20px 0;">{{status_message}}</p>
+                            <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#F5F5F5; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
+                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0 0 10px 0;">MyLegacy Cannabis - GTA's Premier Cannabis Delivery<br>Serving the Greater Toronto Area</p>
+                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">&copy; 2026 MyLegacy Cannabis. All rights reserved.<br><a href="{{unsubscribe_url}}" style="color:#720eec; text-decoration:none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color:#720eec; text-decoration:none;">Privacy Policy</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+    variables: ["customer_name","order_id","order_status","update_date","status_message","unsubscribe_url","privacy_url"],
     isActive: true,
   },
 ];
