@@ -9,6 +9,13 @@ import { nanoid } from "nanoid";
 import { notifyOwner, notifyOwnerAsync } from "./_core/notification";
 import { eq } from "drizzle-orm";
 import { buildFullUserResponse } from "./userHelpers";
+import {
+  getHealthDashboard,
+  getEmailEvents,
+  pingProvider,
+  sendTestEmail,
+  getAvailableProviders,
+} from "./emailHealthMonitor";
 
 export const appRouter = router({
   system: systemRouter,
@@ -388,6 +395,42 @@ export const appRouter = router({
           details: `Updated setting "${input.key}" to "${input.value}"`,
         });
         return { success: true };
+      }),
+    }),
+
+    // ─── EMAIL HEALTH MONITOR ───
+    emailHealth: router({
+      /** Real-time dashboard: status, uptime %, totals, streak, last events */
+      dashboard: adminProcedure.query(() => {
+        return getHealthDashboard();
+      }),
+
+      /** Paginated event log with optional status filter */
+      events: adminProcedure.input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(25),
+        status: z.enum(["sent", "failed", "bounced"]).optional(),
+      })).query(({ input }) => {
+        return getEmailEvents(input);
+      }),
+
+      /** Ping a specific provider (resend, smtp, sendgrid, mailgun, ses) */
+      ping: adminProcedure.input(z.object({
+        provider: z.string(),
+      })).mutation(async ({ input }) => {
+        return pingProvider(input.provider);
+      }),
+
+      /** Send a real test email to verify end-to-end delivery */
+      sendTest: adminProcedure.input(z.object({
+        to: z.string().email(),
+      })).mutation(async ({ input }) => {
+        return sendTestEmail(input.to);
+      }),
+
+      /** List all known providers and their configuration status */
+      providers: adminProcedure.query(() => {
+        return getAvailableProviders();
       }),
     }),
 

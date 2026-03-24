@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
+import EmailHealthMonitor from "./EmailHealthMonitor";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -683,7 +684,12 @@ export default function AdminSettings() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
-          SECTION 4: AUTHENTICATION PROVIDERS
+          SECTION 4: EMAIL HEALTH MONITOR
+          ══════════════════════════════════════════════════════════════ */}
+      <EmailHealthMonitor />
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 5: AUTHENTICATION PROVIDERS
           ══════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
