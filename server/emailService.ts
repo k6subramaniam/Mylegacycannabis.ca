@@ -42,6 +42,7 @@ function getTransporter(): nodemailer.Transporter | null {
     host: ENV.smtpHost,
     port: ENV.smtpPort,
     secure: ENV.smtpPort === 465, // true for port 465, false for 587
+    family: 4, // Force IPv4 — Railway blocks outbound IPv6 SMTP (QDISC_DROP)
     auth: {
       user: ENV.smtpUser,
       pass: ENV.smtpPass,
