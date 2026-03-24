@@ -578,7 +578,7 @@ export const appRouter = router({
       guestName: z.string(),
       guestPhone: z.string().optional(),
       items: z.array(z.object({
-        productId: z.number().optional(),
+        productId: z.any().optional().transform(v => { const n = Number(v); return isNaN(n) ? undefined : n; }),
         productName: z.string(),
         productImage: z.string().optional(),
         quantity: z.number(),
