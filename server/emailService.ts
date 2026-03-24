@@ -46,6 +46,9 @@ function getTransporter(): nodemailer.Transporter | null {
       user: ENV.smtpUser,
       pass: ENV.smtpPass,
     },
+    connectionTimeout: 10_000, // 10s to connect
+    greetingTimeout: 10_000,   // 10s for SMTP greeting
+    socketTimeout: 10_000,     // 10s inactivity timeout
   });
 
   // Verify connection on first use

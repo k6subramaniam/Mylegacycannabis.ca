@@ -6,7 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
-import { notifyOwner } from "./_core/notification";
+import { notifyOwner, notifyOwnerAsync } from "./_core/notification";
 import { eq } from "drizzle-orm";
 import { buildFullUserResponse } from "./userHelpers";
 
@@ -624,7 +624,8 @@ export const appRouter = router({
         quantity: item.quantity,
         price: item.price,
       })));
-      await notifyOwner({ title: `New Order: ${orderNumber}`, content: `New order from ${input.guestName} (${input.guestEmail}) — Total: $${input.total}` });
+      // Fire-and-forget — never block the customer's order confirmation
+      notifyOwnerAsync({ title: `New Order: ${orderNumber}`, content: `New order from ${input.guestName} (${input.guestEmail}) — Total: $${input.total}` });
       return { orderNumber, orderId };
     }),
     submitVerification: publicProcedure.input(z.object({
@@ -658,7 +659,8 @@ export const appRouter = router({
         selfieImageUrl: selfieUrl,
         idType: input.idType,
       });
-      await notifyOwner({ title: "New ID Verification Submitted", content: `Verification #${id} from ${input.guestName || input.guestEmail || "Guest"} needs review.` });
+      // Fire-and-forget — never block the customer's verification submission
+      notifyOwnerAsync({ title: "New ID Verification Submitted", content: `Verification #${id} from ${input.guestName || input.guestEmail || "Guest"} needs review.` });
       return { id, status: "pending" };
     }),
   }),
