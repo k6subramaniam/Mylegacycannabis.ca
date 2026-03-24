@@ -266,6 +266,47 @@ export async function sendAdminNotification(
   return sendMail({ to: adminEmail, subject: `[My Legacy] ${subject}`, html });
 }
 
+// ─── Email Provider Status (used by /api/auth/smtp-available) ───
+export function getEmailProviderStatus(): {
+  available: boolean;
+  provider: string;
+  adminEmail: string;
+  missing: string[];
+} {
+  const missing: string[] = [];
+
+  // Check Resend (primary)
+  if (ENV.resendApiKey) {
+    return {
+      available: true,
+      provider: "resend",
+      adminEmail: ENV.adminEmail,
+      missing: [],
+    };
+  }
+  missing.push("RESEND_API_KEY");
+
+  // Check SMTP (fallback)
+  if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass) {
+    return {
+      available: true,
+      provider: "smtp",
+      adminEmail: ENV.adminEmail,
+      missing: [],
+    };
+  }
+  if (!ENV.smtpHost) missing.push("SMTP_HOST");
+  if (!ENV.smtpUser) missing.push("SMTP_USER");
+  if (!ENV.smtpPass) missing.push("SMTP_PASS");
+
+  return {
+    available: false,
+    provider: "none",
+    adminEmail: ENV.adminEmail,
+    missing,
+  };
+}
+
 // ─── Customer Notification Email ───
 export async function sendCustomerEmail(
   to: string,
