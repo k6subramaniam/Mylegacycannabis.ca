@@ -482,8 +482,18 @@ export function registerCustomAuthRoutes(app: Express) {
 
   // ─── CHECK SMTP EMAIL AVAILABILITY ───
   app.get("/api/auth/smtp-available", (_req: Request, res: Response) => {
-    const available = Boolean(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass);
+    const smtpConfigured = Boolean(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass);
     const adminEmail = ENV.adminEmail || null;
-    res.json({ available, adminEmail: available ? adminEmail : null });
+    const missing = [
+      !ENV.smtpHost && "SMTP_HOST",
+      !ENV.smtpUser && "SMTP_USER",
+      !ENV.smtpPass && "SMTP_PASS",
+    ].filter(Boolean);
+    res.json({
+      available: smtpConfigured,
+      adminEmail,
+      adminEmailConfigured: Boolean(adminEmail),
+      missing: smtpConfigured ? [] : missing,
+    });
   });
 }

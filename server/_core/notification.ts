@@ -109,7 +109,7 @@ export async function notifyOwner(
   }
 
   if (!emailSent && !forgeSent) {
-    console.warn(`[Notification] All channels failed. Title: ${title} | Content: ${content}`);
+    console.warn(`[Notification] All channels failed for: "${title}". SMTP_PASS may be missing — set a Gmail App Password in .env for real email delivery.`);
   }
 
   return emailSent || forgeSent;

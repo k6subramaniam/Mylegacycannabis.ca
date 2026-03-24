@@ -17,11 +17,24 @@ import { ENV } from "./_core/env";
 
 // ─── SMTP Transport (lazy singleton) ───
 let _transporter: nodemailer.Transporter | null = null;
+let _smtpStatusLogged = false;
 
 function getTransporter(): nodemailer.Transporter | null {
   if (_transporter) return _transporter;
 
   if (!ENV.smtpHost || !ENV.smtpUser || !ENV.smtpPass) {
+    if (!_smtpStatusLogged) {
+      _smtpStatusLogged = true;
+      const missing = [
+        !ENV.smtpHost && "SMTP_HOST",
+        !ENV.smtpUser && "SMTP_USER",
+        !ENV.smtpPass && "SMTP_PASS",
+      ].filter(Boolean).join(", ");
+      console.log(`[Email] SMTP not configured (missing: ${missing}). Emails will be logged to console only.`);
+      if (ENV.adminEmail) {
+        console.log(`[Email] ADMIN_EMAIL is set (${ENV.adminEmail}) — admin notifications will appear in console.`);
+      }
+    }
     return null; // SMTP not configured
   }
 

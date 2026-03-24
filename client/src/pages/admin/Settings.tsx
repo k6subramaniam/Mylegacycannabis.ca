@@ -64,13 +64,14 @@ export default function AdminSettings() {
   const [smsAvailable, setSmsAvailable] = useState(false);
   const [smtpAvailable, setSmtpAvailable] = useState(false);
   const [smtpAdminEmail, setSmtpAdminEmail] = useState<string | null>(null);
+  const [smtpMissing, setSmtpMissing] = useState<string[]>([]);
   const [authStatusLoading, setAuthStatusLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/google-available').then(r => r.json()).then(d => setGoogleAvailable(d.available)).catch(() => {}),
       fetch('/api/auth/sms-available').then(r => r.json()).then(d => setSmsAvailable(d.available)).catch(() => {}),
-      fetch('/api/auth/smtp-available').then(r => r.json()).then(d => { setSmtpAvailable(d.available); setSmtpAdminEmail(d.adminEmail); }).catch(() => {}),
+      fetch('/api/auth/smtp-available').then(r => r.json()).then(d => { setSmtpAvailable(d.available); setSmtpAdminEmail(d.adminEmail); setSmtpMissing(d.missing || []); }).catch(() => {}),
     ]).finally(() => setAuthStatusLoading(false));
   }, []);
 
@@ -829,6 +830,16 @@ export default function AdminSettings() {
                     </p>
                     {!smtpAvailable && (
                       <div className="mt-3 bg-white rounded-lg border border-amber-200 p-3">
+                        {smtpMissing.length > 0 && (
+                          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded">
+                            <p className="text-xs font-semibold text-red-700">Missing environment variables: <span className="font-mono">{smtpMissing.join(', ')}</span></p>
+                          </div>
+                        )}
+                        {smtpAdminEmail && (
+                          <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded">
+                            <p className="text-xs text-green-700">ADMIN_EMAIL: <span className="font-semibold">{smtpAdminEmail}</span></p>
+                          </div>
+                        )}
                         <p className="text-xs font-semibold text-gray-700 mb-1.5">Setup Instructions (Gmail):</p>
                         <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
                           <li>Enable 2-Step Verification on your Google Account</li>
