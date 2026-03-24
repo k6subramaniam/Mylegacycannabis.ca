@@ -16,6 +16,16 @@ import {
   sendTestEmail,
   getAvailableProviders,
 } from "./emailHealthMonitor";
+import {
+  triggerWelcomeEmail,
+  triggerOrderConfirmation,
+  triggerPaymentReceived,
+  triggerIdSubmitted,
+  triggerIdApproved,
+  triggerIdRejected,
+  triggerOrderShipped,
+  triggerOrderStatusUpdate,
+} from "./emailTemplateEngine";
 
 export const appRouter = router({
   system: systemRouter,
@@ -86,6 +96,11 @@ export const appRouter = router({
       if (!newUser) {
         return { success: false, error: "Failed to create user" };
       }
+      // Fire-and-forget: send welcome email template
+      triggerWelcomeEmail({
+        customerName: input.name,
+        customerEmail: input.email,
+      }).catch(err => console.warn("[Register] Welcome email failed:", err.message));
       return {
         success: true,
         user: await buildFullUserResponse(newUser),
@@ -209,6 +224,29 @@ export const appRouter = router({
         await db.updateOrder(input.id, { status: input.status });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_status", entityType: "order", entityId: input.id, details: `Changed order #${input.id} status to ${input.status}` });
         await notifyOwner({ title: `Order Status Updated`, content: `Order #${input.id} status changed to ${input.status}` });
+
+        // Send status update email to customer
+        const statusOrder = await db.getOrderById(input.id);
+        if (statusOrder && statusOrder.guestEmail) {
+          const statusMessages: Record<string, string> = {
+            confirmed: "Your order has been confirmed and payment has been verified. We're preparing your order now.",
+            processing: "Your order is being prepared and packaged for shipment.",
+            shipped: "Your order has been shipped! You'll receive tracking information separately.",
+            delivered: "Your order has been delivered. Thank you for shopping with MyLegacy Cannabis! We hope you enjoy your purchase.",
+            cancelled: "Your order has been cancelled. If you didn't request this, please contact us immediately at support@mylegacycannabis.ca.",
+            refunded: "Your order has been refunded. The refund will be processed within 3-5 business days.",
+          };
+          const statusMsg = statusMessages[input.status] || `Your order status has been updated to: ${input.status}.`;
+
+          triggerOrderStatusUpdate({
+            customerName: statusOrder.guestName || "Customer",
+            customerEmail: statusOrder.guestEmail,
+            orderId: statusOrder.orderNumber || String(input.id),
+            orderStatus: input.status.charAt(0).toUpperCase() + input.status.slice(1),
+            statusMessage: statusMsg,
+          }).catch(err => console.warn("[Status] Email failed:", err.message));
+        }
+
         return { success: true };
       }),
       updatePayment: adminProcedure.input(z.object({
@@ -217,6 +255,21 @@ export const appRouter = router({
       })).mutation(async ({ input, ctx }) => {
         await db.updateOrder(input.id, { paymentStatus: input.paymentStatus });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_payment", entityType: "order", entityId: input.id, details: `Changed order #${input.id} payment to ${input.paymentStatus}` });
+
+        // Send payment received emails when payment is received or confirmed
+        if (input.paymentStatus === "received" || input.paymentStatus === "confirmed") {
+          const order = await db.getOrderById(input.id);
+          if (order && order.guestEmail) {
+            triggerPaymentReceived({
+              customerName: order.guestName || "Customer",
+              customerEmail: order.guestEmail,
+              orderId: order.orderNumber || String(input.id),
+              orderTotal: order.total || "0",
+              isGuest: true,
+            }).catch(err => console.warn("[Payment] Email failed:", err.message));
+          }
+        }
+
         return { success: true };
       }),
       addTracking: adminProcedure.input(z.object({
@@ -232,8 +285,22 @@ export const appRouter = router({
           ),
         trackingUrl: z.string().optional(),
       })).mutation(async ({ input, ctx }) => {
-        await db.updateOrder(input.id, { trackingNumber: input.trackingNumber, trackingUrl: input.trackingUrl || `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${input.trackingNumber}` });
+        const trackingUrl = input.trackingUrl || `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${input.trackingNumber}`;
+        await db.updateOrder(input.id, { trackingNumber: input.trackingNumber, trackingUrl });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "add_tracking", entityType: "order", entityId: input.id, details: `Added tracking: ${input.trackingNumber}` });
+
+        // Send "Order Shipped" email to customer with tracking info
+        const trackOrder = await db.getOrderById(input.id);
+        if (trackOrder && trackOrder.guestEmail) {
+          triggerOrderShipped({
+            customerName: trackOrder.guestName || "Customer",
+            customerEmail: trackOrder.guestEmail,
+            orderId: trackOrder.orderNumber || String(input.id),
+            trackingNumber: input.trackingNumber,
+            trackingUrl,
+          }).catch(err => console.warn("[Tracking] Email failed:", err.message));
+        }
+
         return { success: true };
       }),
       addNote: adminProcedure.input(z.object({ id: z.number(), note: z.string() })).mutation(async ({ input, ctx }) => {
@@ -310,6 +377,29 @@ export const appRouter = router({
         if (idVerifEnabledReview) {
           await notifyOwner({ title: `ID Verification ${input.status}`, content: `Verification #${input.id} has been ${input.status}` });
         }
+
+        // Send templated customer emails for ID review results
+        if (verification && verification.guestEmail) {
+          const customerName = verification.guestName || "Customer";
+          const customerEmail = verification.guestEmail;
+          const isGuest = !verification.userId;
+
+          if (input.status === "approved") {
+            triggerIdApproved({ customerName, customerEmail, isGuest }).catch(err =>
+              console.warn("[Verification] Approved email failed:", err.message)
+            );
+          } else if (input.status === "rejected") {
+            triggerIdRejected({
+              customerName,
+              customerEmail,
+              rejectionReason: input.notes || "The submitted ID could not be verified.",
+              isGuest,
+            }).catch(err =>
+              console.warn("[Verification] Rejected email failed:", err.message)
+            );
+          }
+        }
+
         return { success: true };
       }),
     }),
@@ -669,6 +759,23 @@ export const appRouter = router({
       })));
       // Fire-and-forget — never block the customer's order confirmation
       notifyOwnerAsync({ title: `New Order: ${orderNumber}`, content: `New order from ${input.guestName} (${input.guestEmail}) — Total: $${input.total}` });
+
+      // Send templated order confirmation to customer
+      const itemsSummary = input.items.map(i => `${i.quantity}x ${i.productName} ($${i.price})`).join("<br>");
+      const addr = input.shippingAddress;
+      const addressStr = `${addr.street}, ${addr.city}, ${addr.province} ${addr.postalCode}, ${addr.country}`;
+      triggerOrderConfirmation({
+        customerName: input.guestName,
+        customerEmail: input.guestEmail,
+        orderId: orderNumber,
+        orderTotal: input.total,
+        orderItems: itemsSummary,
+        deliveryAddress: addressStr,
+        paymentAmount: input.total,
+        paymentReference: orderNumber,
+        isGuest: true,
+      }).catch(err => console.warn("[Order] Confirmation email failed:", err.message));
+
       return { orderNumber, orderId };
     }),
     submitVerification: publicProcedure.input(z.object({
@@ -704,6 +811,17 @@ export const appRouter = router({
       });
       // Fire-and-forget — never block the customer's verification submission
       notifyOwnerAsync({ title: "New ID Verification Submitted", content: `Verification #${id} from ${input.guestName || input.guestEmail || "Guest"} needs review.` });
+
+      // Send templated admin notification
+      triggerIdSubmitted({
+        customerName: input.guestName || "Guest",
+        customerEmail: input.guestEmail || "",
+        userId: ctx.user?.id,
+        verificationId: id,
+        idType: input.idType,
+        isGuest: !ctx.user,
+      }).catch(err => console.warn("[Verification] Admin email failed:", err.message));
+
       return { id, status: "pending" };
     }),
   }),

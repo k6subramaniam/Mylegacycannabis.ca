@@ -6,6 +6,7 @@ import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
 import { sendOTPEmail, sendOTPSms, getEmailProviderStatus } from "./emailService";
+import { triggerWelcomeEmail } from "./emailTemplateEngine";
 import rateLimit from "express-rate-limit";
 import { buildFullUserResponse } from "./userHelpers";
 
@@ -243,6 +244,15 @@ export function registerCustomAuthRoutes(app: Express) {
         // Return full user data
         const createdUser = await db.getUserByOpenId(openId);
         const fullRegUser = createdUser ? await buildFullUserResponse(createdUser) : { name: registrationData.name, email: registrationData.email, phone: normalizedPhone };
+
+        // Fire-and-forget: send welcome email
+        if (registrationData.email) {
+          triggerWelcomeEmail({
+            customerName: registrationData.name,
+            customerEmail: registrationData.email,
+          }).catch(err => console.warn("[Register] Welcome email failed:", err.message));
+        }
+
         res.json({
           success: true,
           message: "Account created successfully! You earned 25 welcome bonus points.",
