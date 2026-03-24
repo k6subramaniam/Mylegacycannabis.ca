@@ -281,7 +281,7 @@ export default function Checkout() {
         guestName: `${form.firstName} ${form.lastName}`.trim(),
         guestPhone: form.phone || undefined,
         items: items.map(item => ({
-          productId: Number(item.product.id),
+          productId: isNaN(Number(item.product.id)) ? undefined : Number(item.product.id),
           productName: item.product.name,
           productImage: item.product.image || undefined,
           quantity: item.quantity,
