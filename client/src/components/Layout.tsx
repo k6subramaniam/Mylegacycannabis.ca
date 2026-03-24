@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, Truck } from 'lucide-react';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, Truck, Wrench, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
@@ -62,6 +63,110 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
           I am under 19 — Exit
         </button>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MAINTENANCE MODE OVERLAY
+// ============================================================
+function MaintenanceOverlay({ title, message }: { title: string; message: string }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[199] bg-[#4B2D8E] flex items-center justify-center p-4"
+      aria-modal="true"
+      role="dialog"
+      aria-label="Maintenance mode"
+    >
+      <div className="bg-white rounded-2xl p-8 w-full max-w-[520px] text-center shadow-2xl">
+        <img
+          src={LOGO_URL}
+          alt="My Legacy Cannabis"
+          width="240"
+          height="64"
+          className="h-16 w-auto mx-auto mb-6"
+          loading="eager"
+          decoding="sync"
+        />
+        <div className="w-20 h-20 rounded-full bg-[#F15929]/10 flex items-center justify-center mx-auto mb-6">
+          <Wrench size={36} className="text-[#F15929]" />
+        </div>
+        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4 uppercase">
+          {title || "WE'LL BE RIGHT BACK"}
+        </h2>
+        <p className="text-[#333] mb-6 font-body text-sm leading-relaxed whitespace-pre-wrap max-w-md mx-auto">
+          {message || "Our store is currently undergoing maintenance. Please check back soon!"}
+        </p>
+        <div className="flex items-center justify-center gap-6 text-sm text-gray-400 font-body">
+          <a href="mailto:support@mylegacycannabis.ca" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+            <Mail size={14} /> Email Us
+          </a>
+          <a href="tel:4372154722" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+            <Phone size={14} /> (437) 215-4722
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// STORE HOURS WIDGET — used in Footer
+// ============================================================
+const DAY_LABELS_SHORT: Record<string, string> = {
+  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed',
+  thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
+};
+const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+function formatTime12(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+}
+
+function StoreHoursWidget() {
+  const { storeHours } = useSiteConfig();
+
+  if (!storeHours.enabled || !storeHours.hours) return null;
+
+  const hours = storeHours.hours;
+  const today = DAYS_ORDER[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+
+  return (
+    <div>
+      <h3 className="font-display text-lg mb-4 text-[#F15929]">STORE HOURS</h3>
+      <ul className="space-y-1.5 font-body text-sm">
+        {DAYS_ORDER.map(day => {
+          const d = hours[day];
+          if (!d) return null;
+          const isToday = day === today;
+          return (
+            <li key={day} className={`flex items-center justify-between ${isToday ? 'text-[#F15929] font-semibold' : 'text-white/70'}`}>
+              <span className="flex items-center gap-1.5">
+                {isToday && <Clock size={12} />}
+                {DAY_LABELS_SHORT[day]}
+              </span>
+              <span>
+                {d.closed
+                  ? 'Closed'
+                  : `${formatTime12(d.open)} - ${formatTime12(d.close)}`
+                }
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {storeHours.note && (
+        <p className="text-white/50 text-xs mt-3 leading-relaxed">{storeHours.note}</p>
+      )}
     </div>
   );
 }
@@ -263,7 +368,7 @@ function Footer() {
   return (
     <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8">
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div>
             {/* Explicit width/height prevents layout shift when image loads */}
@@ -323,6 +428,9 @@ function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* Store Hours (from admin settings) */}
+          <StoreHoursWidget />
 
           {/* Contact */}
           <div>
@@ -495,6 +603,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [ageVerified, setAgeVerified] = useState(() => {
     try { return localStorage.getItem('mlc-age-verified') === 'true'; } catch { return false; }
   });
+  const { maintenance } = useSiteConfig();
 
   const handleAgeConfirm = () => {
     setAgeVerified(true);
@@ -505,6 +614,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <>
       {/* AgeGate is position:fixed — zero impact on document flow / CLS */}
       {!ageVerified && <AgeGate onConfirm={handleAgeConfirm} />}
+
+      {/* Maintenance overlay — shown after age gate, blocks entire storefront */}
+      {ageVerified && maintenance.enabled && (
+        <MaintenanceOverlay title={maintenance.title} message={maintenance.message} />
+      )}
 
       <div className="min-h-screen flex flex-col">
         <Header />

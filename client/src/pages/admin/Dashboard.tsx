@@ -1,13 +1,13 @@
 import { trpc } from "@/lib/trpc";
 import {
   Package, ShoppingCart, ShieldCheck, Users, DollarSign,
-  TrendingUp, Clock, AlertTriangle, ArrowRight, Eye,
+  TrendingUp, Clock, AlertTriangle, ArrowRight, Eye, Wrench,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 export default function AdminDashboard() {
-  const { idVerificationEnabled } = useSiteConfig();
+  const { idVerificationEnabled, maintenance } = useSiteConfig();
   const { data: stats, isLoading } = trpc.admin.stats.useQuery(undefined, {
     refetchInterval: 30_000, // re-poll every 30s so new orders/verifications appear without a refresh
     refetchOnWindowFocus: true,
@@ -86,6 +86,20 @@ export default function AdminDashboard() {
           </div>
           <Link href="/admin/verifications" className="bg-[#F15929] text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-[#d94d22] transition-colors shrink-0">
             Review Now
+          </Link>
+        </div>
+      )}
+
+      {/* Maintenance mode alert */}
+      {maintenance.enabled && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <Wrench size={20} className="text-red-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-700">Maintenance Mode is Active</p>
+            <p className="text-xs text-red-600 mt-0.5">The storefront is offline. Visitors see the maintenance page.</p>
+          </div>
+          <Link href="/admin/settings" className="bg-red-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shrink-0">
+            Disable
           </Link>
         </div>
       )}
