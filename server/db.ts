@@ -271,6 +271,20 @@ export async function initializeDatabase(): Promise<void> {
 async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
   const defaults: { key: string; value: string }[] = [
     { key: 'id_verification_enabled', value: 'true' },
+    { key: 'maintenance_mode_enabled', value: 'false' },
+    { key: 'maintenance_title', value: 'We\'ll Be Right Back' },
+    { key: 'maintenance_message', value: 'Our store is currently undergoing scheduled maintenance. We appreciate your patience and will be back online shortly. Please check back soon!' },
+    { key: 'store_hours', value: JSON.stringify({
+      monday:    { open: '10:00', close: '22:00', closed: false },
+      tuesday:   { open: '10:00', close: '22:00', closed: false },
+      wednesday: { open: '10:00', close: '22:00', closed: false },
+      thursday:  { open: '10:00', close: '22:00', closed: false },
+      friday:    { open: '10:00', close: '23:00', closed: false },
+      saturday:  { open: '10:00', close: '23:00', closed: false },
+      sunday:    { open: '11:00', close: '21:00', closed: false },
+    }) },
+    { key: 'store_hours_enabled', value: 'true' },
+    { key: 'store_hours_note', value: 'Orders placed outside business hours will be processed on the next business day.' },
   ];
   for (const d of defaults) {
     const existing = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.key, d.key)).limit(1);
@@ -698,6 +712,56 @@ export async function isIdVerificationEnabled(): Promise<boolean> {
   return val !== 'false'; // default true if not set
 }
 
+export async function isMaintenanceModeEnabled(): Promise<boolean> {
+  const val = await getSiteSetting('maintenance_mode_enabled');
+  return val === 'true'; // default false if not set
+}
+
+export type DayHours = { open: string; close: string; closed: boolean };
+export type StoreHours = Record<string, DayHours>;
+
+export async function getStoreHours(): Promise<StoreHours | null> {
+  const val = await getSiteSetting('store_hours');
+  if (!val) return null;
+  try { return JSON.parse(val); } catch { return null; }
+}
+
+export async function getMaintenanceConfig(): Promise<{
+  enabled: boolean;
+  title: string;
+  message: string;
+}> {
+  const [enabled, title, message] = await Promise.all([
+    getSiteSetting('maintenance_mode_enabled'),
+    getSiteSetting('maintenance_title'),
+    getSiteSetting('maintenance_message'),
+  ]);
+  return {
+    enabled: enabled === 'true',
+    title: title || "We'll Be Right Back",
+    message: message || 'Our store is currently undergoing maintenance. Please check back soon!',
+  };
+}
+
+export async function getStoreHoursConfig(): Promise<{
+  enabled: boolean;
+  hours: StoreHours | null;
+  note: string;
+}> {
+  const [enabled, hours, note] = await Promise.all([
+    getSiteSetting('store_hours_enabled'),
+    getSiteSetting('store_hours'),
+    getSiteSetting('store_hours_note'),
+  ]);
+  let parsed: StoreHours | null = null;
+  if (hours) { try { parsed = JSON.parse(hours); } catch {} }
+  return {
+    enabled: enabled !== 'false',
+    hours: parsed,
+    note: note || '',
+  };
+}
+
 // ─── ADMIN ACTIVITY LOG ───
 export async function logAdminActivity(data: schema.InsertAdminActivityLog): Promise<void> {
   if (!USE_PERSISTENT_DB) { _mem_logAdminActivity(data); return; }
@@ -906,7 +970,15 @@ const _emailTemplates: any[] = [];
 const _adminActivityLog: any[] = [];
 const _rewardsHistory: any[] = [];
 const _verificationCodes: any[] = [];
-const _siteSettings: any[] = [{ id: 1, key: 'id_verification_enabled', value: 'true', updatedAt: new Date() }];
+const _siteSettings: any[] = [
+  { id: 1, key: 'id_verification_enabled', value: 'true', updatedAt: new Date() },
+  { id: 2, key: 'maintenance_mode_enabled', value: 'false', updatedAt: new Date() },
+  { id: 3, key: 'maintenance_title', value: "We'll Be Right Back", updatedAt: new Date() },
+  { id: 4, key: 'maintenance_message', value: 'Our store is currently undergoing scheduled maintenance. We appreciate your patience and will be back online shortly. Please check back soon!', updatedAt: new Date() },
+  { id: 5, key: 'store_hours', value: JSON.stringify({ monday: { open: '10:00', close: '22:00', closed: false }, tuesday: { open: '10:00', close: '22:00', closed: false }, wednesday: { open: '10:00', close: '22:00', closed: false }, thursday: { open: '10:00', close: '22:00', closed: false }, friday: { open: '10:00', close: '23:00', closed: false }, saturday: { open: '10:00', close: '23:00', closed: false }, sunday: { open: '11:00', close: '21:00', closed: false } }), updatedAt: new Date() },
+  { id: 6, key: 'store_hours_enabled', value: 'true', updatedAt: new Date() },
+  { id: 7, key: 'store_hours_note', value: 'Orders placed outside business hours will be processed on the next business day.', updatedAt: new Date() },
+];
 
 function paginate<T>(arr: T[], page: number, limit: number) {
   const offset = (page - 1) * limit;

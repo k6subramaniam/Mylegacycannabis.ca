@@ -577,8 +577,16 @@ export const appRouter = router({
   // ─── PUBLIC: STOREFRONT API ───
   store: router({
     siteConfig: publicProcedure.query(async () => {
-      const idVerificationEnabled = await db.isIdVerificationEnabled();
-      return { idVerificationEnabled };
+      const [idVerificationEnabled, maintenance, storeHoursConfig] = await Promise.all([
+        db.isIdVerificationEnabled(),
+        db.getMaintenanceConfig(),
+        db.getStoreHoursConfig(),
+      ]);
+      return {
+        idVerificationEnabled,
+        maintenance,
+        storeHours: storeHoursConfig,
+      };
     }),
     products: publicProcedure.input(z.object({
       page: z.number().default(1),
