@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyLegacy Cannabis — Workflow Audit & Status Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --purple: #4B2D8E;
+    --purple-light: #6B4FB3;
+    --purple-50: #f5f3ff;
+    --orange: #F15929;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --yellow: #ca8a04;
+    --yellow-bg: #fefce8;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #fff;
+    color: var(--gray-800);
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page { size: A4; margin: 12mm; }
+
+  @media print {
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    body { font-size: 9pt; }
+    h1 { font-size: 20pt; }
+    h2 { font-size: 15pt; }
+    h3 { font-size: 12pt; }
+    .container { max-width: 100%; padding: 0; }
+    .hero { padding: 24px 20px; min-height: auto; }
+    .section { padding: 16px 0; }
+    .diagram-box { break-inside: avoid; }
+    .workflow-card { break-inside: avoid; }
+    .svg-diagram-wrap { break-inside: avoid; }
+    .priority-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+  /* ===== HERO ===== */
+  .hero {
+    background: linear-gradient(135deg, var(--purple) 0%, #2d1a54 50%, #1a0f33 100%);
+    color: #fff;
+    padding: 56px 0 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -15%;
+    width: 550px; height: 550px;
+    background: radial-gradient(circle, rgba(241,89,41,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: -10%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(107,79,179,0.2) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero .doc-type {
+    display: inline-block;
+    background: rgba(241,89,41,0.25);
+    border: 1px solid rgba(241,89,41,0.4);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1.15; }
+  .hero .subtitle { font-size: 1.05rem; font-weight: 300; opacity: 0.75; margin-top: 8px; }
+  .hero .meta-bar {
+    display: flex; gap: 16px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .hero .meta-item {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 14px 20px;
+    backdrop-filter: blur(10px);
+    min-width: 130px;
+  }
+  .hero .meta-item .label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.55; }
+  .hero .meta-item .value { font-size: 1.5rem; font-weight: 800; }
+  .hero .meta-item .sub { font-size: 0.65rem; opacity: 0.6; margin-top: 2px; }
+
+  /* ===== DOWNLOAD BAR ===== */
+  .download-bar {
+    background: var(--orange);
+    padding: 14px 0;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(241,89,41,0.3);
+  }
+  .download-bar a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    padding: 6px 20px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .download-bar a:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
+
+  /* ===== TABLE OF CONTENTS ===== */
+  .toc {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin: 28px 0;
+    columns: 2;
+    column-gap: 32px;
+  }
+  @media (max-width: 700px) { .toc { columns: 1; } }
+  .toc-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+    column-span: all;
+  }
+  .toc a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--gray-700);
+    font-size: 0.82rem;
+    padding: 5px 0;
+    break-inside: avoid;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--purple); }
+  .toc .toc-num {
+    width: 22px; height: 22px;
+    background: var(--purple);
+    color: #fff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  /* ===== SECTIONS ===== */
+  .section { padding: 44px 0; }
+  .section + .section { border-top: 1px solid var(--gray-200); }
+
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--purple);
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--purple);
+    color: #fff;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .section-desc { color: var(--gray-500); font-size: 0.88rem; margin-bottom: 24px; max-width: 720px; }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin: 20px 0 10px;
+  }
+
+  /* ===== SVG DIAGRAMS ===== */
+  .svg-diagram-wrap {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  .svg-diagram-wrap svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+  }
+  .diagram-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gray-500);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  /* ===== FLOW DIAGRAMS (CSS) ===== */
+  .diagram-box {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  .flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+    text-align: center;
+    position: relative;
+  }
+  .flow-node {
+    width: 84px;
+    height: 84px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 600;
+    line-height: 1.3;
+    padding: 6px;
+  }
+  .flow-node.done { background: #dcfce7; border: 2px solid #86efac; color: #166534; }
+  .flow-node.partial { background: #fef9c3; border: 2px solid #fde047; color: #854d0e; }
+  .flow-node.missing { background: #fee2e2; border: 2px solid #fca5a5; color: #991b1b; }
+  .flow-node .icon { font-size: 1.2rem; margin-bottom: 2px; }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    color: var(--gray-300);
+    font-size: 1.3rem;
+    padding-top: 26px;
+    font-weight: 300;
+  }
+  .flow-label {
+    font-size: 0.58rem;
+    color: var(--gray-500);
+    margin-top: 5px;
+    max-width: 96px;
+    line-height: 1.3;
+  }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .badge-done { background: #dcfce7; color: #166534; }
+  .badge-partial { background: #fef9c3; color: #854d0e; }
+  .badge-missing { background: #fee2e2; color: #991b1b; }
+  .badge-info { background: #dbeafe; color: #1e40af; }
+
+  /* ===== WORKFLOW CARDS ===== */
+  .workflow-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .wc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .wc-header h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gray-800);
+  }
+  .wc-body { padding: 14px 20px; }
+
+  .step-list { list-style: none; }
+  .step-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 0.8rem;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-dot {
+    width: 19px; height: 19px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .dot-green { background: #dcfce7; color: #166534; }
+  .dot-yellow { background: #fef9c3; color: #854d0e; }
+  .dot-red { background: #fee2e2; color: #991b1b; }
+
+  /* ===== INFO BOXES ===== */
+  .impact-box {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border: 1px solid #c4b5fd;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    font-size: 0.78rem;
+  }
+  .impact-box strong { color: var(--purple); }
+
+  .usecase-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+  }
+  .usecase-box strong { color: var(--blue); }
+
+  .relevance-box {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+  }
+  .relevance-box strong { color: var(--green); }
+
+  .gap-box {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #9a3412;
+  }
+
+  /* ===== OVERVIEW TABLE ===== */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 16px 0;
+  }
+  .overview-table th {
+    text-align: left;
+    background: var(--purple);
+    color: #fff;
+    padding: 10px 12px;
+    font-weight: 700;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .overview-table th:first-child { border-radius: 10px 0 0 0; }
+  .overview-table th:last-child { border-radius: 0 10px 0 0; }
+  .overview-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: top;
+  }
+  .overview-table tr:nth-child(even) td { background: var(--gray-50); }
+
+  /* ===== PRIORITY MATRIX ===== */
+  .priority-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 20px 0;
+  }
+  @media (max-width: 700px) { .priority-grid { grid-template-columns: 1fr; } }
+  .priority-box {
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .priority-box h4 {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .priority-box.p-critical { background: #fef2f2; border: 2px solid #fca5a5; }
+  .priority-box.p-critical h4 { color: #991b1b; }
+  .priority-box.p-high { background: #fff7ed; border: 2px solid #fed7aa; }
+  .priority-box.p-high h4 { color: #9a3412; }
+  .priority-box.p-medium { background: #fefce8; border: 2px solid #fde047; }
+  .priority-box.p-medium h4 { color: #854d0e; }
+  .priority-box.p-low { background: #f0fdf4; border: 2px solid #86efac; }
+  .priority-box.p-low h4 { color: #166534; }
+  .priority-box ul { list-style: none; font-size: 0.78rem; line-height: 1.7; }
+  .priority-box li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .p-critical li::before { background: #dc2626; }
+  .p-high li::before { background: #ea580c; }
+  .p-medium li::before { background: #ca8a04; }
+  .p-low li::before { background: #16a34a; }
+
+  /* ===== EMAIL GRID ===== */
+  .email-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .email-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.72rem;
+    background: #fff;
+  }
+  .email-card .slug { font-weight: 700; color: var(--purple); margin-bottom: 3px; font-size: 0.68rem; }
+  .email-card .trigger { color: var(--gray-500); }
+
+  /* ===== TIMELINE ===== */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 20px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-200);
+  }
+  .tl-item { position: relative; padding: 10px 0; }
+  .tl-dot {
+    position: absolute;
+    left: -26px;
+    top: 14px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+  }
+  .tl-dot.green { background: var(--green); box-shadow: 0 0 0 2px #86efac; }
+  .tl-dot.yellow { background: var(--yellow); box-shadow: 0 0 0 2px #fde047; }
+  .tl-dot.red { background: var(--red); box-shadow: 0 0 0 2px #fca5a5; }
+  .tl-content { font-size: 0.8rem; }
+  .tl-content strong { color: var(--gray-800); }
+  .tl-content .desc { color: var(--gray-500); font-size: 0.72rem; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    background: var(--gray-900);
+    color: var(--gray-500);
+    padding: 28px 0;
+    text-align: center;
+    font-size: 0.72rem;
+    margin-top: 36px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== HERO ======== -->
+<div class="hero">
+  <div class="container hero-content">
+    <div class="doc-type">Confidential &mdash; Internal Document</div>
+    <h1>MyLegacy Cannabis</h1>
+    <div class="subtitle">Workflow Audit &amp; Status Report &mdash; Complete System Architecture</div>
+    <div class="meta-bar">
+      <div class="meta-item">
+        <div class="label">Workflows Mapped</div>
+        <div class="value">8</div>
+        <div class="sub">core business flows</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Steps Built</div>
+        <div class="value">47</div>
+        <div class="sub">of 66 total steps</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Gaps Found</div>
+        <div class="value">19</div>
+        <div class="sub">action items pending</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Completion</div>
+        <div class="value">71%</div>
+        <div class="sub">overall readiness</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Report Date</div>
+        <div class="value">Mar 24</div>
+        <div class="sub">2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="download-bar no-print">
+  <a href="javascript:window.print()">&#128196; Download as PDF &mdash; Ctrl+P (Cmd+P on Mac) &rarr; Save as PDF</a>
+</div>
+
+<!-- ======== TABLE OF CONTENTS ======== -->
+<div class="section" style="padding-bottom:20px;">
+  <div class="container">
+    <div class="toc">
+      <div class="toc-title">Table of Contents</div>
+      <a href="#overview"><span class="toc-num">0</span> Master Overview &amp; Architecture Diagram</a>
+      <a href="#wf1"><span class="toc-num">1</span> Authentication Workflow</a>
+      <a href="#wf2"><span class="toc-num">2</span> Product Catalog Workflow</a>
+      <a href="#wf3"><span class="toc-num">3</span> Order &amp; Checkout Workflow</a>
+      <a href="#wf4"><span class="toc-num">4</span> ID Verification Workflow</a>
+      <a href="#wf5"><span class="toc-num">5</span> Shipping &amp; Fulfillment Workflow</a>
+      <a href="#wf6"><span class="toc-num">6</span> Email Notification System</a>
+      <a href="#wf7"><span class="toc-num">7</span> Rewards &amp; Loyalty Workflow</a>
+      <a href="#wf8"><span class="toc-num">8</span> AI Menu Import Workflow</a>
+      <a href="#admin"><span class="toc-num">A</span> Admin Panel Capabilities</a>
+      <a href="#priority"><span class="toc-num">!</span> Priority Matrix &amp; Timeline</a>
+      <a href="#tech"><span class="toc-num">T</span> Technology Stack Reference</a>
+    </div>
+  </div>
+</div>
+
+<!-- ======== MASTER OVERVIEW + ARCHITECTURE DIAGRAM ======== -->
+<div class="section" id="overview">
+  <div class="container">
+    <h2><span class="num">0</span> Master Overview</h2>
+    <p class="section-desc">All 8 major workflows and their build status at a glance, plus a full system architecture diagram.</p>
+
+    <!-- SYSTEM ARCHITECTURE DIAGRAM (SVG) -->
+    <div class="svg-diagram-wrap">
+      <div class="diagram-title">System Architecture Diagram &mdash; MyLegacy Cannabis Platform</div>
+      <svg viewBox="0 0 1080 780" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif;">
+        <defs>
+          <linearGradient id="gPurple" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6B4FB3"/><stop offset="100%" stop-color="#4B2D8E"/></linearGradient>
+          <linearGradient id="gGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#16a34a"/></linearGradient>
+          <linearGradient id="gYellow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#facc15"/><stop offset="100%" stop-color="#ca8a04"/></linearGradient>
+          <linearGradient id="gRed" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f87171"/><stop offset="100%" stop-color="#dc2626"/></linearGradient>
+          <linearGradient id="gOrange" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fb923c"/><stop offset="100%" stop-color="#ea580c"/></linearGradient>
+          <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
+          <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/></filter>
+          <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>
+          <marker id="arrowGreen" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/></marker>
+          <marker id="arrowRed" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#dc2626"/></marker>
+        </defs>
+
+        <!-- Background -->
+        <rect width="1080" height="780" rx="16" fill="#fafafa"/>
+
+        <!-- ===== HEADER ===== -->
+        <rect x="0" y="0" width="1080" height="52" rx="16" fill="url(#gPurple)"/>
+        <rect x="0" y="36" width="1080" height="16" fill="url(#gPurple)"/>
+        <text x="540" y="33" text-anchor="middle" fill="#fff" font-size="15" font-weight="800" letter-spacing="0.5">MYLEGACY CANNABIS &mdash; FULL SYSTEM ARCHITECTURE</text>
+
+        <!-- ===== CUSTOMER LAYER ===== -->
+        <rect x="30" y="70" width="1020" height="70" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+        <text x="50" y="92" fill="#1e40af" font-size="9" font-weight="700" letter-spacing="1" text-transform="uppercase">CUSTOMER-FACING LAYER</text>
+
+        <!-- Customer nodes -->
+        <rect x="50" y="100" width="120" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="110" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Storefront (React)</text>
+
+        <rect x="190" y="100" width="110" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="245" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Product Pages</text>
+
+        <rect x="320" y="100" width="100" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="370" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Cart + Checkout</text>
+
+        <rect x="440" y="100" width="100" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="490" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Account / ID</text>
+
+        <rect x="560" y="100" width="110" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="615" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Login / Register</text>
+
+        <rect x="690" y="100" width="100" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="740" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">Rewards Page</text>
+
+        <rect x="810" y="100" width="110" height="30" rx="6" fill="#fff" stroke="#93c5fd" filter="url(#shadow)"/>
+        <text x="865" y="119" text-anchor="middle" fill="#1e40af" font-size="9" font-weight="600">SEO / Sitemap</text>
+
+        <!-- Arrows from customer to API -->
+        <line x1="540" y1="140" x2="540" y2="165" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="552" y="157" fill="#94a3b8" font-size="7" font-weight="600">tRPC + REST</text>
+
+        <!-- ===== API / BACKEND LAYER ===== -->
+        <rect x="30" y="168" width="1020" height="140" rx="12" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1"/>
+        <text x="50" y="190" fill="#6B4FB3" font-size="9" font-weight="700" letter-spacing="1">BACKEND API LAYER (Express + tRPC)</text>
+
+        <!-- 8 workflow boxes -->
+        <!-- Row 1 -->
+        <rect x="50" y="200" width="115" height="42" rx="8" fill="url(#gGreen)" filter="url(#shadow)"/>
+        <text x="107" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">1. AUTHENTICATION</text>
+        <text x="107" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">OTP + Google OAuth</text>
+
+        <rect x="180" y="200" width="115" height="42" rx="8" fill="url(#gGreen)" filter="url(#shadow)"/>
+        <text x="237" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">2. CATALOG</text>
+        <text x="237" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">CRUD + Search</text>
+
+        <rect x="310" y="200" width="115" height="42" rx="8" fill="url(#gYellow)" filter="url(#shadow)"/>
+        <text x="367" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">3. ORDERS</text>
+        <text x="367" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">No stock decrement!</text>
+
+        <rect x="440" y="200" width="115" height="42" rx="8" fill="url(#gGreen)" filter="url(#shadow)"/>
+        <text x="497" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">4. ID VERIFY</text>
+        <text x="497" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">Upload + Review</text>
+
+        <!-- Row 2 -->
+        <rect x="570" y="200" width="115" height="42" rx="8" fill="url(#gYellow)" filter="url(#shadow)"/>
+        <text x="627" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">5. SHIPPING</text>
+        <text x="627" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">Zone rates, manual</text>
+
+        <rect x="700" y="200" width="115" height="42" rx="8" fill="url(#gGreen)" filter="url(#shadow)"/>
+        <text x="757" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">6. EMAILS</text>
+        <text x="757" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">16 templates</text>
+
+        <rect x="830" y="200" width="115" height="42" rx="8" fill="url(#gYellow)" filter="url(#shadow)"/>
+        <text x="887" y="217" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">7. REWARDS</text>
+        <text x="887" y="233" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">No auto-earn!</text>
+
+        <!-- Row 2 continued -->
+        <rect x="50" y="255" width="115" height="42" rx="8" fill="url(#gGreen)" filter="url(#shadow)"/>
+        <text x="107" y="272" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">8. MENU IMPORT</text>
+        <text x="107" y="288" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">AI Vision Parse</text>
+
+        <!-- Admin Panel -->
+        <rect x="200" y="255" width="160" height="42" rx="8" fill="url(#gPurple)" filter="url(#shadow)"/>
+        <text x="280" y="272" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">ADMIN PANEL (10 pages)</text>
+        <text x="280" y="288" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">Dashboard, CRUD, Reports</text>
+
+        <!-- Security status -->
+        <rect x="395" y="255" width="160" height="42" rx="8" fill="url(#gRed)" filter="url(#shadow)"/>
+        <text x="475" y="272" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">SECURITY GAPS</text>
+        <text x="475" y="288" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">No rate limit, JWT exposed</text>
+
+        <!-- Missing features -->
+        <rect x="590" y="255" width="160" height="42" rx="8" fill="url(#gOrange)" filter="url(#shadow)"/>
+        <text x="670" y="272" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">PENDING FEATURES</text>
+        <text x="670" y="288" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">Coupons, referrals, newsletter</text>
+
+        <!-- Automation missing -->
+        <rect x="785" y="255" width="160" height="42" rx="8" fill="url(#gOrange)" filter="url(#shadow)"/>
+        <text x="865" y="272" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">AUTOMATION GAPS</text>
+        <text x="865" y="288" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="7">No cron, no webhooks</text>
+
+        <!-- Arrows to data layer -->
+        <line x1="540" y1="308" x2="540" y2="338" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- ===== DATA LAYER ===== -->
+        <rect x="30" y="340" width="1020" height="100" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+        <text x="50" y="362" fill="#166534" font-size="9" font-weight="700" letter-spacing="1">DATA &amp; STORAGE LAYER</text>
+
+        <!-- DB -->
+        <rect x="50" y="375" width="150" height="50" rx="10" fill="#fff" stroke="#86efac" stroke-width="2" filter="url(#shadow)"/>
+        <text x="125" y="396" text-anchor="middle" fill="#166534" font-size="9" font-weight="700">PostgreSQL</text>
+        <text x="125" y="412" text-anchor="middle" fill="#6b7280" font-size="7">Supabase (ca-central-1)</text>
+
+        <!-- Tables -->
+        <rect x="230" y="375" width="140" height="50" rx="10" fill="#fff" stroke="#86efac" filter="url(#shadow)"/>
+        <text x="300" y="393" text-anchor="middle" fill="#166534" font-size="8" font-weight="600">Tables</text>
+        <text x="300" y="406" text-anchor="middle" fill="#6b7280" font-size="7">users, products, orders,</text>
+        <text x="300" y="417" text-anchor="middle" fill="#6b7280" font-size="7">verifications, rewards...</text>
+
+        <!-- Drizzle ORM -->
+        <rect x="400" y="375" width="120" height="50" rx="10" fill="#fff" stroke="#86efac" filter="url(#shadow)"/>
+        <text x="460" y="396" text-anchor="middle" fill="#166534" font-size="9" font-weight="700">Drizzle ORM</text>
+        <text x="460" y="412" text-anchor="middle" fill="#6b7280" font-size="7">Type-safe queries</text>
+
+        <!-- Storage -->
+        <rect x="550" y="375" width="140" height="50" rx="10" fill="#fff" stroke="#86efac" filter="url(#shadow)"/>
+        <text x="620" y="396" text-anchor="middle" fill="#166534" font-size="9" font-weight="700">File Storage</text>
+        <text x="620" y="412" text-anchor="middle" fill="#6b7280" font-size="7">Forge API / Base64</text>
+
+        <!-- Session -->
+        <rect x="720" y="375" width="130" height="50" rx="10" fill="#fff" stroke="#86efac" filter="url(#shadow)"/>
+        <text x="785" y="396" text-anchor="middle" fill="#166534" font-size="9" font-weight="700">Sessions</text>
+        <text x="785" y="412" text-anchor="middle" fill="#6b7280" font-size="7">HTTP-only cookies</text>
+
+        <!-- Activity log -->
+        <rect x="880" y="375" width="140" height="50" rx="10" fill="#fff" stroke="#86efac" filter="url(#shadow)"/>
+        <text x="950" y="396" text-anchor="middle" fill="#166534" font-size="9" font-weight="700">Activity Log</text>
+        <text x="950" y="412" text-anchor="middle" fill="#6b7280" font-size="7">Admin actions tracked</text>
+
+        <!-- Arrows to external services -->
+        <line x1="540" y1="440" x2="540" y2="473" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- ===== EXTERNAL SERVICES ===== -->
+        <rect x="30" y="475" width="1020" height="85" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="1"/>
+        <text x="50" y="497" fill="#854d0e" font-size="9" font-weight="700" letter-spacing="1">EXTERNAL SERVICES &amp; INTEGRATIONS</text>
+
+        <!-- Services -->
+        <rect x="50" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fde047" filter="url(#shadow)"/>
+        <text x="107" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Resend Email</text>
+        <text x="107" y="538" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">ACTIVE</text>
+
+        <rect x="185" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fde047" filter="url(#shadow)"/>
+        <text x="242" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Google OAuth</text>
+        <text x="242" y="538" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">ACTIVE</text>
+
+        <rect x="320" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fde047" filter="url(#shadow)"/>
+        <text x="377" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">OpenAI / GPT</text>
+        <text x="377" y="538" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">ACTIVE</text>
+
+        <rect x="455" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="2" filter="url(#shadow)"/>
+        <text x="512" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Twilio SMS</text>
+        <text x="512" y="538" text-anchor="middle" fill="#dc2626" font-size="7" font-weight="700">NOT CONFIGURED</text>
+
+        <rect x="590" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="2" filter="url(#shadow)"/>
+        <text x="647" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Canada Post API</text>
+        <text x="647" y="538" text-anchor="middle" fill="#dc2626" font-size="7" font-weight="700">NOT BUILT</text>
+
+        <rect x="725" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="2" filter="url(#shadow)"/>
+        <text x="782" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Stripe/Payment</text>
+        <text x="782" y="538" text-anchor="middle" fill="#dc2626" font-size="7" font-weight="700">NOT BUILT</text>
+
+        <rect x="860" y="508" width="115" height="40" rx="8" fill="#fff" stroke="#fca5a5" stroke-width="2" filter="url(#shadow)"/>
+        <text x="917" y="525" text-anchor="middle" fill="#854d0e" font-size="8" font-weight="600">Gmail SMTP</text>
+        <text x="917" y="538" text-anchor="middle" fill="#ca8a04" font-size="7" font-weight="700">BACKUP (NO PASS)</text>
+
+        <!-- ===== HOSTING LAYER ===== -->
+        <rect x="30" y="580" width="1020" height="65" rx="12" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1"/>
+        <text x="50" y="602" fill="#6B4FB3" font-size="9" font-weight="700" letter-spacing="1">HOSTING &amp; DEPLOYMENT</text>
+
+        <rect x="50" y="612" width="200" height="24" rx="6" fill="url(#gPurple)"/>
+        <text x="150" y="628" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">Railway (Docker multi-stage)</text>
+
+        <rect x="270" y="612" width="160" height="24" rx="6" fill="#fff" stroke="#c4b5fd"/>
+        <text x="350" y="628" text-anchor="middle" fill="#6B4FB3" font-size="8" font-weight="600">GitHub Auto-Deploy</text>
+
+        <rect x="450" y="612" width="180" height="24" rx="6" fill="#fff" stroke="#fca5a5" stroke-width="2"/>
+        <text x="540" y="628" text-anchor="middle" fill="#dc2626" font-size="8" font-weight="600">Custom Domain NOT SET</text>
+
+        <rect x="650" y="612" width="160" height="24" rx="6" fill="#fff" stroke="#fca5a5" stroke-width="2"/>
+        <text x="730" y="628" text-anchor="middle" fill="#dc2626" font-size="8" font-weight="600">SSL via Railway (pending)</text>
+
+        <rect x="830" y="612" width="190" height="24" rx="6" fill="#fff" stroke="#c4b5fd"/>
+        <text x="925" y="628" text-anchor="middle" fill="#6B4FB3" font-size="8" font-weight="600">Node 20 + pnpm production</text>
+
+        <!-- ===== LEGEND ===== -->
+        <rect x="30" y="665" width="1020" height="100" rx="12" fill="#fff" stroke="#e5e7eb"/>
+        <text x="50" y="688" fill="#374151" font-size="9" font-weight="700" letter-spacing="1">LEGEND &amp; STATUS KEY</text>
+
+        <rect x="50" y="700" width="14" height="14" rx="4" fill="url(#gGreen)"/>
+        <text x="72" y="712" fill="#374151" font-size="8" font-weight="600">Complete &amp; Live</text>
+
+        <rect x="200" y="700" width="14" height="14" rx="4" fill="url(#gYellow)"/>
+        <text x="222" y="712" fill="#374151" font-size="8" font-weight="600">Partially Built (gaps)</text>
+
+        <rect x="380" y="700" width="14" height="14" rx="4" fill="url(#gRed)"/>
+        <text x="402" y="712" fill="#374151" font-size="8" font-weight="600">Critical Gap / Blocker</text>
+
+        <rect x="560" y="700" width="14" height="14" rx="4" fill="url(#gOrange)"/>
+        <text x="582" y="712" fill="#374151" font-size="8" font-weight="600">Pending Feature</text>
+
+        <rect x="740" y="700" width="14" height="14" rx="4" fill="#fff" stroke="#fca5a5" stroke-width="2"/>
+        <text x="762" y="712" fill="#374151" font-size="8" font-weight="600">Not Configured / Not Built</text>
+
+        <text x="50" y="745" fill="#6b7280" font-size="8">Green boxes = workflow functioning end-to-end. Yellow = core built but missing critical steps. Red border = external service not connected. Orange = feature defined but not implemented.</text>
+      </svg>
+    </div>
+
+    <!-- MASTER STATUS TABLE -->
+    <table class="overview-table">
+      <thead>
+        <tr>
+          <th style="width:18%">Workflow</th>
+          <th style="width:8%">Status</th>
+          <th style="width:32%">What's Built</th>
+          <th style="width:22%">Critical Gaps</th>
+          <th style="width:20%">Business Relevance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Authentication</strong></td>
+          <td><span class="badge badge-done">&#10003; Live</span></td>
+          <td>OTP email/SMS, Google OAuth, age gate (19+), session cookies, profile completion</td>
+          <td>SMS (Twilio) unconfigured; no rate limit on OTP; Google callback needs prod domain</td>
+          <td>Gateway to the entire platform. Without it, no purchases.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Product Catalog</strong></td>
+          <td><span class="badge badge-done">&#10003; Live</span></td>
+          <td>Full CRUD, 6 categories, strain types, price/weight/THC, featured/new, search</td>
+          <td>All products use same Unsplash placeholder images; menu-imported have zero images</td>
+          <td>Core of the e-commerce experience. Products ARE the business.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Order &amp; Checkout</strong></td>
+          <td><span class="badge badge-partial">&#9888; Partial</span></td>
+          <td>Cart, checkout, e-Transfer, order emails, admin management, status tracking</td>
+          <td><strong>Stock not decremented</strong>; no 24h auto-cancel; no out-of-stock guard; no coupons</td>
+          <td>Revenue generator. Stock gap = overselling risk + angry customers.</td>
+        </tr>
+        <tr>
+          <td><strong>4. ID Verification</strong></td>
+          <td><span class="badge badge-done">&#10003; Live</span></td>
+          <td>Guest + registered upload, admin review panel, approve/reject + emails, toggle on/off</td>
+          <td>Manual review only; no AI-assisted age detection</td>
+          <td>Legal compliance for cannabis in Canada. Non-negotiable.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Shipping</strong></td>
+          <td><span class="badge badge-partial">&#9888; Partial</span></td>
+          <td>5 zone rates, free >$150, tracking entry, shipped email, zone CRUD</td>
+          <td>No Canada Post API; manual tracking only; no delivery confirmation</td>
+          <td>Fulfillment = customer satisfaction. Manual works up to ~10 orders/day.</td>
+        </tr>
+        <tr>
+          <td><strong>6. Email System</strong></td>
+          <td><span class="badge badge-done">&#10003; Live</span></td>
+          <td>16 templates, template engine, admin-editable, health monitor, Resend active</td>
+          <td>Sending from sandbox domain; mylegacycannabis.ca not verified in Resend</td>
+          <td>All communication runs through email. Domain verification = trust.</td>
+        </tr>
+        <tr>
+          <td><strong>7. Rewards</strong></td>
+          <td><span class="badge badge-partial">&#9888; Partial</span></td>
+          <td>25pt welcome, 5 tiers, cart redemption, admin adjustments, history table</td>
+          <td>Points not auto-earned; no birthday/referral/review bonuses</td>
+          <td>Retention driver. Broken auto-earn = customers feel cheated.</td>
+        </tr>
+        <tr>
+          <td><strong>8. Menu Import</strong></td>
+          <td><span class="badge badge-done">&#10003; Live</span></td>
+          <td>AI vision parsing, drag-drop, review table, bulk create/update, deactivate old</td>
+          <td>Flower-only; no images on imports; no rate limit on AI endpoint</td>
+          <td>Massive time saver. 2hrs data entry &rarr; 30sec photo upload.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ======== 1. AUTHENTICATION ======== -->
+<div class="section page-break" id="wf1">
+  <div class="container">
+    <h2><span class="num">1</span> Authentication Workflow</h2>
+    <p class="section-desc">Multi-method authentication with OTP (email/SMS), Google OAuth, and mandatory age verification (19+). Session managed via HTTP-only cookies.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Authentication Flow Diagram</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128100;</span>Visitor</div><div class="flow-label">Lands on site</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128286;</span>Age Gate</div><div class="flow-label">Must be 19+</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128231;</span>Send OTP</div><div class="flow-label">Email or SMS</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128273;</span>Verify Code</div><div class="flow-label">6-digit, 10min TTL</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#127881;</span>Session Set</div><div class="flow-label">Cookie + 25pts</div></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="flow">
+          <div class="flow-step"><div class="flow-node done"><span class="icon">&#128100;</span>Visitor</div></div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step"><div class="flow-node done"><span class="icon">G</span>Google OAuth</div><div class="flow-label">Consent screen</div></div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step"><div class="flow-node done"><span class="icon">&#128257;</span>Callback</div><div class="flow-label">Token exchange</div></div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step"><div class="flow-node done"><span class="icon">&#128241;</span>Phone Req</div><div class="flow-label">Complete profile</div></div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step"><div class="flow-node done"><span class="icon">&#9989;</span>Logged In</div><div class="flow-label">Session active</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Built vs Pending Steps</h4><span class="badge badge-done">8 of 8 core steps complete</span></div>
+      <div class="wc-body">
+        <ul class="step-list">
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>OTP email send</strong> &mdash; 6-digit code via Resend API, 10-min expiry</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>OTP SMS send</strong> &mdash; Twilio integration coded (sends if configured)</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>OTP verify + login/register</strong> &mdash; Validates code, creates user with 25pt bonus, sets session</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Google OAuth</strong> &mdash; Full redirect + callback + profile completion flow</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Account lock/unlock</strong> &mdash; Admin can lock users, login blocked with message</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="gap-box">
+      <strong>&#9888; Pending Items:</strong><br>
+      &bull; <strong>Twilio not configured</strong> &mdash; All 3 env vars empty. SMS OTP silently fails.<br>
+      &bull; <strong>No rate limiting on /api/auth/send-otp</strong> &mdash; Bot can spam Resend email quota (100/day free tier).<br>
+      &bull; <strong>Google OAuth callback URL</strong> &mdash; Must add production domain in Google Cloud Console.<br>
+      &bull; <strong>JWT secret is hardcoded</strong> &mdash; Must rotate to random 64+ char string.
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> New customer registration (email OTP), returning customer login (email/Google), guest checkout (no auth required but ID needed), admin account management (lock/unlock), phone-first users (SMS OTP when Twilio enabled).
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Auth is the gateway to the entire system. Without SMS, phone-only users can't register. Without rate limiting, a bot can drain your Resend quota. The hardcoded JWT secret means anyone who's seen the code can forge sessions.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Critical path &mdash; every single purchase requires authentication or guest checkout. Age gate compliance is legally mandatory in Canada (Cannabis Act, 19+ in most provinces). Authentication directly impacts conversion rate.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 2. PRODUCT CATALOG ======== -->
+<div class="section page-break" id="wf2">
+  <div class="container">
+    <h2><span class="num">2</span> Product Catalog Workflow</h2>
+    <p class="section-desc">Full product lifecycle from creation to storefront display. Covers admin CRUD, AI-powered menu import, and public shop rendering.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Product Data Flow</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128247;</span>Menu Photo</div><div class="flow-label">Upload image</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#129302;</span>GPT Vision</div><div class="flow-label">AI extract</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128220;</span>Review</div><div class="flow-label">Edit stock/prices</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128190;</span>DB Import</div><div class="flow-label">Create/update</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node missing"><span class="icon">&#128248;</span>Images</div><div class="flow-label">No real photos!</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128722;</span>Shop</div><div class="flow-label">Public storefront</div></div>
+      </div>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Product Fields</h4><span class="badge badge-info">18 fields per product</span></div>
+      <div class="wc-body" style="font-size:0.78rem; color:var(--gray-600);">
+        name, slug (unique), category (6 types), strainType, price, weight, thc, description, shortDescription, image, images[], stock, featured, isNew, isActive, flavor, rewardPoints, timestamps
+      </div>
+    </div>
+
+    <div class="gap-box">
+      <strong>&#9888; Pending Items:</strong><br>
+      &bull; <strong>Product images are placeholders</strong> &mdash; 21 seed products share the same Unsplash stock photos. Menu-imported products have NO images at all.<br>
+      &bull; <strong>Menu import is flower-only</strong> &mdash; Edibles, vapes, concentrates, accessories must be added manually.<br>
+      &bull; <strong>No batch image assignment</strong> after import.
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Admin adds new products manually via CRUD, bulk update from supplier menu photo (AI import), seasonal product rotation, search and filter by category/strain on storefront, featured products on homepage.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Product images are the #1 factor in online cannabis purchase decisions. Every product showing the same generic photo destroys customer trust and looks unprofessional. This is the most visible gap on the storefront.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Products ARE the business. The catalog directly drives revenue. AI menu import is a competitive advantage &mdash; most cannabis stores manually enter all products. Image quality determines whether customers add to cart.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 3. ORDER & CHECKOUT ======== -->
+<div class="section page-break" id="wf3">
+  <div class="container">
+    <h2><span class="num">3</span> Order &amp; Checkout Workflow</h2>
+    <p class="section-desc">End-to-end order lifecycle from cart to delivery. Payment is manual e-Transfer (Interac), with admin-managed status progression.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Order Lifecycle &mdash; State Machine</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128722;</span>Cart</div><div class="flow-label">Min $40</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128221;</span>Checkout</div><div class="flow-label">Address + ID</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128230;</span>Pending</div><div class="flow-label">Await e-Transfer</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128176;</span>Paid</div><div class="flow-label">Admin confirms</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128230;</span>Processing</div><div class="flow-label">Packing</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128666;</span>Shipped</div><div class="flow-label">Tracking added</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#9989;</span>Delivered</div><div class="flow-label">Complete</div></div>
+      </div>
+      <div style="margin-top:10px; font-size:0.68rem; color:var(--gray-500);">
+        &#128308; Cancelled path: Pending &rarr; Cancelled &nbsp;&nbsp; &#128308; Refund path: Any &rarr; Refunded
+      </div>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Order Steps &mdash; Detailed Status</h4></div>
+      <div class="wc-body">
+        <ul class="step-list">
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Cart with minimums</strong> &mdash; $40 min, free shipping >$150, province-based rates</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Checkout form</strong> &mdash; Contact, shipping (13 provinces), order notes</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Guest ID inline</strong> &mdash; Upload ID at checkout, order flagged pending review</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Order creation + emails</strong> &mdash; ML-xxxxx order#, confirmation + e-Transfer instructions</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Admin status management</strong> &mdash; Full lifecycle with emails at each transition</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Tracking number</strong> &mdash; Canada Post validation + auto-generated tracking URL</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Stock decrement</strong> &mdash; <strong style="color:#dc2626">NOT BUILT</strong> &mdash; Orders don't reduce stock counts</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Out-of-stock guard</strong> &mdash; <strong style="color:#dc2626">NOT BUILT</strong> &mdash; Can order 0-stock items</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>24hr auto-cancel</strong> &mdash; <strong style="color:#dc2626">NOT BUILT</strong> &mdash; Emails say it but no scheduler</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Coupon/promo codes</strong> &mdash; <strong style="color:#dc2626">NOT BUILT</strong> &mdash; No input in checkout</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="gap-box">
+      <strong>&#9888; Critical Gap &mdash; Stock Decrement:</strong> Product stock is NEVER reduced on order. "5 in stock" stays at 5 after 10 orders. Overselling is inevitable.
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Customer places order &rarr; sends Interac e-Transfer &rarr; admin confirms payment &rarr; packs and ships &rarr; customer tracks delivery. Guest checkout for first-time buyers without account. Repeat customers use saved account. Admin manages full order queue.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Stock management is the backbone of e-commerce. Without it, you'll accept orders you can't fulfill &rarr; refunds, angry customers, legal issues. The 24hr auto-cancel gap means unpaid orders accumulate in admin's queue indefinitely.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> This is where revenue happens. Every dollar flows through this workflow. Stock integrity, payment confirmation, and fulfillment speed directly determine customer retention and business viability.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 4. ID VERIFICATION ======== -->
+<div class="section page-break" id="wf4">
+  <div class="container">
+    <h2><span class="num">4</span> ID Verification Workflow</h2>
+    <p class="section-desc">Age verification is legally required for cannabis sales in Canada (19+). Supports both registered users (verify once) and guests (verify every time).</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">ID Verification Flow</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128248;</span>Upload ID</div><div class="flow-label">Govt ID front</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#129488;</span>Selfie</div><div class="flow-label">Optional</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128190;</span>Stored</div><div class="flow-label">Secure storage</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128231;</span>Admin Alert</div><div class="flow-label">Email sent</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128269;</span>Review</div><div class="flow-label">Approve/reject</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128231;</span>Result</div><div class="flow-label">Customer email</div></div>
+      </div>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Verification Features</h4><span class="badge badge-done">Fully wired</span></div>
+      <div class="wc-body">
+        <ul class="step-list">
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Registered user flow</strong> &mdash; Verify once, approved flag persists</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Guest checkout inline</strong> &mdash; ID upload embedded in checkout, order flagged</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Admin review panel</strong> &mdash; Approve/reject with notes, pagination, status filter</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Email notifications (4 templates)</strong> &mdash; Admin pending, customer approved/rejected</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Toggle on/off</strong> &mdash; Admin can disable ID verification from Settings</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>AI-assisted age detection</strong> &mdash; All verification is manual human review</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> First-time registered buyer uploads ID once, future orders auto-approved. Guest buyer submits ID at checkout each time. Admin reviews queue during business hours. Rejected customers get clear resubmit instructions.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Legal requirement. Admin bottleneck during high-volume periods. AI age detection would reduce admin workload by ~80%.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Cannabis Act compliance (federal). Provinces require proof of age. Without this, the business cannot legally operate. The manual process works but doesn't scale beyond ~50 verifications/day.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 5. SHIPPING ======== -->
+<div class="section page-break" id="wf5">
+  <div class="container">
+    <h2><span class="num">5</span> Shipping &amp; Fulfillment Workflow</h2>
+    <p class="section-desc">Nationwide Canada Post shipping with zone-based pricing. Currently manual &mdash; admin enters tracking numbers after physically shipping packages.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Shipping Zones &amp; Rates</div>
+      <table class="overview-table" style="margin:0;">
+        <thead><tr><th>Zone</th><th>Provinces</th><th>Rate</th><th>Delivery</th><th>Free Ship</th></tr></thead>
+        <tbody>
+          <tr><td>Ontario</td><td>ON</td><td>$10</td><td>2-4 days</td><td rowspan="5" style="vertical-align:middle;text-align:center;font-weight:700;color:var(--green);">Orders &gt;$150<br>ship FREE</td></tr>
+          <tr><td>Quebec</td><td>QC</td><td>$12</td><td>3-5 days</td></tr>
+          <tr><td>Western</td><td>BC, AB, SK, MB</td><td>$15</td><td>4-7 days</td></tr>
+          <tr><td>Atlantic</td><td>NS, NB, PE, NL</td><td>$18</td><td>5-8 days</td></tr>
+          <tr><td>Northern</td><td>YT, NT, NU</td><td>$25</td><td>7-14 days</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Fulfillment Steps</h4></div>
+      <div class="wc-body">
+        <ul class="step-list">
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Zone auto-selection</strong> &mdash; Province dropdown auto-calculates shipping rate</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Free shipping progress bar</strong> &mdash; "$X more for free shipping" in cart</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Tracking entry + URL</strong> &mdash; Canada Post format validation, auto-generates link</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Shipped email</strong> &mdash; Customer gets tracking number + clickable link</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Admin zone CRUD</strong> &mdash; Add/edit zones and rates</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Canada Post API</strong> &mdash; No auto rate calc, label printing, or pickup scheduling</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Delivery confirmation webhook</strong> &mdash; No auto-update to "delivered" status</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Customer selects province at checkout &rarr; rate calculated. Admin processes paid order &rarr; ships package &rarr; enters tracking# &rarr; customer gets email. Admin adjusts zone rates for seasonal changes.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Manual tracking works for 1-10 orders/day. At 50+ orders/day, it becomes a bottleneck. Canada Post API would enable auto-calculated rates, printed labels, and delivery status auto-updates.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Shipping speed and communication drive reviews and repeat purchases. The manual workflow is adequate for launch but must be upgraded as volume grows.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 6. EMAIL SYSTEM ======== -->
+<div class="section page-break" id="wf6">
+  <div class="container">
+    <h2><span class="num">6</span> Email Notification System</h2>
+    <p class="section-desc">16 admin-editable HTML email templates with {{variable}} replacement, wired to 8 workflow triggers. Includes health monitoring dashboard.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Email System Architecture</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#9889;</span>Event</div><div class="flow-label">Trigger fires</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128295;</span>Engine</div><div class="flow-label">Load + render vars</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128231;</span>Resend</div><div class="flow-label">Primary sender</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128202;</span>Monitor</div><div class="flow-label">Track deliveries</div></div>
+      </div>
+    </div>
+
+    <h3>All 16 Email Templates</h3>
+    <div class="email-grid">
+      <div class="email-card"><div class="slug">welcome-email</div><div class="trigger">&#9889; On registration</div></div>
+      <div class="email-card"><div class="slug">order-confirmation</div><div class="trigger">&#9889; On order submit</div></div>
+      <div class="email-card"><div class="slug">guest-order-placed</div><div class="trigger">&#9889; Guest order</div></div>
+      <div class="email-card"><div class="slug">payment-received-customer</div><div class="trigger">&#9889; Admin marks paid</div></div>
+      <div class="email-card"><div class="slug">payment-received-admin</div><div class="trigger">&#9889; Admin marks paid</div></div>
+      <div class="email-card"><div class="slug">guest-payment-received</div><div class="trigger">&#9889; Guest payment</div></div>
+      <div class="email-card"><div class="slug">guest-payment-admin</div><div class="trigger">&#9889; Guest payment</div></div>
+      <div class="email-card"><div class="slug">admin-id-pending</div><div class="trigger">&#9889; ID submitted</div></div>
+      <div class="email-card"><div class="slug">guest-id-pending-admin</div><div class="trigger">&#9889; Guest ID</div></div>
+      <div class="email-card"><div class="slug">id-verified</div><div class="trigger">&#9889; ID approved</div></div>
+      <div class="email-card"><div class="slug">id-rejected</div><div class="trigger">&#9889; ID rejected</div></div>
+      <div class="email-card"><div class="slug">guest-id-verified</div><div class="trigger">&#9889; Guest ID approved</div></div>
+      <div class="email-card"><div class="slug">guest-id-rejected</div><div class="trigger">&#9889; Guest ID rejected</div></div>
+      <div class="email-card"><div class="slug">order-shipped</div><div class="trigger">&#9889; Tracking added</div></div>
+      <div class="email-card"><div class="slug">order-status-update</div><div class="trigger">&#9889; Status change</div></div>
+      <div class="email-card" style="border-color:#fca5a5;"><div class="slug" style="color:#dc2626;">newsletter (NOT BUILT)</div><div class="trigger">&#10007; No marketing emails</div></div>
+    </div>
+
+    <div class="gap-box">
+      <strong>&#9888; Pending Items:</strong><br>
+      &bull; <strong>Resend domain not verified</strong> &mdash; Sending from onboarding@resend.dev (sandbox). Must verify mylegacycannabis.ca + add DNS records.<br>
+      &bull; <strong>No newsletter/marketing emails</strong> &mdash; Home page email signup does nothing.<br>
+      &bull; <strong>SMTP fallback not configured</strong> &mdash; SMTP_PASS is empty.
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Welcome new customer, order confirmation with e-Transfer instructions, payment receipt, ID status updates, shipping notification with tracking, order status changes. Admin-editable templates allow marketing team to update copy without code changes.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Email is the primary customer communication channel. Sandbox domain emails may land in spam. Domain verification = professional appearance + deliverability. Newsletter is the #1 growth channel for cannabis e-commerce.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Every workflow depends on email. Order workflow sends 4+ emails per order. ID workflow sends 2-3. Email deliverability directly affects whether customers know their order status, driving support requests when emails fail.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 7. REWARDS ======== -->
+<div class="section page-break" id="wf7">
+  <div class="container">
+    <h2><span class="num">7</span> Rewards &amp; Loyalty Workflow</h2>
+    <p class="section-desc">Points-based loyalty program with 5 tiers. Customers earn points per dollar spent and redeem for discounts at checkout (max 50% of subtotal).</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Rewards Tier Structure</div>
+      <table class="overview-table" style="margin:0;">
+        <thead><tr><th>Tier</th><th>Points Required</th><th>Discount</th><th>Effective Rate</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Starter</td><td>100 pts</td><td>$5 off</td><td>5.0%</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+          <tr><td>Silver</td><td>250 pts</td><td>$15 off</td><td>6.0%</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+          <tr><td>Gold</td><td>500 pts</td><td>$30 off</td><td>6.0%</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+          <tr><td>Platinum</td><td>1,000 pts</td><td>$75 off</td><td>7.5%</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+          <tr><td>VIP</td><td>2,000 pts</td><td>$150 off</td><td>7.5%</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>Rewards Features</h4></div>
+      <div class="wc-body">
+        <ul class="step-list">
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Welcome bonus</strong> &mdash; 25 points on registration (OTP + Google)</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Points display + tier progress</strong> &mdash; Shown on Account page</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Cart redemption</strong> &mdash; Apply tier discount (capped at 50% of subtotal)</div></li>
+          <li><span class="step-dot dot-green">&#10003;</span><div><strong>Admin manual adjust</strong> &mdash; +/- points with reason, logged in history</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Auto-earn on delivery</strong> &mdash; NOT BUILT. 1pt/$1 is advertised but never awarded server-side.</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Birthday bonus</strong> &mdash; 100pt constant exists but no trigger/cron.</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Referral system</strong> &mdash; 50pt/25pt constants exist, no referral code mechanism.</div></li>
+          <li><span class="step-dot dot-red">&#10007;</span><div><strong>Review bonus</strong> &mdash; 10pt constant exists, no product review system.</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Customer makes purchase &rarr; earns points on delivery. Accumulates points to unlock tiers. Redeems tier discount at next checkout. Birthday email triggers bonus points. Friends get referral codes for mutual rewards.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> The rewards page advertises "1 point per $1 spent" but points are NEVER awarded on purchases. Customers see balance stuck at 25 forever. This destroys trust in the loyalty program. Birthday/referral bonuses are proven retention/growth tools.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Cannabis is a repeat-purchase business. Loyalty programs increase customer lifetime value by 20-30%. The broken auto-earn is a trust destroyer. Referrals drive organic growth at near-zero cost.
+    </div>
+  </div>
+</div>
+
+<!-- ======== 8. MENU IMPORT ======== -->
+<div class="section page-break" id="wf8">
+  <div class="container">
+    <h2><span class="num">8</span> AI Menu Import Workflow</h2>
+    <p class="section-desc">Admin uploads a supplier menu photo. GPT Vision extracts strains, grades, THC %, and prices across all weight tiers. Admin reviews, sets stock, and imports in bulk.</p>
+
+    <div class="diagram-box">
+      <div class="diagram-title">Menu Import Pipeline</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128247;</span>Upload</div><div class="flow-label">Drag &amp; drop</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#129302;</span>GPT Parse</div><div class="flow-label">~15 sec</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128220;</span>Review</div><div class="flow-label">33 products</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#9999;</span>Edit Stock</div><div class="flow-label">Per-item qty</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="flow-node done"><span class="icon">&#128190;</span>Import</div><div class="flow-label">Create/update</div></div>
+      </div>
+    </div>
+
+    <div class="workflow-card">
+      <div class="wc-header"><h4>What AI Extracts Per Product</h4><span class="badge badge-done">7 fields</span></div>
+      <div class="wc-body" style="font-size:0.78rem; color:var(--gray-600);">
+        Category (Indica/Sativa/Hybrid/Ounce Deals/Shake), grade (AAAA/AAA+/AAA/AA/SHAKE), strain name, THC %, isNew flag, and prices for 5 weight tiers: 1g, 3.5g, 7g, 14g, 28g. Creates one product row per weight tier (e.g., "Pink Taco &mdash; 3.5g", "Pink Taco &mdash; 28g").
+      </div>
+    </div>
+
+    <div class="gap-box">
+      <strong>&#9888; Pending Items:</strong><br>
+      &bull; <strong>Flower category only</strong> &mdash; Won't parse edibles, vapes, concentrates, accessories.<br>
+      &bull; <strong>No product images</strong> &mdash; Imported products have no images. Shows Unsplash fallback.<br>
+      &bull; <strong>No rate limiting</strong> &mdash; Each parse = ~$0.01-0.03 OpenAI cost. No abuse protection.<br>
+      &bull; <strong>No CSV/spreadsheet import</strong> &mdash; Image-based only.
+    </div>
+
+    <div class="usecase-box">
+      <strong>Use Cases:</strong> Admin receives new supplier menu (usually a JPG/PDF photo) &rarr; uploads to platform &rarr; AI extracts all product data &rarr; admin reviews, adjusts stock levels &rarr; one-click import creates/updates 165+ product rows. Replaces ~2 hours of manual data entry.
+    </div>
+
+    <div class="impact-box">
+      <strong>Business Impact:</strong> Key differentiator for operational efficiency. 33 strains &times; 5 tiers = 165 rows in 30 seconds vs 2 hours manual entry. Reduces data entry errors. Flower-only limitation means other categories still need manual entry.
+    </div>
+
+    <div class="relevance-box">
+      <strong>Relevance:</strong> Cannabis suppliers update menus weekly. This tool makes menu updates a 1-minute task instead of a 2-hour task. Operational efficiency directly impacts profitability for a small team.
+    </div>
+  </div>
+</div>
+
+<!-- ======== ADMIN PANEL ======== -->
+<div class="section page-break" id="admin">
+  <div class="container">
+    <h2><span class="num">A</span> Admin Panel &mdash; Pages &amp; Capabilities</h2>
+    <p class="section-desc">10-page admin dashboard at /admin. Protected by role-based access.</p>
+
+    <table class="overview-table">
+      <thead><tr><th>Page</th><th>Route</th><th>Key Capabilities</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Dashboard</strong></td><td>/admin</td><td>Stats overview, order totals, top products, activity log</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Products</strong></td><td>/admin/products</td><td>Full CRUD, search, category filter, pagination, bulk update</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Menu Import</strong></td><td>/admin/menu-import</td><td>AI photo parsing, review table, bulk import, deactivate old</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Orders</strong></td><td>/admin/orders</td><td>List/detail, status updates, payment, tracking, notes</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Verifications</strong></td><td>/admin/verifications</td><td>Review submissions, approve/reject with notes, filter</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Shipping</strong></td><td>/admin/shipping</td><td>Zone CRUD, rate management, delivery estimates</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Email Templates</strong></td><td>/admin/emails</td><td>Edit HTML/subject, manage variables, toggle active</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Reports</strong></td><td>/admin/reports</td><td>Revenue stats, order analytics, top products</td><td><span class="badge badge-partial">Partial</span></td></tr>
+        <tr><td><strong>Customers</strong></td><td>/admin/customers</td><td>List/search, edit, lock/unlock, points, password, delete</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+        <tr><td><strong>Settings</strong></td><td>/admin/settings</td><td>Maintenance mode, store hours, ID toggle, site config</td><td><span class="badge badge-done">&#10003;</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ======== PRIORITY MATRIX ======== -->
+<div class="section page-break" id="priority">
+  <div class="container">
+    <h2><span class="num">!</span> Priority Matrix &mdash; What to Build Next</h2>
+    <p class="section-desc">19 identified gaps organized by business impact and urgency.</p>
+
+    <div class="priority-grid">
+      <div class="priority-box p-critical">
+        <h4>&#128308; Critical &mdash; Must fix before launch</h4>
+        <ul>
+          <li><strong>Stock decrement on order</strong> (~1hr)</li>
+          <li><strong>Out-of-stock prevention</strong> (~1hr)</li>
+          <li><strong>Rotate JWT secret</strong> (~10min)</li>
+          <li><strong>Remove DB password from .env in git</strong> (~15min)</li>
+          <li><strong>Verify Resend email domain</strong> (~30min DNS)</li>
+          <li><strong>Custom domain + SSL setup</strong> (~1hr DNS)</li>
+        </ul>
+      </div>
+      <div class="priority-box p-high">
+        <h4>&#128992; High &mdash; Before real customers</h4>
+        <ul>
+          <li><strong>Rate limiting on OTP + AI import</strong> (~1hr)</li>
+          <li><strong>Security headers (helmet, cors)</strong> (~30min)</li>
+          <li><strong>Real product images</strong> (~2-4hrs)</li>
+          <li><strong>Auto-earn reward points on delivery</strong> (~1hr)</li>
+          <li><strong>Update Google OAuth callback</strong> (~10min)</li>
+          <li><strong>Fix 2 failing tests</strong> (~30min)</li>
+          <li><strong>Request logging (morgan/pino)</strong> (~30min)</li>
+        </ul>
+      </div>
+      <div class="priority-box p-medium">
+        <h4>&#128993; Medium &mdash; First month of operation</h4>
+        <ul>
+          <li><strong>24hr unpaid order auto-cancel</strong> (~2hrs)</li>
+          <li><strong>Coupon/promo code system</strong> (~4hrs)</li>
+          <li><strong>Birthday bonus trigger</strong> (~1hr)</li>
+          <li><strong>Referral system</strong> (~4hrs)</li>
+          <li><strong>Newsletter/mailing list</strong> (~3hrs)</li>
+          <li><strong>CSV import for products</strong> (~2hrs)</li>
+        </ul>
+      </div>
+      <div class="priority-box p-low">
+        <h4>&#128994; Low &mdash; Nice to have</h4>
+        <ul>
+          <li><strong>Canada Post API integration</strong> (~8hrs)</li>
+          <li><strong>AI-assisted age detection</strong> (~6hrs)</li>
+          <li><strong>Dynamic sitemap generation</strong> (~2hrs)</li>
+          <li><strong>Analytics (GA/Umami)</strong> (~1hr)</li>
+          <li><strong>Bundle size optimization</strong> (~2hrs)</li>
+          <li><strong>Invoice PDF generation</strong> (~3hrs)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- WORKFLOW INTERCONNECTION DIAGRAM -->
+    <div class="svg-diagram-wrap">
+      <div class="diagram-title">Workflow Interconnection Diagram &mdash; How All 8 Workflows Connect</div>
+      <svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif;">
+        <defs>
+          <marker id="arrB" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>
+          <marker id="arrG" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/></marker>
+          <marker id="arrR" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse"><polygon points="0 0, 10 3.5, 0 7" fill="#dc2626"/></marker>
+          <filter id="sh2"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/></filter>
+        </defs>
+
+        <rect width="1000" height="560" rx="12" fill="#fafafa"/>
+
+        <!-- Title -->
+        <text x="500" y="30" text-anchor="middle" fill="#374151" font-size="13" font-weight="800">CUSTOMER JOURNEY &amp; WORKFLOW INTERACTIONS</text>
+        <text x="500" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">Solid green lines = built connections | Dashed red lines = missing connections</text>
+
+        <!-- ===== WORKFLOW NODES ===== -->
+        <!-- 1. Auth (top-left) -->
+        <rect x="60" y="80" width="160" height="70" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2" filter="url(#sh2)"/>
+        <text x="140" y="105" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">1. AUTH</text>
+        <text x="140" y="121" text-anchor="middle" fill="#166534" font-size="8">OTP + Google OAuth</text>
+        <text x="140" y="137" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">&#9679; LIVE</text>
+
+        <!-- 2. Catalog (top-center) -->
+        <rect x="300" y="80" width="160" height="70" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2" filter="url(#sh2)"/>
+        <text x="380" y="105" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">2. CATALOG</text>
+        <text x="380" y="121" text-anchor="middle" fill="#166534" font-size="8">Products + Search</text>
+        <text x="380" y="137" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">&#9679; LIVE</text>
+
+        <!-- 3. Orders (center) -->
+        <rect x="420" y="230" width="160" height="70" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="2" filter="url(#sh2)"/>
+        <text x="500" y="255" text-anchor="middle" fill="#854d0e" font-size="11" font-weight="700">3. ORDERS</text>
+        <text x="500" y="271" text-anchor="middle" fill="#854d0e" font-size="8">Cart &rarr; Checkout &rarr; Fulfill</text>
+        <text x="500" y="287" text-anchor="middle" fill="#ca8a04" font-size="7" font-weight="700">&#9679; PARTIAL</text>
+
+        <!-- 4. ID Verify (top-right) -->
+        <rect x="560" y="80" width="160" height="70" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2" filter="url(#sh2)"/>
+        <text x="640" y="105" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">4. ID VERIFY</text>
+        <text x="640" y="121" text-anchor="middle" fill="#166534" font-size="8">Upload + Admin Review</text>
+        <text x="640" y="137" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">&#9679; LIVE</text>
+
+        <!-- 5. Shipping (right) -->
+        <rect x="700" y="230" width="160" height="70" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="2" filter="url(#sh2)"/>
+        <text x="780" y="255" text-anchor="middle" fill="#854d0e" font-size="11" font-weight="700">5. SHIPPING</text>
+        <text x="780" y="271" text-anchor="middle" fill="#854d0e" font-size="8">Zone rates + tracking</text>
+        <text x="780" y="287" text-anchor="middle" fill="#ca8a04" font-size="7" font-weight="700">&#9679; PARTIAL</text>
+
+        <!-- 6. Email (bottom-center) -->
+        <rect x="300" y="400" width="160" height="70" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2" filter="url(#sh2)"/>
+        <text x="380" y="425" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">6. EMAIL</text>
+        <text x="380" y="441" text-anchor="middle" fill="#166534" font-size="8">16 templates + engine</text>
+        <text x="380" y="457" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">&#9679; LIVE</text>
+
+        <!-- 7. Rewards (left) -->
+        <rect x="120" y="230" width="160" height="70" rx="12" fill="#fefce8" stroke="#fde047" stroke-width="2" filter="url(#sh2)"/>
+        <text x="200" y="255" text-anchor="middle" fill="#854d0e" font-size="11" font-weight="700">7. REWARDS</text>
+        <text x="200" y="271" text-anchor="middle" fill="#854d0e" font-size="8">Points + 5 tiers</text>
+        <text x="200" y="287" text-anchor="middle" fill="#ca8a04" font-size="7" font-weight="700">&#9679; PARTIAL</text>
+
+        <!-- 8. Menu Import (bottom-left) -->
+        <rect x="60" y="400" width="160" height="70" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2" filter="url(#sh2)"/>
+        <text x="140" y="425" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">8. MENU IMPORT</text>
+        <text x="140" y="441" text-anchor="middle" fill="#166534" font-size="8">AI Vision &rarr; Products</text>
+        <text x="140" y="457" text-anchor="middle" fill="#16a34a" font-size="7" font-weight="700">&#9679; LIVE</text>
+
+        <!-- Customer node -->
+        <rect x="800" y="80" width="140" height="70" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" filter="url(#sh2)"/>
+        <text x="870" y="105" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="700">CUSTOMER</text>
+        <text x="870" y="121" text-anchor="middle" fill="#1e40af" font-size="8">Browse &rarr; Buy &rarr; Return</text>
+        <text x="870" y="137" text-anchor="middle" fill="#3b82f6" font-size="7" font-weight="700">END USER</text>
+
+        <!-- ===== CONNECTIONS (BUILT - solid green) ===== -->
+        <!-- Auth -> Orders (session required) -->
+        <path d="M 180 150 Q 180 265 420 265" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="270" y="195" fill="#16a34a" font-size="7" font-weight="600" transform="rotate(-15, 270, 195)">session cookie</text>
+
+        <!-- Auth -> Customer -->
+        <line x1="220" y1="100" x2="800" y2="100" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="510" y="93" fill="#16a34a" font-size="7" font-weight="600">login/register</text>
+
+        <!-- Catalog -> Orders -->
+        <path d="M 420 150 Q 420 200 450 230" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="400" y="190" fill="#16a34a" font-size="7" font-weight="600">add to cart</text>
+
+        <!-- ID -> Orders -->
+        <path d="M 640 150 Q 640 200 575 230" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="620" y="190" fill="#16a34a" font-size="7" font-weight="600">ID check</text>
+
+        <!-- Orders -> Shipping -->
+        <line x1="580" y1="265" x2="700" y2="265" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="630" y="258" fill="#16a34a" font-size="7" font-weight="600">fulfill</text>
+
+        <!-- Orders -> Email -->
+        <path d="M 470 300 Q 420 350 400 400" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="410" y="350" fill="#16a34a" font-size="7" font-weight="600">order emails</text>
+
+        <!-- ID -> Email -->
+        <path d="M 600 150 Q 500 300 430 400" fill="none" stroke="#16a34a" stroke-width="1" stroke-dasharray="4 2"/>
+        <text x="530" y="330" fill="#16a34a" font-size="7">ID emails</text>
+
+        <!-- Shipping -> Email -->
+        <path d="M 750 300 Q 600 380 460 420" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="620" y="370" fill="#16a34a" font-size="7" font-weight="600">shipped email</text>
+
+        <!-- Rewards -> Orders (discount at checkout) -->
+        <line x1="280" y1="265" x2="420" y2="265" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="340" y="258" fill="#16a34a" font-size="7" font-weight="600">redeem</text>
+
+        <!-- Menu Import -> Catalog -->
+        <path d="M 180 400 Q 300 300 340 150" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+        <text x="220" y="280" fill="#16a34a" font-size="7" font-weight="600">import products</text>
+
+        <!-- ===== MISSING CONNECTIONS (dashed red) ===== -->
+        <!-- Orders -> Stock (not built) -->
+        <path d="M 520 230 Q 520 180 430 150" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrR)"/>
+        <text x="490" y="183" fill="#dc2626" font-size="7" font-weight="700">STOCK DECREMENT MISSING</text>
+
+        <!-- Orders -> Rewards (auto-earn not built) -->
+        <path d="M 420 275 Q 350 275 280 275" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrR)"/>
+        <text x="335" y="287" fill="#dc2626" font-size="7" font-weight="700">AUTO-EARN MISSING</text>
+
+        <!-- Auth -> Email (welcome built, but...) -->
+        <path d="M 100 150 Q 100 400 300 430" fill="none" stroke="#16a34a" stroke-width="1" marker-end="url(#arrG)"/>
+        <text x="80" y="300" fill="#16a34a" font-size="7" transform="rotate(-90, 80, 300)">welcome email</text>
+
+        <!-- Legend -->
+        <rect x="600" y="420" width="370" height="110" rx="10" fill="#fff" stroke="#e5e7eb"/>
+        <text x="620" y="442" fill="#374151" font-size="8" font-weight="700">CONNECTION LEGEND</text>
+        <line x1="620" y1="458" x2="660" y2="458" stroke="#16a34a" stroke-width="2"/>
+        <text x="670" y="462" fill="#374151" font-size="8">Built &amp; working connection</text>
+        <line x1="620" y1="480" x2="660" y2="480" stroke="#dc2626" stroke-width="2" stroke-dasharray="5 3"/>
+        <text x="670" y="484" fill="#374151" font-size="8">Missing / broken connection (action needed)</text>
+        <rect x="620" y="494" width="14" height="14" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+        <text x="644" y="506" fill="#374151" font-size="8">Live workflow</text>
+        <rect x="770" y="494" width="14" height="14" rx="4" fill="#fefce8" stroke="#fde047" stroke-width="2"/>
+        <text x="794" y="506" fill="#374151" font-size="8">Partial workflow (has gaps)</text>
+      </svg>
+    </div>
+
+    <!-- TIMELINE -->
+    <h3>Recommended Launch Timeline</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot red"></div>
+        <div class="tl-content">
+          <strong>Week 1 &mdash; Critical Security &amp; Data Integrity</strong>
+          <div class="desc">Stock decrement, JWT rotation, .env cleanup, Resend domain, custom domain + SSL. <em>~4 hours dev + DNS propagation.</em></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot yellow"></div>
+        <div class="tl-content">
+          <strong>Week 2 &mdash; Production Hardening</strong>
+          <div class="desc">Rate limiting, security headers, logging, Google OAuth callback, fix tests, product images. <em>~6-8 hours.</em></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot yellow"></div>
+        <div class="tl-content">
+          <strong>Week 3 &mdash; Rewards &amp; Automation</strong>
+          <div class="desc">Auto-earn points, birthday bonus, 24hr order auto-cancel, Twilio SMS setup or removal. <em>~4-5 hours.</em></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-content">
+          <strong>Week 4+ &mdash; Growth Features</strong>
+          <div class="desc">Coupons, referrals, newsletter, CSV import, Canada Post API, analytics. <em>Ongoing.</em></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== TECH STACK ======== -->
+<div class="section page-break" id="tech">
+  <div class="container">
+    <h2><span class="num">T</span> Technology Stack Reference</h2>
+    <table class="overview-table">
+      <thead><tr><th>Layer</th><th>Technology</th><th>Details</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Frontend</strong></td><td>React 18 + Vite + TypeScript</td><td>SPA with lazy-loaded routes, Tailwind CSS, Framer Motion, Sonner toasts</td></tr>
+        <tr><td><strong>State</strong></td><td>tRPC + TanStack Query</td><td>End-to-end typesafe API with auto cache invalidation</td></tr>
+        <tr><td><strong>Backend</strong></td><td>Express.js + tRPC + TypeScript</td><td>tRPC router for admin/store + REST for auth</td></tr>
+        <tr><td><strong>Database</strong></td><td>PostgreSQL (Supabase)</td><td>Drizzle ORM, AWS ca-central-1 (Toronto)</td></tr>
+        <tr><td><strong>Auth</strong></td><td>Custom OTP + Google OAuth</td><td>HTTP-only cookies, Twilio SMS (coded, unconfigured)</td></tr>
+        <tr><td><strong>Email</strong></td><td>Resend API + SMTP fallback</td><td>Primary: Resend HTTP (100/day free). Backup: Gmail SMTP (unconfigured)</td></tr>
+        <tr><td><strong>Storage</strong></td><td>Forge API / Base64 fallback</td><td>When no backend, images stored as data: URLs</td></tr>
+        <tr><td><strong>AI</strong></td><td>OpenAI GPT (vision)</td><td>Menu image parsing via GenSpark LLM proxy</td></tr>
+        <tr><td><strong>Hosting</strong></td><td>Railway (Docker)</td><td>Multi-stage Dockerfile, pnpm, GitHub auto-deploy</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ======== FOOTER ======== -->
+<div class="footer">
+  <div class="container">
+    MyLegacy Cannabis &mdash; Workflow Audit Report &mdash; Generated March 24, 2026<br>
+    Confidential &mdash; For internal use only &mdash; 8 workflows | 47 steps built | 19 gaps identified | 71% launch-ready
+  </div>
+</div>
+
+</body>
+</html>

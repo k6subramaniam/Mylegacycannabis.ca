@@ -27,6 +27,7 @@ import {
   triggerOrderStatusUpdate,
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
+import { nanoid as nanoidSmall } from "nanoid";
 
 export const appRouter = router({
   system: systemRouter,
@@ -222,9 +223,24 @@ export const appRouter = router({
         id: z.number(),
         status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]),
       })).mutation(async ({ input, ctx }) => {
+        const previousOrder = await db.getOrderById(input.id);
         await db.updateOrder(input.id, { status: input.status });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_status", entityType: "order", entityId: input.id, details: `Changed order #${input.id} status to ${input.status}` });
         await notifyOwner({ title: `Order Status Updated`, content: `Order #${input.id} status changed to ${input.status}` });
+
+        // ─── AUTO-EARN REWARDS on delivered ───
+        if (input.status === 'delivered') {
+          const pointsResult = await db.awardOrderPoints(input.id);
+          if (pointsResult) {
+            console.log(`[Rewards] Awarded ${pointsResult.points} points for order #${input.id}`);
+          }
+        }
+
+        // ─── RESTORE STOCK on cancellation / refund ───
+        if ((input.status === 'cancelled' || input.status === 'refunded') && previousOrder && previousOrder.status !== 'cancelled' && previousOrder.status !== 'refunded') {
+          await db.restoreStock(input.id);
+          console.log(`[Stock] Restored stock for cancelled/refunded order #${input.id}`);
+        }
 
         // Send status update email to customer
         const statusOrder = await db.getOrderById(input.id);
@@ -628,6 +644,84 @@ export const appRouter = router({
       return { url, key };
     }),
 
+    // ─── COUPONS ───
+    coupons: router({
+      list: adminProcedure.query(async () => {
+        return db.getAllCoupons();
+      }),
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+        return db.getCouponById(input.id);
+      }),
+      create: adminProcedure.input(z.object({
+        code: z.string().min(1).transform(v => v.toUpperCase().replace(/\s/g, '')),
+        name: z.string().min(1),
+        type: z.enum(['percentage', 'fixed_amount', 'free_shipping']),
+        value: z.string(),
+        minOrderAmount: z.string().optional(),
+        maxDiscount: z.string().optional(),
+        usageLimit: z.number().optional(),
+        perUserLimit: z.number().default(1),
+        isActive: z.boolean().default(true),
+        startsAt: z.date().optional(),
+        expiresAt: z.date().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const id = await db.createCoupon(input as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'create', entityType: 'coupon', entityId: id, details: `Created coupon: ${input.code}` });
+        return { id };
+      }),
+      update: adminProcedure.input(z.object({
+        id: z.number(),
+        code: z.string().optional(),
+        name: z.string().optional(),
+        type: z.enum(['percentage', 'fixed_amount', 'free_shipping']).optional(),
+        value: z.string().optional(),
+        minOrderAmount: z.string().optional(),
+        maxDiscount: z.string().optional(),
+        usageLimit: z.number().optional(),
+        perUserLimit: z.number().optional(),
+        isActive: z.boolean().optional(),
+        startsAt: z.date().optional(),
+        expiresAt: z.date().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        await db.updateCoupon(id, data as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'update', entityType: 'coupon', entityId: id, details: `Updated coupon #${id}` });
+        return { success: true };
+      }),
+      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        await db.deleteCoupon(input.id);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'delete', entityType: 'coupon', entityId: input.id, details: `Deleted coupon #${input.id}` });
+        return { success: true };
+      }),
+    }),
+
+    // ─── REVIEWS ───
+    reviews: router({
+      list: adminProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(50) })).query(async ({ input }) => {
+        return db.getAllReviews(input);
+      }),
+      approve: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        await db.approveReview(input.id);
+        // Award review bonus points (10 pts) if not already awarded
+        const REVIEW_BONUS = 10;
+        if (db.USE_PERSISTENT_DB) {
+          // For persistent DB, use the schema directly
+          const reviews = await db.getAllReviews({ page: 1, limit: 1000 });
+          const review = reviews.data.find((r: any) => r.id === input.id);
+          if (review && !review.pointsAwarded) {
+            const user = await db.getUserById(review.userId);
+            if (user) {
+              await db.updateUser(user.id, { rewardPoints: (user.rewardPoints || 0) + REVIEW_BONUS } as any);
+              await db.addRewardsHistory({ userId: user.id, points: REVIEW_BONUS, type: 'review' as any, description: 'Review bonus: +10 points for approved product review' } as any);
+              await db.updateReviewPointsAwarded(input.id);
+            }
+          }
+        }
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'approve', entityType: 'review', entityId: input.id, details: `Approved review #${input.id}` });
+        return { success: true };
+      }),
+    }),
+
     // ─── MENU IMPORT (AI-powered product import from menu photos) ───
     menuImport: router({
       /** Parse a menu image using AI vision → return structured product list for review */
@@ -788,7 +882,26 @@ export const appRouter = router({
       }),
       shippingZone: z.string().optional(),
       notes: z.string().optional(),
+      couponCode: z.string().optional(),
     })).mutation(async ({ input }) => {
+      // ─── OUT-OF-STOCK GUARD ───
+      const stockIssues = await db.checkStock(input.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity })));
+      if (stockIssues.length > 0) {
+        throw new Error(`Out of stock: ${stockIssues.join(', ')}`);
+      }
+
+      // ─── COUPON VALIDATION ───
+      let couponDiscount = '0';
+      let couponCode: string | undefined;
+      if (input.couponCode) {
+        const couponResult = await db.validateCoupon(input.couponCode, parseFloat(input.subtotal), input.guestEmail);
+        if (!couponResult.valid) {
+          throw new Error(couponResult.error || 'Invalid coupon code.');
+        }
+        couponDiscount = couponResult.discount.toFixed(2);
+        couponCode = input.couponCode.toUpperCase();
+      }
+
       const orderNumber = `ML-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
       const orderId = await db.createOrder({
         orderNumber,
@@ -803,9 +916,11 @@ export const appRouter = router({
         shippingAddress: input.shippingAddress,
         shippingZone: input.shippingZone,
         notes: input.notes,
+        couponCode,
+        couponDiscount,
         status: "pending",
         paymentStatus: "pending",
-      });
+      } as any);
       await db.createOrderItems(input.items.map(item => ({
         orderId,
         productId: item.productId,
@@ -814,6 +929,18 @@ export const appRouter = router({
         quantity: item.quantity,
         price: item.price,
       })));
+
+      // ─── STOCK DECREMENT ───
+      await db.decrementStock(input.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity })));
+
+      // ─── RECORD COUPON USAGE ───
+      if (couponCode) {
+        const coupon = await db.getCouponByCode(couponCode);
+        if (coupon) {
+          await db.recordCouponUsage({ couponId: coupon.id, orderId, email: input.guestEmail });
+        }
+      }
+
       // Fire-and-forget — never block the customer's order confirmation
       notifyOwnerAsync({ title: `New Order: ${orderNumber}`, content: `New order from ${input.guestName} (${input.guestEmail}) — Total: $${input.total}` });
 
@@ -834,6 +961,73 @@ export const appRouter = router({
       }).catch(err => console.warn("[Order] Confirmation email failed:", err.message));
 
       return { orderNumber, orderId };
+    }),
+    // ─── VALIDATE COUPON (public — for checkout preview) ───
+    validateCoupon: publicProcedure.input(z.object({
+      code: z.string().min(1),
+      subtotal: z.number(),
+      email: z.string().email(),
+    })).query(async ({ input }) => {
+      return db.validateCoupon(input.code, input.subtotal, input.email);
+    }),
+    // ─── SUBMIT PRODUCT REVIEW (authenticated) ───
+    submitReview: protectedProcedure.input(z.object({
+      productId: z.number(),
+      orderId: z.number().optional(),
+      rating: z.number().min(1).max(5),
+      title: z.string().optional(),
+      body: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+      const id = await db.createProductReview({ userId, ...input });
+      return { id, message: 'Review submitted! It will appear after admin approval.' };
+    }),
+    // ─── GET PRODUCT REVIEWS (public) ───
+    productReviews: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
+      return db.getProductReviews(input.productId);
+    }),
+    // ─── GET REFERRAL CODE (authenticated) ───
+    myReferralCode: protectedProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+      let ref = await db.getReferralCodeByUserId(userId);
+      if (!ref) {
+        // Auto-generate a referral code
+        const code = `MLC-${nanoidSmall(6).toUpperCase()}`;
+        await db.createReferralCode({ userId, code });
+        ref = await db.getReferralCodeByUserId(userId);
+      }
+      return ref;
+    }),
+    // ─── APPLY REFERRAL CODE (at registration) ───
+    applyReferral: publicProcedure.input(z.object({
+      code: z.string().min(1),
+      refereeEmail: z.string().email(),
+    })).mutation(async ({ input }) => {
+      const REFERRAL_BONUS_REFERRER = 50;
+      const REFERRAL_BONUS_REFEREE = 25;
+      const refCode = await db.getReferralCodeByCode(input.code);
+      if (!refCode) return { success: false, error: 'Invalid referral code.' };
+      const referee = await db.getUserByEmail(input.refereeEmail);
+      if (!referee) return { success: false, error: 'Referee user not found.' };
+      if (referee.id === refCode.userId) return { success: false, error: 'Cannot refer yourself.' };
+      // Award points to both
+      const referrer = await db.getUserById(refCode.userId);
+      if (referrer) {
+        await db.updateUser(referrer.id, { rewardPoints: (referrer.rewardPoints || 0) + REFERRAL_BONUS_REFERRER } as any);
+        await db.addRewardsHistory({ userId: referrer.id, points: REFERRAL_BONUS_REFERRER, type: 'referral' as any, description: `Referral bonus: ${referee.name || referee.email} joined using your code` } as any);
+      }
+      await db.updateUser(referee.id, { rewardPoints: (referee.rewardPoints || 0) + REFERRAL_BONUS_REFEREE, referredBy: refCode.userId } as any);
+      await db.addRewardsHistory({ userId: referee.id, points: REFERRAL_BONUS_REFEREE, type: 'referral' as any, description: `Welcome bonus: Used referral code ${input.code}` } as any);
+      await db.trackReferral({ referrerId: refCode.userId, refereeId: referee.id, referralCodeId: refCode.id, referrerPointsAwarded: true, refereePointsAwarded: true });
+      return { success: true, referrerPoints: REFERRAL_BONUS_REFERRER, refereePoints: REFERRAL_BONUS_REFEREE };
+    }),
+    // ─── REWARDS HISTORY (authenticated) ───
+    rewardsHistory: protectedProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) return [];
+      return db.getRewardsHistoryByUser(userId);
     }),
     submitVerification: publicProcedure.input(z.object({
       guestEmail: z.string().optional(),

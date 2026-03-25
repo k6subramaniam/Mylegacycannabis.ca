@@ -6,7 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { trpc } from '@/lib/trpc';
 import { canadianProvinces, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
-import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock } from 'lucide-react';
+import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock, Tag, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
@@ -179,6 +179,10 @@ export default function Checkout() {
   const [guestIdSubmitted, setGuestIdSubmitted] = useState(false);
   const [guestVerificationId, setGuestVerificationId] = useState<number>(0);
   const submitOrder = trpc.store.submitOrder.useMutation();
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; type?: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [form, setForm] = useState({
     email: user?.email || '', firstName: user?.firstName || '', lastName: user?.lastName || '',
     phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
@@ -260,6 +264,31 @@ export default function Checkout() {
     );
   }
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const queryInput = encodeURIComponent(JSON.stringify({ json: { code: couponCode.trim(), subtotal, email: form.email || 'guest@checkout.com' } }));
+      const res = await fetch('/api/trpc/store.validateCoupon?input=' + queryInput);
+      const json = await res.json();
+      const result = json?.result?.data?.json;
+      if (result?.valid) {
+        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), discount: result.discount, type: result.coupon?.type });
+        toast.success(`Coupon applied! -$${result.discount.toFixed(2)}`);
+      } else {
+        setCouponError(result?.error || 'Invalid coupon code.');
+      }
+    } catch {
+      setCouponError('Unable to validate coupon. Please try again.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const couponDiscount = appliedCoupon?.discount || 0;
+  const adjustedTotal = subtotal - rewardDiscount - couponDiscount + (appliedCoupon?.type === 'free_shipping' ? 0 : shippingRate);
+
   const handlePlaceOrder = async () => {
     if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.postalCode) {
       toast.error('Please fill in all required fields');
@@ -276,6 +305,8 @@ export default function Checkout() {
         ? `[ID VERIFICATION PENDING] Guest ID submission #${guestVerificationId || 'submitted'} — hold order until age verified.`
         : undefined;
 
+      const finalShipping = appliedCoupon?.type === 'free_shipping' ? 0 : shippingRate;
+      const finalTotal = subtotal - rewardDiscount - couponDiscount + finalShipping;
       const result = await submitOrder.mutateAsync({
         guestEmail: form.email,
         guestName: `${form.firstName} ${form.lastName}`.trim(),
@@ -288,10 +319,10 @@ export default function Checkout() {
           price: (typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price).toFixed(2),
         })),
         subtotal: subtotal.toFixed(2),
-        shippingCost: shippingRate.toFixed(2),
-        discount: rewardDiscount.toFixed(2),
+        shippingCost: finalShipping.toFixed(2),
+        discount: (rewardDiscount + couponDiscount).toFixed(2),
         pointsRedeemed: 0,
-        total: total.toFixed(2),
+        total: finalTotal.toFixed(2),
         shippingAddress: {
           street: form.address,
           city: form.city,
@@ -301,6 +332,7 @@ export default function Checkout() {
         },
         shippingZone: form.province,
         notes: [form.notes, idNote].filter(Boolean).join('\n') || undefined,
+        couponCode: appliedCoupon?.code || undefined,
       });
       setOrderNumber(result.orderNumber);
       setOrderPlaced(true);
@@ -470,9 +502,50 @@ export default function Checkout() {
                 </div>
               </div>
 
+              {/* Coupon Code */}
+              <div className="bg-[#F5F5F5] rounded-2xl p-6">
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">3. COUPON / PROMO CODE</h2>
+                {appliedCoupon ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Tag size={18} className="text-green-600" />
+                      <div>
+                        <p className="font-display text-sm text-green-700">{appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600 font-body">
+                          {appliedCoupon.type === 'free_shipping' ? 'Free shipping applied!' : `-$${appliedCoupon.discount.toFixed(2)} discount`}
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-gray-400 hover:text-red-500 transition-colors">
+                      <X size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={e => { setCouponCode(e.target.value); setCouponError(''); }}
+                        placeholder="Enter coupon code"
+                        className="flex-1 bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] uppercase"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={!couponCode.trim() || couponLoading}
+                        className="bg-[#4B2D8E] text-white font-display text-sm px-6 py-3 rounded-lg hover:bg-[#3a2270] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        {couponLoading ? 'CHECKING...' : 'APPLY'}
+                      </button>
+                    </div>
+                    {couponError && <p className="text-xs text-red-500 font-body mt-2">{couponError}</p>}
+                  </div>
+                )}
+              </div>
+
               {/* Payment */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">3. PAYMENT METHOD</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">4. PAYMENT METHOD</h2>
                 <div className="bg-white rounded-xl p-4 border-2 border-[#4B2D8E]">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center">
@@ -509,12 +582,13 @@ export default function Checkout() {
                 <div className="space-y-2 text-sm font-body border-t border-gray-200 pt-4 mb-4">
                   <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                   {rewardDiscount > 0 && <div className="flex justify-between text-[#F15929]"><span>Rewards</span><span>-${rewardDiscount.toFixed(2)}</span></div>}
-                  <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span className={isFreeShipping ? 'text-[#F15929]' : ''}>{isFreeShipping ? 'FREE' : `$${shippingRate.toFixed(2)}`}</span></div>
+                  {couponDiscount > 0 && <div className="flex justify-between text-[#F15929]"><span>Coupon ({appliedCoupon?.code})</span><span>-${couponDiscount.toFixed(2)}</span></div>}
+                  <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span className={(isFreeShipping || appliedCoupon?.type === 'free_shipping') ? 'text-[#F15929]' : ''}>{(isFreeShipping || appliedCoupon?.type === 'free_shipping') ? 'FREE' : `$${shippingRate.toFixed(2)}`}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>$0.00</span></div>
                 </div>
                 <div className="flex justify-between font-display text-lg border-t border-gray-200 pt-4 mb-4">
                   <span className="text-[#4B2D8E]">TOTAL</span>
-                  <span className="text-[#4B2D8E]">${total.toFixed(2)}</span>
+                  <span className="text-[#4B2D8E]">${adjustedTotal.toFixed(2)}</span>
                 </div>
                 {isAuthenticated && (
                   <p className="text-xs text-[#4B2D8E] font-body mb-4 flex items-center gap-1">
