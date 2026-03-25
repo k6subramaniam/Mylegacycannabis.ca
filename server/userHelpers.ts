@@ -3,6 +3,7 @@
  * Used across auth.me, loginEmail, register, OTP verify, and store.refreshUser.
  */
 import * as db from "./db";
+import { nanoid } from "nanoid";
 
 export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType<typeof db.getUserByEmail>>>) {
   // Fetch orders
@@ -46,6 +47,35 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
     }
   }
 
+  // ─── REWARDS HISTORY (from DB) ───
+  let rewardsHistory: { id: string; date: string; type: string; points: number; description: string }[] = [];
+  try {
+    const history = await db.getRewardsHistoryByUser(user.id);
+    rewardsHistory = (history || []).map((h: any) => ({
+      id: `rh-${h.id}`,
+      date: h.createdAt?.toISOString?.() || new Date().toISOString(),
+      type: h.type || 'earned',
+      points: h.points || 0,
+      description: h.description || '',
+    }));
+  } catch (err) {
+    console.warn('[buildFullUserResponse] Failed to fetch rewards history:', err);
+  }
+
+  // ─── REFERRAL CODE (fetch or auto-generate) ───
+  let referralCode = '';
+  try {
+    let refRecord = await db.getReferralCodeByUserId(user.id);
+    if (!refRecord) {
+      const code = `MLC-${nanoid(6).toUpperCase()}`;
+      await db.createReferralCode({ userId: user.id, code } as any);
+      refRecord = await db.getReferralCodeByUserId(user.id);
+    }
+    referralCode = refRecord?.code || '';
+  } catch (err) {
+    console.warn('[buildFullUserResponse] Failed to fetch referral code:', err);
+  }
+
   return {
     id: user.id,
     email: user.email,
@@ -56,8 +86,8 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
     idVerified: !idVerifEnabled || user.idVerified || idVerificationStatus === 'approved',
     idVerificationStatus,
     rewardsPoints: user.rewardPoints || 0,
-    rewardsHistory: [],
-    referralCode: '',
+    rewardsHistory,
+    referralCode,
     orders: formattedOrders,
   };
 }
