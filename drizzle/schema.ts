@@ -27,7 +27,9 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "pending", "received", "confirmed", "refunded",
 ]);
 export const verificationStatusEnum = pgEnum("verification_status", ["pending", "approved", "rejected"]);
-export const rewardsTypeEnum = pgEnum("rewards_type", ["earned", "redeemed", "bonus", "deducted", "admin_add", "admin_deduct"]);
+export const rewardsTypeEnum = pgEnum("rewards_type", ["earned", "redeemed", "bonus", "deducted", "admin_add", "admin_deduct", "birthday", "referral", "review"]);
+
+export const couponTypeEnum = pgEnum("coupon_type", ["percentage", "fixed_amount", "free_shipping"]);
 
 // ─── USERS ───
 export const users = pgTable("users", {
@@ -47,6 +49,9 @@ export const users = pgTable("users", {
   idVerified: boolean("id_verified").default(false).notNull(),
   isLocked: boolean("is_locked").default(false).notNull(),
   adminNotes: text("admin_notes"),
+  referredBy: integer("referred_by"),
+  referralCode: varchar("referral_code", { length: 20 }),
+  lastBirthdayBonus: varchar("last_birthday_bonus", { length: 4 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
@@ -125,6 +130,8 @@ export const orders = pgTable("orders", {
   trackingUrl: text("tracking_url"),
   notes: text("notes"),
   adminNotes: text("admin_notes"),
+  couponCode: varchar("coupon_code", { length: 50 }),
+  couponDiscount: numeric("coupon_discount", { precision: 10, scale: 2 }).default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -228,6 +235,84 @@ export const rewardsHistory = pgTable("rewards_history", {
 
 export type RewardsHistory = typeof rewardsHistory.$inferSelect;
 export type InsertRewardsHistory = typeof rewardsHistory.$inferInsert;
+
+// ─── COUPONS ───
+export const coupons = pgTable("coupons", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: couponTypeEnum("type").notNull(),
+  value: numeric("value", { precision: 10, scale: 2 }).notNull(),
+  minOrderAmount: numeric("min_order_amount", { precision: 10, scale: 2 }),
+  maxDiscount: numeric("max_discount", { precision: 10, scale: 2 }),
+  usageLimit: integer("usage_limit"),
+  usageCount: integer("usage_count").default(0).notNull(),
+  perUserLimit: integer("per_user_limit").default(1).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  startsAt: timestamp("starts_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = typeof coupons.$inferInsert;
+
+// ─── COUPON USAGE TRACKING ───
+export const couponUsage = pgTable("coupon_usage", {
+  id: serial("id").primaryKey(),
+  couponId: integer("coupon_id").notNull(),
+  orderId: integer("order_id"),
+  email: varchar("email", { length: 320 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CouponUsage = typeof couponUsage.$inferSelect;
+export type InsertCouponUsage = typeof couponUsage.$inferInsert;
+
+// ─── REFERRAL CODES ───
+export const referralCodes = pgTable("referral_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  timesUsed: integer("times_used").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = typeof referralCodes.$inferInsert;
+
+// ─── REFERRAL TRACKING ───
+export const referralTracking = pgTable("referral_tracking", {
+  id: serial("id").primaryKey(),
+  referrerId: integer("referrer_id").notNull(),
+  refereeId: integer("referee_id").notNull(),
+  referralCodeId: integer("referral_code_id").notNull(),
+  referrerPointsAwarded: boolean("referrer_points_awarded").default(false).notNull(),
+  refereePointsAwarded: boolean("referee_points_awarded").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ReferralTracking = typeof referralTracking.$inferSelect;
+export type InsertReferralTracking = typeof referralTracking.$inferInsert;
+
+// ─── PRODUCT REVIEWS ───
+export const productReviews = pgTable("product_reviews", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  productId: integer("product_id").notNull(),
+  orderId: integer("order_id"),
+  rating: integer("rating").notNull(),
+  title: varchar("title", { length: 255 }),
+  body: text("body"),
+  isApproved: boolean("is_approved").default(false).notNull(),
+  pointsAwarded: boolean("points_awarded").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ProductReview = typeof productReviews.$inferSelect;
+export type InsertProductReview = typeof productReviews.$inferInsert;
 
 // ─── SITE SETTINGS ───
 export const siteSettings = pgTable("site_settings", {

@@ -14,7 +14,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { initializeDatabase, USE_PERSISTENT_DB } from "../db";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses } from "../db";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
@@ -71,6 +71,39 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
   });
+
+  // ─── BACKGROUND JOBS ───
+  // Run auto-cancel for unpaid orders every hour
+  setInterval(async () => {
+    try {
+      const count = await autoCancelUnpaidOrders();
+      if (count > 0) console.log(`[Cron] Auto-cancelled ${count} unpaid order(s)`);
+    } catch (err) {
+      console.error("[Cron] Auto-cancel error:", err);
+    }
+  }, 60 * 60 * 1000); // every hour
+
+  // Run birthday bonus check every 6 hours
+  setInterval(async () => {
+    try {
+      const awarded = await checkBirthdayBonuses();
+      if (awarded > 0) console.log(`[Cron] Awarded birthday bonus to ${awarded} user(s)`);
+    } catch (err) {
+      console.error("[Cron] Birthday bonus error:", err);
+    }
+  }, 6 * 60 * 60 * 1000); // every 6 hours
+
+  // Run both immediately on startup (after a short delay to let DB settle)
+  setTimeout(async () => {
+    try {
+      const cancelCount = await autoCancelUnpaidOrders();
+      if (cancelCount > 0) console.log(`[Startup] Auto-cancelled ${cancelCount} unpaid order(s)`);
+      const birthdayCount = await checkBirthdayBonuses();
+      if (birthdayCount > 0) console.log(`[Startup] Awarded birthday bonus to ${birthdayCount} user(s)`);
+    } catch (err) {
+      console.error("[Startup] Background job error:", err);
+    }
+  }, 5000);
 }
 
 startServer().catch(console.error);

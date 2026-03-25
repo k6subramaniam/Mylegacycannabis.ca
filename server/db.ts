@@ -250,6 +250,96 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── New enum for coupons ───
+  await _sql!.unsafe(`DO $$ BEGIN CREATE TYPE coupon_type AS ENUM ('percentage','fixed_amount','free_shipping'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
+
+  // ─── Alter rewards_type enum to add new values ───
+  for (const val of ['birthday', 'referral', 'review']) {
+    await _sql!.unsafe(`DO $$ BEGIN ALTER TYPE rewards_type ADD VALUE IF NOT EXISTS '${val}'; EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  }
+
+  // ─── Alter users table — add new columns ───
+  await _sql!`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER`;
+  await _sql!`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20)`;
+  await _sql!`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_birthday_bonus VARCHAR(4)`;
+
+  // ─── Alter orders table — add coupon columns ───
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50)`;
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount NUMERIC(10,2) DEFAULT 0`;
+
+  // ─── Coupons table ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) NOT NULL UNIQUE,
+      name VARCHAR(255) NOT NULL,
+      type coupon_type NOT NULL,
+      value NUMERIC(10,2) NOT NULL,
+      min_order_amount NUMERIC(10,2),
+      max_discount NUMERIC(10,2),
+      usage_limit INTEGER,
+      usage_count INTEGER NOT NULL DEFAULT 0,
+      per_user_limit INTEGER NOT NULL DEFAULT 1,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      starts_at TIMESTAMP,
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ─── Coupon usage tracking ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS coupon_usage (
+      id SERIAL PRIMARY KEY,
+      coupon_id INTEGER NOT NULL,
+      order_id INTEGER,
+      email VARCHAR(320) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ─── Referral codes ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS referral_codes (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      code VARCHAR(20) NOT NULL UNIQUE,
+      times_used INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ─── Referral tracking ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS referral_tracking (
+      id SERIAL PRIMARY KEY,
+      referrer_id INTEGER NOT NULL,
+      referee_id INTEGER NOT NULL,
+      referral_code_id INTEGER NOT NULL,
+      referrer_points_awarded BOOLEAN NOT NULL DEFAULT FALSE,
+      referee_points_awarded BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ─── Product reviews ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS product_reviews (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      order_id INTEGER,
+      rating INTEGER NOT NULL,
+      title VARCHAR(255),
+      body TEXT,
+      is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+      points_awarded BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -790,6 +880,320 @@ export async function getRewardsHistoryByUser(userId: number) {
   return getDb().select().from(schema.rewardsHistory).where(eq(schema.rewardsHistory.userId, userId)).orderBy(desc(schema.rewardsHistory.createdAt));
 }
 
+// ─── COUPON HELPERS ───
+export async function getAllCoupons() {
+  if (!USE_PERSISTENT_DB) return _mem_getAllCoupons();
+  return getDb().select().from(schema.coupons).orderBy(desc(schema.coupons.createdAt));
+}
+
+export async function getCouponByCode(code: string) {
+  if (!USE_PERSISTENT_DB) return _mem_getCouponByCode(code);
+  const rows = await getDb().select().from(schema.coupons).where(sql`UPPER(${schema.coupons.code}) = UPPER(${code})`).limit(1);
+  return rows[0];
+}
+
+export async function getCouponById(id: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getCouponById(id);
+  const rows = await getDb().select().from(schema.coupons).where(eq(schema.coupons.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function createCoupon(data: schema.InsertCoupon): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_createCoupon(data);
+  const result = await getDb().insert(schema.coupons).values(data).returning({ id: schema.coupons.id });
+  return result[0].id;
+}
+
+export async function updateCoupon(id: number, data: Partial<schema.InsertCoupon>): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_updateCoupon(id, data); return; }
+  await getDb().update(schema.coupons).set({ ...data, updatedAt: new Date() } as any).where(eq(schema.coupons.id, id));
+}
+
+export async function deleteCoupon(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_deleteCoupon(id); return; }
+  await getDb().delete(schema.coupons).where(eq(schema.coupons.id, id));
+}
+
+export async function getCouponUsageByEmail(couponId: number, email: string): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_getCouponUsageByEmail(couponId, email);
+  const result = await getDb().select({ cnt: count() }).from(schema.couponUsage)
+    .where(and(eq(schema.couponUsage.couponId, couponId), sql`LOWER(${schema.couponUsage.email}) = LOWER(${email})`));
+  return result[0].cnt;
+}
+
+export async function recordCouponUsage(data: schema.InsertCouponUsage): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_recordCouponUsage(data); return; }
+  await getDb().insert(schema.couponUsage).values(data);
+  // Increment usage count
+  await getDb().update(schema.coupons).set({ usageCount: sql`${schema.coupons.usageCount} + 1`, updatedAt: new Date() }).where(eq(schema.coupons.id, data.couponId));
+}
+
+/**
+ * Validate a coupon code and calculate the discount.
+ * Returns { valid, coupon, discount, error } 
+ */
+export async function validateCoupon(code: string, subtotal: number, email: string): Promise<{ valid: boolean; coupon?: any; discount: number; error?: string }> {
+  const coupon = await getCouponByCode(code);
+  if (!coupon) return { valid: false, discount: 0, error: 'Invalid coupon code.' };
+  if (!coupon.isActive) return { valid: false, discount: 0, error: 'This coupon is no longer active.' };
+  const now = new Date();
+  if (coupon.startsAt && now < coupon.startsAt) return { valid: false, discount: 0, error: 'This coupon is not yet active.' };
+  if (coupon.expiresAt && now > coupon.expiresAt) return { valid: false, discount: 0, error: 'This coupon has expired.' };
+  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return { valid: false, discount: 0, error: 'This coupon has reached its usage limit.' };
+  if (coupon.minOrderAmount && subtotal < parseFloat(coupon.minOrderAmount)) return { valid: false, discount: 0, error: `Minimum order of $${coupon.minOrderAmount} required.` };
+  // Check per-user limit
+  const userUsage = await getCouponUsageByEmail(coupon.id, email);
+  if (userUsage >= coupon.perUserLimit) return { valid: false, discount: 0, error: 'You have already used this coupon.' };
+
+  let discount = 0;
+  if (coupon.type === 'percentage') {
+    discount = subtotal * (parseFloat(coupon.value) / 100);
+    if (coupon.maxDiscount) discount = Math.min(discount, parseFloat(coupon.maxDiscount));
+  } else if (coupon.type === 'fixed_amount') {
+    discount = Math.min(parseFloat(coupon.value), subtotal);
+  } else if (coupon.type === 'free_shipping') {
+    discount = 0; // handled separately — shipping becomes 0
+  }
+  return { valid: true, coupon, discount: Math.round(discount * 100) / 100 };
+}
+
+// ─── REFERRAL HELPERS ───
+export async function getReferralCodeByUserId(userId: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getReferralCodeByUserId(userId);
+  const rows = await getDb().select().from(schema.referralCodes).where(eq(schema.referralCodes.userId, userId)).limit(1);
+  return rows[0];
+}
+
+export async function getReferralCodeByCode(code: string) {
+  if (!USE_PERSISTENT_DB) return _mem_getReferralCodeByCode(code);
+  const rows = await getDb().select().from(schema.referralCodes).where(sql`UPPER(${schema.referralCodes.code}) = UPPER(${code})`).limit(1);
+  return rows[0];
+}
+
+export async function createReferralCode(data: schema.InsertReferralCode): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_createReferralCode(data);
+  const result = await getDb().insert(schema.referralCodes).values(data).returning({ id: schema.referralCodes.id });
+  return result[0].id;
+}
+
+export async function trackReferral(data: schema.InsertReferralTracking): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_trackReferral(data);
+  const result = await getDb().insert(schema.referralTracking).values(data).returning({ id: schema.referralTracking.id });
+  return result[0].id;
+}
+
+export async function getReferralTracking(referrerId: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getReferralTracking(referrerId);
+  return getDb().select().from(schema.referralTracking).where(eq(schema.referralTracking.referrerId, referrerId)).orderBy(desc(schema.referralTracking.createdAt));
+}
+
+// ─── PRODUCT REVIEW HELPERS ───
+export async function createProductReview(data: schema.InsertProductReview): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_createProductReview(data);
+  const result = await getDb().insert(schema.productReviews).values(data).returning({ id: schema.productReviews.id });
+  return result[0].id;
+}
+
+export async function getProductReviews(productId: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getProductReviews(productId);
+  return getDb().select().from(schema.productReviews).where(and(eq(schema.productReviews.productId, productId), eq(schema.productReviews.isApproved, true))).orderBy(desc(schema.productReviews.createdAt));
+}
+
+export async function getUserReviews(userId: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getUserReviews(userId);
+  return getDb().select().from(schema.productReviews).where(eq(schema.productReviews.userId, userId)).orderBy(desc(schema.productReviews.createdAt));
+}
+
+export async function getAllReviews(opts?: { page?: number; limit?: number }) {
+  if (!USE_PERSISTENT_DB) return _mem_getAllReviews(opts);
+  const db = getDb();
+  const page = opts?.page ?? 1;
+  const limit = opts?.limit ?? 50;
+  const offset = (page - 1) * limit;
+  const data = await db.select().from(schema.productReviews).orderBy(desc(schema.productReviews.createdAt)).offset(offset).limit(limit);
+  const totalResult = await db.select({ cnt: count() }).from(schema.productReviews);
+  return { data, total: totalResult[0].cnt };
+}
+
+export async function approveReview(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_approveReview(id); return; }
+  await getDb().update(schema.productReviews).set({ isApproved: true, updatedAt: new Date() }).where(eq(schema.productReviews.id, id));
+}
+
+export async function updateReviewPointsAwarded(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_updateReviewPointsAwarded(id); return; }
+  await getDb().update(schema.productReviews).set({ pointsAwarded: true, updatedAt: new Date() }).where(eq(schema.productReviews.id, id));
+}
+
+// ─── STOCK MANAGEMENT ───
+/**
+ * Decrement stock for each item in an order. Returns array of out-of-stock item names.
+ */
+export async function decrementStock(items: { productId?: number; productName: string; quantity: number }[]): Promise<string[]> {
+  const outOfStock: string[] = [];
+  for (const item of items) {
+    if (!item.productId) continue;
+    const product = await getProductById(item.productId);
+    if (!product) continue;
+    if (product.stock < item.quantity) {
+      outOfStock.push(`${item.productName} (only ${product.stock} in stock)`);
+      continue;
+    }
+    if (USE_PERSISTENT_DB) {
+      await getDb().update(schema.products).set({ stock: sql`${schema.products.stock} - ${item.quantity}`, updatedAt: new Date() }).where(eq(schema.products.id, item.productId));
+    } else {
+      const p = _products.find((p: any) => p.id === item.productId);
+      if (p) { p.stock = Math.max(0, p.stock - item.quantity); p.updatedAt = new Date(); }
+    }
+  }
+  return outOfStock;
+}
+
+/**
+ * Check stock availability for all items. Returns array of out-of-stock item names.
+ */
+export async function checkStock(items: { productId?: number; productName: string; quantity: number }[]): Promise<string[]> {
+  const outOfStock: string[] = [];
+  for (const item of items) {
+    if (!item.productId) continue;
+    const product = await getProductById(item.productId);
+    if (!product) continue;
+    if (product.stock < item.quantity) {
+      outOfStock.push(`${item.productName} (only ${product.stock} available)`);
+    }
+  }
+  return outOfStock;
+}
+
+/**
+ * Restore stock when an order is cancelled
+ */
+export async function restoreStock(orderId: number): Promise<void> {
+  const items = await getOrderItems(orderId);
+  for (const item of items) {
+    if (!item.productId) continue;
+    if (USE_PERSISTENT_DB) {
+      await getDb().update(schema.products).set({ stock: sql`${schema.products.stock} + ${item.quantity}`, updatedAt: new Date() }).where(eq(schema.products.id, item.productId));
+    } else {
+      const p = _products.find((p: any) => p.id === item.productId);
+      if (p) { p.stock += item.quantity; p.updatedAt = new Date(); }
+    }
+  }
+}
+
+/**
+ * Auto-cancel unpaid orders older than 24 hours. Returns count of cancelled orders.
+ */
+export async function autoCancelUnpaidOrders(): Promise<number> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  if (USE_PERSISTENT_DB) {
+    const db = getDb();
+    const staleOrders = await db.select().from(schema.orders).where(
+      and(
+        eq(schema.orders.status, 'pending'),
+        eq(schema.orders.paymentStatus, 'pending'),
+        lte(schema.orders.createdAt, cutoff)
+      )
+    );
+    for (const order of staleOrders) {
+      await db.update(schema.orders).set({ status: 'cancelled', adminNotes: (order.adminNotes || '') + '\n[AUTO-CANCELLED] Unpaid after 24 hours.', updatedAt: new Date() } as any).where(eq(schema.orders.id, order.id));
+      await restoreStock(order.id);
+    }
+    return staleOrders.length;
+  } else {
+    let cancelled = 0;
+    for (const order of _orders) {
+      if (order.status === 'pending' && order.paymentStatus === 'pending' && order.createdAt <= cutoff) {
+        order.status = 'cancelled';
+        order.adminNotes = (order.adminNotes || '') + '\n[AUTO-CANCELLED] Unpaid after 24 hours.';
+        order.updatedAt = new Date();
+        await restoreStock(order.id);
+        cancelled++;
+      }
+    }
+    return cancelled;
+  }
+}
+
+/**
+ * Award auto-earn reward points when an order is marked as delivered.
+ * 1 point per $1 of the subtotal (pre-tax, pre-shipping).
+ */
+export async function awardOrderPoints(orderId: number): Promise<{ points: number; userId?: number } | null> {
+  const order = await getOrderById(orderId);
+  if (!order) return null;
+  // Already awarded? Check rewards history
+  if (USE_PERSISTENT_DB) {
+    const existing = await getDb().select().from(schema.rewardsHistory)
+      .where(and(eq(schema.rewardsHistory.orderId, orderId), eq(schema.rewardsHistory.type, 'earned')))
+      .limit(1);
+    if (existing.length > 0) return null; // already awarded
+  } else {
+    const existing = _rewardsHistory.find((r: any) => r.orderId === orderId && r.type === 'earned');
+    if (existing) return null;
+  }
+  // Find user by email
+  if (!order.guestEmail) return null;
+  const user = await getUserByEmail(order.guestEmail);
+  if (!user) return null;
+
+  const subtotal = parseFloat(order.subtotal ?? '0');
+  const points = Math.floor(subtotal);
+  if (points <= 0) return null;
+
+  const newPoints = (user.rewardPoints || 0) + points;
+  await updateUser(user.id, { rewardPoints: newPoints } as any);
+  await addRewardsHistory({ userId: user.id, points, type: 'earned', description: `Earned ${points} points from order ${order.orderNumber}`, orderId } as any);
+
+  return { points, userId: user.id };
+}
+
+/**
+ * Check and award birthday bonus to all eligible users.
+ * Awards BIRTHDAY_BONUS points once per year on the user's birthday.
+ */
+export async function checkBirthdayBonuses(): Promise<number> {
+  const BIRTHDAY_BONUS = 100;
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+  const todayMD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  let awarded = 0;
+  if (USE_PERSISTENT_DB) {
+    const db = getDb();
+    // Find users whose birthday matches today (MM-DD) and haven't received this year's bonus
+    const eligibleUsers = await db.select().from(schema.users).where(
+      and(
+        sql`${schema.users.birthday} IS NOT NULL`,
+        sql`SUBSTRING(${schema.users.birthday} FROM 6) = ${todayMD}`,
+        or(
+          sql`${schema.users.lastBirthdayBonus} IS NULL`,
+          sql`${schema.users.lastBirthdayBonus} != ${currentYear}`
+        )
+      )
+    );
+    for (const user of eligibleUsers) {
+      const newPoints = (user.rewardPoints || 0) + BIRTHDAY_BONUS;
+      await db.update(schema.users).set({ rewardPoints: newPoints, lastBirthdayBonus: currentYear, updatedAt: new Date() } as any).where(eq(schema.users.id, user.id));
+      await addRewardsHistory({ userId: user.id, points: BIRTHDAY_BONUS, type: 'birthday' as any, description: `Happy Birthday! +${BIRTHDAY_BONUS} bonus points` } as any);
+      awarded++;
+    }
+  } else {
+    for (const user of _users) {
+      if (!user.birthday) continue;
+      const bMD = user.birthday.substring(5);
+      if (bMD !== todayMD) continue;
+      if (user.lastBirthdayBonus === currentYear) continue;
+      user.rewardPoints = (user.rewardPoints || 0) + BIRTHDAY_BONUS;
+      user.lastBirthdayBonus = currentYear;
+      user.updatedAt = new Date();
+      _rewardsHistory.push({ id: nextId(), userId: user.id, points: BIRTHDAY_BONUS, type: 'birthday', description: `Happy Birthday! +${BIRTHDAY_BONUS} bonus points`, createdAt: new Date() });
+      awarded++;
+    }
+  }
+  return awarded;
+}
+
 // ─── DASHBOARD STATS ───
 export async function getDashboardStats() {
   if (!USE_PERSISTENT_DB) return _mem_getDashboardStats();
@@ -970,6 +1374,11 @@ const _emailTemplates: any[] = [];
 const _adminActivityLog: any[] = [];
 const _rewardsHistory: any[] = [];
 const _verificationCodes: any[] = [];
+const _coupons: any[] = [];
+const _couponUsage: any[] = [];
+const _referralCodes: any[] = [];
+const _referralTracking: any[] = [];
+const _productReviews: any[] = [];
 const _siteSettings: any[] = [
   { id: 1, key: 'id_verification_enabled', value: 'true', updatedAt: new Date() },
   { id: 2, key: 'maintenance_mode_enabled', value: 'false', updatedAt: new Date() },
@@ -1142,3 +1551,28 @@ function _mem_getTopProducts(limit = 10) {
   for (const i of _orderItems) { const ex = byProd.get(i.productName) ?? { totalSold: 0, totalRevenue: 0 }; ex.totalSold += i.quantity; ex.totalRevenue += parseFloat(i.price ?? '0') * i.quantity; byProd.set(i.productName, ex); }
   return Array.from(byProd.entries()).map(([productName, s]) => ({ productName, totalSold: s.totalSold, totalRevenue: String(s.totalRevenue) })).sort((a, b) => b.totalSold - a.totalSold).slice(0, limit);
 }
+
+// ─── IN-MEMORY COUPON STUBS ───
+function _mem_getAllCoupons() { return [..._coupons].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
+function _mem_getCouponByCode(code: string) { return _coupons.find((c: any) => c.code.toUpperCase() === code.toUpperCase()); }
+function _mem_getCouponById(id: number) { return _coupons.find((c: any) => c.id === id); }
+function _mem_createCoupon(data: any) { const id = nextId(); _coupons.push({ id, ...data, usageCount: 0, createdAt: new Date(), updatedAt: new Date() }); return id; }
+function _mem_updateCoupon(id: number, data: any) { const c = _coupons.find((c: any) => c.id === id); if (c) Object.assign(c, data, { updatedAt: new Date() }); }
+function _mem_deleteCoupon(id: number) { const idx = _coupons.findIndex((c: any) => c.id === id); if (idx !== -1) _coupons.splice(idx, 1); }
+function _mem_getCouponUsageByEmail(couponId: number, email: string) { return _couponUsage.filter((u: any) => u.couponId === couponId && u.email.toLowerCase() === email.toLowerCase()).length; }
+function _mem_recordCouponUsage(data: any) { _couponUsage.push({ id: nextId(), ...data, createdAt: new Date() }); const c = _coupons.find((c: any) => c.id === data.couponId); if (c) c.usageCount = (c.usageCount || 0) + 1; }
+
+// ─── IN-MEMORY REFERRAL STUBS ───
+function _mem_getReferralCodeByUserId(userId: number) { return _referralCodes.find((r: any) => r.userId === userId); }
+function _mem_getReferralCodeByCode(code: string) { return _referralCodes.find((r: any) => r.code.toUpperCase() === code.toUpperCase()); }
+function _mem_createReferralCode(data: any) { const id = nextId(); _referralCodes.push({ id, ...data, timesUsed: 0, createdAt: new Date() }); return id; }
+function _mem_trackReferral(data: any) { const id = nextId(); _referralTracking.push({ id, ...data, createdAt: new Date() }); return id; }
+function _mem_getReferralTracking(referrerId: number) { return [..._referralTracking].filter((r: any) => r.referrerId === referrerId).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
+
+// ─── IN-MEMORY REVIEW STUBS ───
+function _mem_createProductReview(data: any) { const id = nextId(); _productReviews.push({ id, ...data, isApproved: false, pointsAwarded: false, createdAt: new Date(), updatedAt: new Date() }); return id; }
+function _mem_getProductReviews(productId: number) { return _productReviews.filter((r: any) => r.productId === productId && r.isApproved).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
+function _mem_getUserReviews(userId: number) { return _productReviews.filter((r: any) => r.userId === userId).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
+function _mem_getAllReviews(opts?: any) { const sorted = [..._productReviews].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); return { data: paginate(sorted, opts?.page ?? 1, opts?.limit ?? 50), total: sorted.length }; }
+function _mem_approveReview(id: number) { const r = _productReviews.find((r: any) => r.id === id); if (r) { r.isApproved = true; r.updatedAt = new Date(); } }
+function _mem_updateReviewPointsAwarded(id: number) { const r = _productReviews.find((r: any) => r.id === id); if (r) { r.pointsAwarded = true; r.updatedAt = new Date(); } }
