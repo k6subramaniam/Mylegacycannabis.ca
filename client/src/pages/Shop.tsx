@@ -74,7 +74,7 @@ export default function Shop() {
             <div className={`${filtersOpen ? 'block' : 'hidden'} lg:block lg:w-64 shrink-0`}>
               <div className="bg-[#F5F5F5] rounded-2xl p-6 sticky top-24">
                 <div className="flex items-center justify-between mb-6 lg:hidden">
-                  <h3 className="font-display text-lg text-[#4B2D8E]">FILTERS</h3>
+                  <h3 className="font-display text-lg text-[#4B2D8E]">{t.shop.filters}</h3>
                   <button onClick={() => setFiltersOpen(false)} className="text-gray-500 hover:text-[#4B2D8E]">
                     <X size={20} />
                   </button>

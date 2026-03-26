@@ -4,7 +4,8 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { storeLocations } from '@/lib/data';
-import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation } from 'lucide-react';
+import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe } from 'lucide-react';
+import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
@@ -21,6 +22,7 @@ export const HEADER_HEIGHT_DESKTOP = 112; // px
 // AGE GATE — no animation, instant render, fixed full-screen
 // ============================================================
 function AgeGate({ onConfirm }: { onConfirm: () => void }) {
+  const { t } = useT();
   useEffect(() => {
     // Lock scroll while gate is visible — prevents scrollbar CLS
     const prev = document.body.style.overflow;
@@ -48,21 +50,21 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
           loading="eager"
           decoding="sync"
         />
-        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">WELCOME TO<br />MY LEGACY</h2>
+        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">{t.ageGate.welcome}<br />{t.ageGate.myLegacy}</h2>
         <p className="text-[#333] mb-6 font-body text-sm leading-relaxed">
-          Please confirm you are of legal age (19+) in your province to view cannabis products.
+          {t.ageGate.confirm}
         </p>
         <button
           onClick={onConfirm}
           className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display text-lg py-4 px-8 rounded-full transition-colors"
         >
-          I AM 19 OR OLDER
+          {t.ageGate.iAmOlder}
         </button>
         <button
           onClick={() => { window.location.href = 'https://www.google.com'; }}
           className="mt-4 text-gray-400 hover:text-gray-600 font-body text-sm transition-colors cursor-pointer bg-transparent border-none w-full"
         >
-          I am under 19 — Exit
+          {t.ageGate.underAge}
         </button>
       </div>
     </div>
@@ -362,6 +364,7 @@ function Header() {
   const { itemCount } = useCart();
   const { isAuthenticated } = useAuth();
   const [location] = useLocation();
+  const { t, locale, setLocale } = useT();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -372,14 +375,14 @@ function Header() {
   useEffect(() => { setMenuOpen(false); }, [location]);
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/shop', label: 'Shop' },
-    { href: '/rewards', label: 'Rewards' },
-    { href: '/locations', label: 'Locations' },
-    { href: '/about', label: 'About Us' },
-    { href: '/shipping', label: 'Shipping' },
-    { href: '/contact', label: 'Contact' },
-    { href: '/faq', label: 'FAQ' },
+    { href: '/', label: t.common.home },
+    { href: '/shop', label: t.common.shop },
+    { href: '/rewards', label: t.common.rewards },
+    { href: '/locations', label: t.common.locations },
+    { href: '/about', label: t.common.aboutUs },
+    { href: '/shipping', label: t.common.shipping },
+    { href: '/contact', label: t.common.contact },
+    { href: '/faq', label: t.common.faq },
   ];
 
   return (
@@ -445,17 +448,27 @@ function Header() {
                 </span>
               )}
             </Link>
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLocale(locale === 'en' ? 'fr' : 'en')}
+              className="text-white hover:text-[#F15929] transition-colors p-2 flex items-center gap-1"
+              aria-label={t.lang.tooltip}
+              title={t.lang.tooltip}
+            >
+              <Globe size={18} />
+              <span className="text-xs font-display">{t.lang.switchTo}</span>
+            </button>
             <Link
               href={isAuthenticated ? '/account' : '/account/login'}
               className="hidden md:block text-white hover:text-[#F15929] transition-colors p-2"
-              aria-label="Account"
+              aria-label={t.common.account}
             >
               <User size={22} />
             </Link>
             <button
               onClick={() => setMenuOpen(true)}
               className="lg:hidden text-white p-2"
-              aria-label="Open navigation menu"
+              aria-label={t.header.openMenu}
             >
               <Menu size={24} />
             </button>
@@ -465,7 +478,7 @@ function Header() {
         {/* Shipping banner: explicit h-8 (32px) so height never shifts */}
         <div className="h-8 bg-[#F15929] text-white flex items-center justify-center text-xs md:text-sm font-medium font-body whitespace-nowrap overflow-hidden">
           <Truck size={14} className="inline-block shrink-0 mr-1.5" />
-          FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada
+          {t.header.freeShippingBanner}
         </div>
       </header>
 
@@ -525,13 +538,13 @@ function Header() {
                     href={isAuthenticated ? '/account' : '/account/login'}
                     className="flex items-center gap-3 py-3 px-4 rounded-lg text-lg font-display text-[#333] hover:bg-[#F5F5F5]"
                   >
-                    <User size={20} /> {isAuthenticated ? 'My Account' : 'Sign In'}
+                    <User size={20} /> {isAuthenticated ? t.common.myAccount : t.common.signIn}
                   </Link>
                   <Link
                     href="/rewards"
                     className="flex items-center gap-3 py-3 px-4 rounded-lg text-lg font-display text-[#F15929] hover:bg-[#F5F5F5]"
                   >
-                    <Gift size={20} /> My Rewards
+                    <Gift size={20} /> {t.common.myRewards}
                   </Link>
                 </div>
               </div>
@@ -547,6 +560,7 @@ function Header() {
 // FOOTER
 // ============================================================
 function Footer() {
+  const { t } = useT();
   return (
     <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8">
       <div className="container py-12">
@@ -563,7 +577,7 @@ function Footer() {
               loading="lazy"
             />
             <p className="text-white/70 text-sm font-body leading-relaxed">
-              Your trusted 24/7 cannabis dispensary serving the Greater Toronto Area and Ottawa. Premium products, nationwide shipping.
+              {t.footer.brand}
             </p>
             <div className="flex gap-3 mt-4">
               <a
@@ -582,9 +596,9 @@ function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">QUICK LINKS</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.quickLinks}</h3>
             <ul className="space-y-2 font-body text-sm">
-              {[['/', 'Home'], ['/shop', 'Shop All'], ['/rewards', 'Rewards Program'], ['/locations', 'Store Locations'], ['/about', 'About Us'], ['/faq', 'FAQ']].map(([href, label]) => (
+              {[['/', t.common.home], ['/shop', t.footer.shopAll], ['/rewards', t.footer.rewardsProgram], ['/locations', t.footer.storeLocations], ['/about', t.common.aboutUs], ['/faq', t.common.faq]].map(([href, label]) => (
                 <li key={href}><Link href={href} className="text-white/70 hover:text-[#F15929] transition-colors">{label}</Link></li>
               ))}
             </ul>
@@ -592,15 +606,15 @@ function Footer() {
 
           {/* Categories */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">CATEGORIES</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.categories}</h3>
             <ul className="space-y-2 font-body text-sm">
               {[
-                { label: 'Flower',       slug: 'flower' },
-                { label: 'Pre-Rolls',    slug: 'pre-rolls' },
-                { label: 'Edibles',      slug: 'edibles' },
-                { label: 'Vapes',        slug: 'vapes' },
-                { label: 'Concentrates', slug: 'concentrates' },
-                { label: 'Accessories',  slug: 'accessories' },
+                { label: t.footer.flower,       slug: 'flower' },
+                { label: t.footer.preRolls,    slug: 'pre-rolls' },
+                { label: t.footer.edibles,      slug: 'edibles' },
+                { label: t.footer.vapes,        slug: 'vapes' },
+                { label: t.footer.concentrates, slug: 'concentrates' },
+                { label: t.footer.accessories,  slug: 'accessories' },
               ].map(cat => (
                 <li key={cat.slug}>
                   <Link href={`/shop/${cat.slug}`} className="text-white/70 hover:text-[#F15929] transition-colors">
@@ -616,7 +630,7 @@ function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">CONTACT US</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.contactUs}</h3>
             <ul className="space-y-3 font-body text-sm">
               <li className="flex items-start gap-2 text-white/70">
                 <MapPin size={16} className="mt-0.5 shrink-0 text-[#F15929]" />
@@ -637,11 +651,11 @@ function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/50 font-body">
-          <p>&copy; {new Date().getFullYear()} My Legacy Cannabis. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} My Legacy Cannabis. {t.common.allRightsReserved}</p>
           <div className="flex gap-4">
-            <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms &amp; Conditions</Link>
-            <Link href="/shipping" className="hover:text-white transition-colors">Shipping Policy</Link>
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">{t.common.privacyPolicy}</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">{t.common.terms}</Link>
+            <Link href="/shipping" className="hover:text-white transition-colors">{t.common.shippingPolicy}</Link>
           </div>
         </div>
       </div>
@@ -656,13 +670,14 @@ function MobileBottomNav() {
   const [location] = useLocation();
   const { itemCount } = useCart();
   const { isAuthenticated } = useAuth();
+  const { t } = useT();
 
   const tabs = [
-    { href: '/', icon: Home, label: 'Home' },
-    { href: '/shop', icon: Search, label: 'Shop' },
-    { href: '/rewards', icon: Gift, label: 'Rewards' },
-    { href: '/cart', icon: ShoppingCart, label: 'Cart', badge: itemCount },
-    { href: isAuthenticated ? '/account' : '/account/login', icon: User, label: 'Account' },
+    { href: '/', icon: Home, label: t.common.home },
+    { href: '/shop', icon: Search, label: t.common.shop },
+    { href: '/rewards', icon: Gift, label: t.common.rewards },
+    { href: '/cart', icon: ShoppingCart, label: t.common.cart, badge: itemCount },
+    { href: isAuthenticated ? '/account' : '/account/login', icon: User, label: t.common.account },
   ];
 
   return (

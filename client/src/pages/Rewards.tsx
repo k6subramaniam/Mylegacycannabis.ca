@@ -3,10 +3,12 @@ import SEOHead from '@/components/SEOHead';
 import { WaveDivider } from '@/components/Layout';
 import { rewardTiers, POINTS_PER_DOLLAR, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFEREE, MIN_REDEMPTION_POINTS, MAX_DISCOUNT_PERCENT } from '@/lib/data';
 import { Gift, Star, Users, Calendar, MessageSquare, ShoppingCart, ArrowRight, CheckCircle, Zap } from 'lucide-react';
+import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-rewards-3eSuXoWLdHAW3VzjYxZwXX.webp';
 
 export default function Rewards() {
+  const { t } = useT();
   return (
     <>
       <SEOHead
@@ -23,15 +25,15 @@ export default function Rewards() {
         </div>
         <div className="container relative z-10 py-8 md:py-14">
           <div className="max-w-2xl">
-            <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">LOYALTY PROGRAM</span>
+            <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">{t.rewardsPage.loyaltyProgram}</span>
             <h1 className="font-display text-4xl md:text-5xl text-white leading-tight mb-4">
-              MY LEGACY<br /><span className="text-[#F15929]">REWARDS</span>
+              {t.rewardsPage.myLegacyRewards}<br /><span className="text-[#F15929]">{t.rewardsPage.rewards}</span>
             </h1>
             <p className="text-white/80 text-lg font-body mb-8 max-w-lg">
-              Earn points on every purchase. Redeem for discounts. Get rewarded for being a loyal customer.
+              {t.rewardsPage.heroDesc}
             </p>
             <Link href="/account/register" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 px-8 rounded-full transition-all hover:scale-105">
-              JOIN NOW — GET {WELCOME_BONUS} POINTS FREE <ArrowRight size={18} />
+              {t.rewardsPage.joinNowGet.replace('{points}', String(WELCOME_BONUS))} <ArrowRight size={18} />
             </Link>
           </div>
         </div>
@@ -42,14 +44,14 @@ export default function Rewards() {
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">HOW IT WORKS</h2>
-            <p className="text-gray-600 font-body max-w-lg mx-auto">Three simple steps to start earning rewards.</p>
+            <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">{t.rewardsPage.howItWorks}</h2>
+            <p className="text-gray-600 font-body max-w-lg mx-auto">{t.rewardsPage.howItWorksDesc}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { step: '01', icon: Users, title: 'SIGN UP', desc: 'Create a free account and get 25 bonus points instantly. Enrollment is automatic.' },
-              { step: '02', icon: ShoppingCart, title: 'EARN POINTS', desc: `Earn ${POINTS_PER_DOLLAR} point for every $1 spent. Plus bonus points for reviews, referrals, and birthdays.` },
-              { step: '03', icon: Gift, title: 'REDEEM REWARDS', desc: 'Use your points for discounts up to $150 OFF. Redeem at checkout with a single click.' },
+              { step: '01', icon: Users, title: t.rewardsPage.step1, desc: t.rewardsPage.step1Desc },
+              { step: '02', icon: ShoppingCart, title: t.rewardsPage.step2, desc: t.rewardsPage.step2Desc.replace('{ptsPerDollar}', String(POINTS_PER_DOLLAR)) },
+              { step: '03', icon: Gift, title: t.rewardsPage.step3, desc: t.rewardsPage.step3Desc },
             ].map((item, i) => (
               <div key={i} className="bg-[#F5F5F5] rounded-2xl p-6 text-center relative overflow-hidden">
                 <span className="absolute top-4 right-4 font-display text-5xl text-[#4B2D8E]/10">{item.step}</span>
@@ -68,16 +70,16 @@ export default function Rewards() {
       <section className="bg-[#F5F5F5] py-12 md:py-16">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">WAYS TO EARN</h2>
+            <h2 className="font-display text-3xl text-[#4B2D8E] mb-3">{t.rewardsPage.waysToEarn}</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
-              { icon: ShoppingCart, label: 'Every Purchase', points: `${POINTS_PER_DOLLAR} pt / $1`, desc: 'Earn on every order (pre-tax, pre-shipping)' },
-              { icon: Zap, label: 'Welcome Bonus', points: `${WELCOME_BONUS} pts`, desc: 'Just for creating an account' },
-              { icon: Calendar, label: 'Birthday Bonus', points: `${BIRTHDAY_BONUS} pts`, desc: 'Happy birthday from us to you!' },
-              { icon: MessageSquare, label: 'Product Review', points: `${REVIEW_BONUS} pts`, desc: 'Per approved review' },
-              { icon: Users, label: 'Refer a Friend', points: `${REFERRAL_BONUS_REFERRER} pts`, desc: `You get ${REFERRAL_BONUS_REFERRER}, friend gets ${REFERRAL_BONUS_REFEREE}` },
-              { icon: Star, label: 'Special Promos', points: 'Varies', desc: 'Bonus point events throughout the year' },
+              { icon: ShoppingCart, label: t.rewardsPage.everyPurchase, points: `${POINTS_PER_DOLLAR} pt / $1`, desc: t.rewardsPage.everyPurchaseDesc },
+              { icon: Zap, label: t.rewardsPage.welcomeBonus, points: `${WELCOME_BONUS} ${t.common.pts}`, desc: t.rewardsPage.welcomeBonusDesc },
+              { icon: Calendar, label: t.rewardsPage.birthdayBonus, points: `${BIRTHDAY_BONUS} ${t.common.pts}`, desc: t.rewardsPage.birthdayBonusDesc },
+              { icon: MessageSquare, label: t.rewardsPage.productReview, points: `${REVIEW_BONUS} ${t.common.pts}`, desc: t.rewardsPage.productReviewDesc },
+              { icon: Users, label: t.rewardsPage.referFriend, points: `${REFERRAL_BONUS_REFERRER} ${t.common.pts}`, desc: t.rewardsPage.referFriendDesc.replace('{referrer}', String(REFERRAL_BONUS_REFERRER)).replace('{referee}', String(REFERRAL_BONUS_REFEREE)) },
+              { icon: Star, label: t.rewardsPage.specialPromos, points: t.rewardsPage.varies, desc: t.rewardsPage.specialPromosDesc },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-xl p-5 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-[#4B2D8E]/10 flex items-center justify-center shrink-0">
@@ -100,8 +102,8 @@ export default function Rewards() {
       <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl text-white mb-3">REDEMPTION TIERS</h2>
-            <p className="text-white/70 font-body max-w-lg mx-auto">The more points you accumulate, the bigger the discount.</p>
+            <h2 className="font-display text-3xl text-white mb-3">{t.rewardsPage.redemptionTiers}</h2>
+            <p className="text-white/70 font-body max-w-lg mx-auto">{t.rewardsPage.redemptionTiersDesc}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {rewardTiers.map((tier, i) => (
@@ -126,7 +128,7 @@ export default function Rewards() {
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container max-w-3xl">
           <div>
-            <h2 className="font-display text-3xl text-[#4B2D8E] mb-6 text-center">PROGRAM DETAILS</h2>
+            <h2 className="font-display text-3xl text-[#4B2D8E] mb-6 text-center">{t.rewardsPage.programDetails}</h2>
             <div className="space-y-4">
               {[
                 { q: 'When do I earn points?', a: 'Points are awarded when your order is marked as completed. Points are calculated on the pre-tax, pre-shipping order total.' },
@@ -150,10 +152,10 @@ export default function Rewards() {
       {/* CTA */}
       <section className="bg-[#F15929] py-12">
         <div className="container text-center">
-          <h2 className="font-display text-3xl text-white mb-4">START EARNING TODAY</h2>
-          <p className="text-white/80 font-body mb-6 max-w-lg mx-auto">Create your free account and get {WELCOME_BONUS} bonus points instantly. It's free to join!</p>
+          <h2 className="font-display text-3xl text-white mb-4">{t.rewardsPage.startEarningToday}</h2>
+          <p className="text-white/80 font-body mb-6 max-w-lg mx-auto">{t.rewardsPage.startEarningDesc.replace('{points}', String(WELCOME_BONUS))}</p>
           <Link href="/account/register" className="inline-flex items-center gap-2 bg-[#4B2D8E] hover:bg-[#3a2270] text-white font-display py-3.5 px-8 rounded-full transition-all hover:scale-105">
-            CREATE FREE ACCOUNT <ArrowRight size={18} />
+            {t.rewardsPage.createFreeAccount} <ArrowRight size={18} />
           </Link>
         </div>
       </section>

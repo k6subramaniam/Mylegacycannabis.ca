@@ -10,10 +10,12 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useT } from '@/i18n';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 export default function Cart() {
+  const { t } = useT();
   const { items, updateQuantity, removeItem, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, freeShippingProgress, amountToFreeShipping, meetsMinimum, pointsToEarn, appliedReward, applyReward, rewardDiscount } = useCart();
   const { user } = useAuth();
   const { idVerificationEnabled } = useSiteConfig();
@@ -26,10 +28,10 @@ export default function Cart() {
         <SEOHead title="Cart" description="Your shopping cart is empty." noindex />
         <section className="container py-20 text-center">
           <ShoppingCart size={64} className="text-gray-300 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">YOUR CART IS EMPTY</h1>
-          <p className="text-gray-500 font-body mb-6">Looks like you haven't added anything yet.</p>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">{t.cart.cartEmpty}</h1>
+          <p className="text-gray-500 font-body mb-6">{t.cart.cartEmptyDesc}</p>
           <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all">
-            START SHOPPING <ArrowRight size={18} />
+            {t.cart.startShopping} <ArrowRight size={18} />
           </Link>
         </section>
       </>
@@ -42,15 +44,15 @@ export default function Cart() {
       <section className="bg-white py-6 md:py-10">
         <div className="container">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: 'Cart' }]} />
-          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">YOUR CART</h1>
+          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">{t.cart.yourCart}</h1>
 
           {/* Free shipping progress */}
           <div className="bg-[#F5F5F5] rounded-xl p-4 mb-6">
             {isFreeShipping ? (
-              <p className="text-sm font-body text-[#4B2D8E] flex items-center gap-2"><Truck size={16} className="text-[#F15929]" /> <strong>You qualify for FREE shipping!</strong></p>
+              <p className="text-sm font-body text-[#4B2D8E] flex items-center gap-2"><Truck size={16} className="text-[#F15929]" /> <strong>{t.cart.youQualifyFreeShipping}</strong></p>
             ) : (
               <>
-                <p className="text-sm font-body text-[#333] mb-2">Add <strong className="text-[#F15929]">${amountToFreeShipping.toFixed(2)}</strong> more for <strong>FREE shipping</strong></p>
+                <p className="text-sm font-body text-[#333] mb-2">{t.cart.addMoreForFreeShipping.replace('{amount}', amountToFreeShipping.toFixed(2))}</p>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-[#F15929] h-2.5 rounded-full transition-all" style={{ width: `${freeShippingProgress}%` }} />
                 </div>
@@ -120,11 +122,11 @@ export default function Cart() {
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-[#F5F5F5] rounded-2xl p-6 sticky top-28">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">ORDER SUMMARY</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.cart.orderSummary}</h2>
 
                 {/* Shipping province selector */}
                 <div className="mb-4">
-                  <label className="text-xs text-gray-500 font-body block mb-1">Shipping to:</label>
+                  <label className="text-xs text-gray-500 font-body block mb-1">{t.cart.shippingTo}</label>
                   <select value={shippingProvince} onChange={e => setShippingProvince(e.target.value)}
                     className="w-full bg-white rounded-lg px-3 py-2.5 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" aria-label="Select province">
                     {canadianProvinces.map(p => (
@@ -134,19 +136,19 @@ export default function Cart() {
                 </div>
 
                 <div className="space-y-3 text-sm font-body border-b border-gray-200 pb-4 mb-4">
-                  <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="text-[#333]">${subtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">{t.cart.subtotal}</span><span className="text-[#333]">${subtotal.toFixed(2)}</span></div>
                   {rewardDiscount > 0 && (
-                    <div className="flex justify-between text-[#F15929]"><span>Rewards Discount</span><span>-${rewardDiscount.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-[#F15929]"><span>{t.cart.rewardsDiscount}</span><span>-${rewardDiscount.toFixed(2)}</span></div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Shipping</span>
-                    <span className={isFreeShipping ? 'text-[#F15929] font-medium' : 'text-[#333]'}>{isFreeShipping ? 'FREE' : `$${shippingRate.toFixed(2)}`}</span>
+                    <span className="text-gray-500">{t.cart.shippingLabel}</span>
+                    <span className={isFreeShipping ? 'text-[#F15929] font-medium' : 'text-[#333]'}>{isFreeShipping ? t.common.free : `$${shippingRate.toFixed(2)}`}</span>
                   </div>
-                  <div className="flex justify-between"><span className="text-gray-500">Tax</span><span className="text-[#333]">$0.00</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">{t.cart.tax}</span><span className="text-[#333]">$0.00</span></div>
                 </div>
 
                 <div className="flex justify-between font-display text-lg mb-2">
-                  <span className="text-[#4B2D8E]">TOTAL</span>
+                  <span className="text-[#4B2D8E]">{t.cart.total}</span>
                   <span className="text-[#4B2D8E]">${total.toFixed(2)}</span>
                 </div>
 
@@ -173,11 +175,11 @@ export default function Cart() {
 
                 <Link href={meetsMinimum ? '/checkout' : '#'}
                   className={`block w-full text-center font-display py-3.5 rounded-full transition-all ${meetsMinimum ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
-                  PROCEED TO CHECKOUT
+                  {t.cart.proceedToCheckout}
                 </Link>
 
                 <Link href="/shop" className="block text-center text-sm text-[#4B2D8E] hover:text-[#F15929] font-body mt-3 transition-colors">
-                  Continue Shopping
+                  {t.common.continueShopping}
                 </Link>
               </div>
             </div>

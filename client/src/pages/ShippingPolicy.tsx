@@ -2,8 +2,10 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
 import { Truck, Package, Clock, Shield, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
+import { useT } from '@/i18n';
 
 export default function ShippingPolicy() {
+  const { t } = useT();
   return (
     <>
       <SEOHead
@@ -15,8 +17,8 @@ export default function ShippingPolicy() {
       <section className="bg-[#4B2D8E] py-6">
         <div className="container">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shipping Policy' }]} variant="dark" />
-          <h1 className="font-display text-3xl md:text-4xl text-white">SHIPPING POLICY</h1>
-          <p className="text-white/70 font-body mt-2">Nationwide delivery across Canada via Canada Post.</p>
+          <h1 className="font-display text-3xl md:text-4xl text-white">{t.shippingPage.title}</h1>
+          <p className="text-white/70 font-body mt-2">{t.shippingPage.subtitle}</p>
         </div>
       </section>
 
@@ -25,16 +27,16 @@ export default function ShippingPolicy() {
           {/* Free shipping banner */}
           <div className="bg-[#F15929] rounded-2xl p-6 text-white text-center mb-8">
             <Truck size={32} className="mx-auto mb-2" />
-            <h2 className="font-display text-2xl mb-1">FREE SHIPPING</h2>
-            <p className="font-body text-white/90">On all orders over <strong>${FREE_SHIPPING_THRESHOLD}</strong> — anywhere in Canada!</p>
+            <h2 className="font-display text-2xl mb-1">{t.shippingPage.freeShipping}</h2>
+            <p className="font-body text-white/90">{t.shippingPage.freeShippingDesc.replace('{threshold}', String(FREE_SHIPPING_THRESHOLD))}</p>
           </div>
 
           {/* Shipping Rates Table */}
           <div className="mb-8">
-            <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">SHIPPING RATES</h2>
+            <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">{t.shippingPage.shippingRates}</h2>
             <div className="bg-[#F5F5F5] rounded-2xl overflow-hidden">
               <div className="grid grid-cols-3 bg-[#4B2D8E] text-white font-display text-xs p-4">
-                <span>REGION</span><span>RATE</span><span>DELIVERY TIME</span>
+                <span>{t.shippingPage.region}</span><span>{t.shippingPage.rate}</span><span>{t.shippingPage.deliveryTime}</span>
               </div>
               {shippingZones.map((zone, i) => (
                 <div key={zone.name} className={`grid grid-cols-3 p-4 text-sm font-body ${i % 2 === 0 ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
@@ -51,14 +53,14 @@ export default function ShippingPolicy() {
 
           {/* Key Policies */}
           <div className="space-y-6">
-            <h2 className="font-display text-2xl text-[#4B2D8E]">SHIPPING DETAILS</h2>
+            <h2 className="font-display text-2xl text-[#4B2D8E]">{t.shippingPage.shippingDetails}</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { icon: Package, title: 'Carrier', desc: 'All orders are shipped via Canada Post Xpresspost with tracking.' },
-                { icon: Clock, title: 'Processing Time', desc: 'Orders are processed within 24 hours of payment confirmation.' },
-                { icon: Shield, title: 'Discreet Packaging', desc: 'All orders are shipped in plain, unmarked packaging for your privacy.' },
-                { icon: MapPin, title: 'Delivery Area', desc: 'We ship to all provinces and territories across Canada.' },
+                { icon: Package, title: t.shippingPage.carrier, desc: t.shippingPage.carrierDesc },
+                { icon: Clock, title: t.shippingPage.processingTime, desc: t.shippingPage.processingTimeDesc },
+                { icon: Shield, title: t.shippingPage.discreetPackaging, desc: t.shippingPage.discreetPackagingDesc },
+                { icon: MapPin, title: t.shippingPage.deliveryArea, desc: t.shippingPage.deliveryAreaDesc },
               ].map((item, i) => (
                 <div key={i} className="bg-[#F5F5F5] rounded-xl p-5 flex items-start gap-4">
                   <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
@@ -73,7 +75,7 @@ export default function ShippingPolicy() {
             </div>
 
             <div className="bg-[#F5F5F5] rounded-2xl p-6">
-              <h3 className="font-display text-lg text-[#4B2D8E] mb-4">IMPORTANT INFORMATION</h3>
+              <h3 className="font-display text-lg text-[#4B2D8E] mb-4">{t.shippingPage.importantInfo}</h3>
               <ul className="space-y-3">
                 {[
                   `Minimum order amount: $${MINIMUM_ORDER}`,
@@ -96,8 +98,8 @@ export default function ShippingPolicy() {
               <div className="flex items-start gap-3">
                 <AlertCircle size={20} className="text-orange-500 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-display text-sm text-orange-700">AGE VERIFICATION REQUIRED</h3>
-                  <p className="text-sm text-orange-600 font-body mt-1">All customers must be 19 years of age or older. ID verification is required during account registration. A signature from an adult (19+) is required upon delivery.</p>
+                  <h3 className="font-display text-sm text-orange-700">{t.shippingPage.ageVerificationRequired}</h3>
+                  <p className="text-sm text-orange-600 font-body mt-1">{t.shippingPage.ageVerificationDesc}</p>
                 </div>
               </div>
             </div>
