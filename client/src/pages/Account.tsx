@@ -3,14 +3,14 @@ import { Link, useLocation } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { rewardTiers, getEligibleRewardTiers, BIRTHDAY_BONUS, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star } from 'lucide-react';
+import { rewardTiers, getEligibleRewardTiers, REFERRAL_BONUS_REFERRER } from '@/lib/data';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function Account() {
   const [location, navigate] = useLocation();
-  const { user, isAuthenticated, login, register, logout, updateProfile } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { idVerificationEnabled } = useSiteConfig();
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -90,7 +90,7 @@ export default function Account() {
           </div>
 
           {/* Tab content */}
-          {activeTab === 'profile' && <ProfileTab user={user} updateProfile={updateProfile} />}
+          {activeTab === 'profile' && <ProfileTab user={user} />}
           {activeTab === 'orders' && <OrdersTab user={user} />}
           {activeTab === 'rewards' && <RewardsTab user={user} />}
         </div>
@@ -99,93 +99,53 @@ export default function Account() {
   );
 }
 
-function isAtLeast19(dob: string): boolean {
-  if (!dob) return false;
-  const parts = dob.split('-');
-  if (parts.length !== 3) return false;
-  const birthYear = parseInt(parts[0], 10);
-  const birthMonth = parseInt(parts[1], 10) - 1;
-  const birthDay = parseInt(parts[2], 10);
-  if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return false;
-  const today = new Date();
-  let age = today.getFullYear() - birthYear;
-  if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
-  return age >= 19;
-}
 
-function maxBirthdayDate(): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 19);
-  return d.toISOString().split('T')[0];
-}
-
-function ProfileTab({ user, updateProfile }: { user: any; updateProfile: (d: any) => void }) {
+function ProfileTab({ user }: { user: any }) {
   const { idVerificationEnabled } = useSiteConfig();
-  const [firstName, setFirstName] = useState(user.firstName);
-  const [lastName, setLastName] = useState(user.lastName);
-  const [phone, setPhone] = useState(user.phone || '');
-  // If the stored birthday is underage, clear it so the user must re-enter a valid date
-  const [birthday, setBirthday] = useState(() => {
-    const stored = user.birthday || '';
-    if (stored && !isAtLeast19(stored)) return '';
-    return stored;
-  });
-  const [birthdayError, setBirthdayError] = useState('');
 
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (birthday && !isAtLeast19(birthday)) {
-      setBirthdayError('You must be 19 years of age or older.');
-      toast.error('You must be 19 years of age or older.');
-      return;
-    }
-    setBirthdayError('');
-    setSaving(true);
-    try {
-      const result = await updateProfile({ firstName, lastName, phone, birthday });
-      if (result === true) {
-        toast.success('Profile saved successfully');
-      } else {
-        toast.error(result || 'Failed to save profile');
-      }
-    } catch {
-      toast.error('Failed to save profile');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const disabledInputClass = 'w-full bg-gray-100 rounded-lg px-4 py-3 text-sm font-body text-gray-500 cursor-not-allowed';
 
   return (
     <div className="space-y-6">
+      {/* Contact admin notice */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+        <Lock size={18} className="text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-body text-amber-800 font-medium">Profile details are locked after registration</p>
+          <p className="text-xs font-body text-amber-700 mt-1">
+            For security purposes, personal information cannot be changed by customers.
+            If you need to update your details, please contact our support team.
+          </p>
+          <a href="mailto:support@mylegacycannabis.ca" className="inline-flex items-center gap-1.5 mt-2 text-xs font-display text-[#F15929] hover:underline">
+            <Mail size={13} /> CONTACT SUPPORT
+          </a>
+        </div>
+      </div>
+
       <div className="bg-[#F5F5F5] rounded-2xl p-6">
         <h2 className="font-display text-lg text-[#4B2D8E] mb-4">PERSONAL INFORMATION</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-gray-500 font-body block mb-1">First Name</label>
-            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
+            <input type="text" value={user.firstName || ''} disabled className={disabledInputClass} />
           </div>
           <div>
             <label className="text-xs text-gray-500 font-body block mb-1">Last Name</label>
-            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
+            <input type="text" value={user.lastName || ''} disabled className={disabledInputClass} />
           </div>
           <div>
             <label className="text-xs text-gray-500 font-body block mb-1">Email</label>
-            <input type="email" value={user.email} disabled className="w-full bg-gray-100 rounded-lg px-4 py-3 text-sm font-body text-gray-400" />
+            <input type="email" value={user.email || ''} disabled className={disabledInputClass} />
           </div>
           <div>
             <label className="text-xs text-gray-500 font-body block mb-1">Phone</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
+            <input type="tel" value={user.phone || ''} disabled className={disabledInputClass} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 font-body block mb-1">Birthday <span className="text-[#F15929]">(must be 19+ — earn {BIRTHDAY_BONUS} bonus points!)</span></label>
-            <input type="date" value={birthday} max={maxBirthdayDate()} min="1900-01-01" onChange={e => { setBirthday(e.target.value); setBirthdayError(''); }} className={`w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-2 focus:ring-2 focus:ring-[#4B2D8E] ${birthdayError ? 'border-red-400' : 'border-transparent'}`} />
-            {(birthdayError || (birthday && !isAtLeast19(birthday))) && <p className="text-xs text-red-500 font-body mt-1">{birthdayError || 'You must be 19 years of age or older.'}</p>}
+            <label className="text-xs text-gray-500 font-body block mb-1">Birthday</label>
+            <input type="text" value={user.birthday || 'Not set'} disabled className={disabledInputClass} />
           </div>
         </div>
-        <button onClick={handleSave} disabled={saving} className="mt-4 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-2.5 px-6 rounded-full transition-all disabled:opacity-60 flex items-center gap-2">
-          {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> SAVING...</> : 'SAVE CHANGES'}
-        </button>
       </div>
 
       {/* ID Verification Status — hidden when feature is disabled */}

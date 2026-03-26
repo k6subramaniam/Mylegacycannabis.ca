@@ -790,36 +790,9 @@ export const appRouter = router({
       const userId = ctx.user?.id;
       if (!userId) throw new Error("Not authenticated");
 
-      // Age gate on birthday update
-      if (input.birthday) {
-        const parts = input.birthday.split('-');
-        if (parts.length === 3) {
-          const birthYear = parseInt(parts[0], 10);
-          const birthMonth = parseInt(parts[1], 10) - 1;
-          const birthDay = parseInt(parts[2], 10);
-          if (!isNaN(birthYear) && !isNaN(birthMonth) && !isNaN(birthDay)) {
-            const today = new Date();
-            let age = today.getFullYear() - birthYear;
-            if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
-            if (age < 19) {
-              throw new Error("You must be 19 years of age or older.");
-            }
-          }
-        }
-      }
-
-      const updates: Record<string, any> = {};
-      if (input.name !== undefined) updates.name = input.name;
-      if (input.phone !== undefined) updates.phone = input.phone;
-      if (input.birthday !== undefined) updates.birthday = input.birthday;
-
-      if (Object.keys(updates).length > 0) {
-        await db.updateUser(userId, updates);
-      }
-
-      const updatedUser = await db.getUserById(userId);
-      if (!updatedUser) throw new Error("User not found");
-      return { success: true, user: await buildFullUserResponse(updatedUser) };
+      // ─── CUSTOMERS CANNOT EDIT THEIR OWN PROFILE ───
+      // Only admins can update customer details via the admin panel.
+      throw new Error("Profile changes are locked. Please contact support@mylegacycannabis.ca to update your details.");
     }),
 
     // ─── REFRESH USER (authenticated users — re-fetch latest data incl. ID verification status) ───
