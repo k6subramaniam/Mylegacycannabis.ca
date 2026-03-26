@@ -355,7 +355,14 @@ export default function Checkout() {
       clearCart();
       toast.success('Order placed successfully!');
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to place order. Please try again.');
+      const raw = err?.message || '';
+      // tRPC JSON parse failures (e.g. 503 "Service Unavailable") produce ugly messages
+      const friendly = raw.includes('not valid JSON') || raw.includes('Unexpected token')
+        ? 'Our server is temporarily unavailable. Please try again in a moment.'
+        : raw.includes('Out of stock')
+          ? raw
+          : raw || 'Failed to place order. Please try again.';
+      toast.error(friendly);
     } finally {
       setSubmitting(false);
     }
