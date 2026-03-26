@@ -4,6 +4,7 @@ import { Breadcrumbs } from '@/components/Layout';
 import { Link } from 'wouter';
 import { ChevronDown, Search, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useT } from '@/i18n';
 
 const faqCategories = [
   {
@@ -65,6 +66,7 @@ const faqCategories = [
 ];
 
 export default function FAQ() {
+  const { t } = useT();
   const [search, setSearch] = useState('');
   const [openCategory, setOpenCategory] = useState<string | null>('Ordering');
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
@@ -95,11 +97,11 @@ export default function FAQ() {
 
       <section className="bg-[#4B2D8E] py-6">
         <div className="container">
-          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'FAQ' }]} variant="dark" />
-          <h1 className="font-display text-3xl md:text-4xl text-white mb-4">FREQUENTLY ASKED QUESTIONS</h1>
+          <Breadcrumbs items={[{ label: t.common.home, href: '/' }, { label: t.common.faq }]} variant="dark" />
+          <h1 className="font-display text-3xl md:text-4xl text-white mb-4">{t.faqPage.title}</h1>
           <div className="relative max-w-lg">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search questions..."
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t.faqPage.searchPlaceholder}
               className="w-full bg-white rounded-full pl-11 pr-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#F15929]" />
           </div>
         </div>
@@ -110,8 +112,8 @@ export default function FAQ() {
           {filtered.length === 0 && (
             <div className="text-center py-12">
               <HelpCircle size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="font-display text-lg text-gray-400 mb-2">NO RESULTS FOUND</p>
-              <p className="text-gray-500 font-body text-sm">Try a different search term or <Link href="/contact" className="text-[#F15929] hover:underline">contact us</Link>.</p>
+              <p className="font-display text-lg text-gray-400 mb-2">{t.faqPage.noResults}</p>
+              <p className="text-gray-500 font-body text-sm">{t.faqPage.noResultsDesc} <Link href="/contact" className="text-[#F15929] hover:underline">{t.faqPage.contactUsLink}</Link>.</p>
             </div>
           )}
 
@@ -157,9 +159,9 @@ export default function FAQ() {
 
           {/* Still have questions */}
           <div className="bg-[#F5F5F5] rounded-2xl p-6 text-center mt-8">
-            <h2 className="font-display text-xl text-[#4B2D8E] mb-2">STILL HAVE QUESTIONS?</h2>
-            <p className="text-gray-600 font-body text-sm mb-4">Our team is here to help. Reach out anytime.</p>
-            <Link href="/contact" className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-8 rounded-full transition-all inline-block">CONTACT US</Link>
+            <h2 className="font-display text-xl text-[#4B2D8E] mb-2">{t.faqPage.stillHaveQuestions}</h2>
+            <p className="text-gray-600 font-body text-sm mb-4">{t.faqPage.stillHaveQuestionsDesc}</p>
+            <Link href="/contact" className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-8 rounded-full transition-all inline-block">{t.contactPage.contactUsTitle}</Link>
           </div>
         </div>
       </section>

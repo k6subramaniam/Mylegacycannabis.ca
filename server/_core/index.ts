@@ -34,6 +34,42 @@ async function startServer() {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // ─── GEO-LOCATION ENDPOINT (for auto-translation) ───
+  // Returns the user's province/region from their IP via free ipapi.co service.
+  // Quebec customers get French; everyone else gets English.
+  app.get("/api/geo", async (req, res) => {
+    try {
+      // Get client IP (behind proxy: x-forwarded-for, or Railway sets x-real-ip)
+      const forwarded = req.headers["x-forwarded-for"];
+      const ip = typeof forwarded === "string"
+        ? forwarded.split(",")[0].trim()
+        : req.socket.remoteAddress || "";
+
+      // Skip for localhost/private IPs
+      if (!ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("192.168.") || ip.startsWith("10.")) {
+        return res.json({ province: "", region: "", country: "CA", source: "local" });
+      }
+
+      // Use free ipapi.co (no key required, 30k/month free)
+      const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!geoRes.ok) throw new Error(`ipapi returned ${geoRes.status}`);
+      const geo = await geoRes.json() as any;
+
+      res.json({
+        province: geo.region_code || geo.region || "",
+        region: geo.region || "",
+        country: geo.country_code || "",
+        city: geo.city || "",
+        source: "ipapi",
+      });
+    } catch (err) {
+      // Fail silently — frontend will use browser language or default to English
+      res.json({ province: "", region: "", country: "", source: "error" });
+    }
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)

@@ -10,6 +10,7 @@ import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileT
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useT } from '@/i18n';
 
 /* ================================================================
    GUEST ID VERIFICATION INLINE COMPONENT
@@ -168,6 +169,7 @@ function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verifi
    MAIN CHECKOUT PAGE
    ================================================================ */
 export default function Checkout() {
+  const { t } = useT();
   const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
   const { idVerificationEnabled } = useSiteConfig();
@@ -205,9 +207,9 @@ export default function Checkout() {
         <SEOHead title="Checkout" description="Complete your order." noindex />
         <section className="container py-20 text-center">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">MINIMUM ORDER NOT MET</h1>
-          <p className="text-gray-500 font-body mb-6">The minimum order is ${MINIMUM_ORDER}. Please add more items.</p>
-          <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] text-white font-display py-3 px-8 rounded-full">CONTINUE SHOPPING</Link>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">{t.checkout.minimumNotMet}</h1>
+          <p className="text-gray-500 font-body mb-6">{t.checkout.minimumNotMetDesc.replace('{min}', String(MINIMUM_ORDER))}</p>
+          <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] text-white font-display py-3 px-8 rounded-full">{t.common.continueShopping}</Link>
         </section>
       </>
     );
@@ -221,7 +223,7 @@ export default function Checkout() {
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} className="text-green-600" />
           </motion.div>
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">ORDER RECEIVED!</h1>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">{t.checkout.orderReceived}</h1>
           <p className="text-gray-600 font-body mb-2">Order #{orderNumber}</p>
 
           {orderHeldForIdReview ? (
@@ -256,8 +258,8 @@ export default function Checkout() {
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/shop" className="bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all">CONTINUE SHOPPING</Link>
-            {isAuthenticated && <Link href="/account/orders" className="bg-[#4B2D8E] text-white font-display py-3 px-8 rounded-full hover:bg-[#3a2270] transition-all">VIEW ORDERS</Link>}
+            <Link href="/shop" className="bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all">{t.common.continueShopping}</Link>
+            {isAuthenticated && <Link href="/account/orders" className="bg-[#4B2D8E] text-white font-display py-3 px-8 rounded-full hover:bg-[#3a2270] transition-all">{t.checkout.viewOrders}</Link>}
           </div>
         </section>
       </>
@@ -374,7 +376,7 @@ export default function Checkout() {
       <section className="bg-white py-6 md:py-10">
         <div className="container">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
-          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">CHECKOUT</h1>
+          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">{t.checkout.checkout}</h1>
 
           {/* Registered user — ID NOT yet verified/submitted */}
           {idCheckRequired && isAuthenticated && user && !user.idVerified && user.idVerificationStatus === 'none' && (
@@ -448,7 +450,7 @@ export default function Checkout() {
 
               {/* Contact */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">1. CONTACT INFORMATION</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.contactInfo}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-gray-500 font-body block mb-1">First Name *</label>
@@ -475,7 +477,7 @@ export default function Checkout() {
 
               {/* Shipping Address */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">2. SHIPPING ADDRESS</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.shippingAddress}</h2>
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-gray-500 font-body block mb-1">Street Address *</label>
@@ -511,7 +513,7 @@ export default function Checkout() {
 
               {/* Coupon Code */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">3. COUPON / PROMO CODE</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.couponSection}</h2>
                 {appliedCoupon ? (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -552,15 +554,15 @@ export default function Checkout() {
 
               {/* Payment */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">4. PAYMENT METHOD</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.paymentMethod}</h2>
                 <div className="bg-white rounded-xl p-4 border-2 border-[#4B2D8E]">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center">
                       <CreditCard size={18} className="text-white" />
                     </div>
                     <div>
-                      <p className="font-display text-sm text-[#4B2D8E]">INTERAC E-TRANSFER</p>
-                      <p className="text-xs text-gray-500 font-body">Send payment after placing your order</p>
+                      <p className="font-display text-sm text-[#4B2D8E]">{t.checkout.interacETransfer}</p>
+                      <p className="text-xs text-gray-500 font-body">{t.checkout.sendPaymentAfter}</p>
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 font-body bg-[#F5F5F5] rounded-lg p-3">
@@ -573,7 +575,7 @@ export default function Checkout() {
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-[#F5F5F5] rounded-2xl p-6 sticky top-28">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">ORDER SUMMARY</h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.cart.orderSummary}</h2>
                 <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
                   {items.map(item => (
                     <div key={item.product.id} className="flex items-center gap-3">
@@ -630,7 +632,7 @@ export default function Checkout() {
                     ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> PLACING ORDER...</>
                     : <><Lock size={16} /> PLACE ORDER</>}
                 </button>
-                <p className="text-[10px] text-gray-400 font-body text-center mt-3">By placing your order, you confirm you are 19+ and agree to our Terms & Conditions.</p>
+                <p className="text-[10px] text-gray-400 font-body text-center mt-3">{t.checkout.orderConfirmBy19}</p>
               </div>
             </div>
           </div>

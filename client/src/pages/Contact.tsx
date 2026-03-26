@@ -5,16 +5,18 @@ import { storeLocations } from '@/lib/data';
 import { Link } from 'wouter';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '@/i18n';
 
 export default function Contact() {
+  const { t } = useT();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) { toast.error('Please fill in all required fields'); return; }
+    if (!form.name || !form.email || !form.message) { toast.error(t.contactPage.fillRequired); return; }
     setSubmitted(true);
-    toast.success('Message sent! We\'ll get back to you shortly.');
+    toast.success(t.contactPage.messageSentToast);
   };
 
   return (
@@ -28,8 +30,8 @@ export default function Contact() {
       <section className="bg-[#4B2D8E] py-6">
         <div className="container">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Contact Us' }]} variant="dark" />
-          <h1 className="font-display text-3xl md:text-4xl text-white">CONTACT US</h1>
-          <p className="text-white/70 font-body mt-2">We'd love to hear from you. Reach out anytime.</p>
+          <h1 className="font-display text-3xl md:text-4xl text-white">{t.contactPage.contactUsTitle}</h1>
+          <p className="text-white/70 font-body mt-2">{t.contactPage.weWouldLove}</p>
         </div>
       </section>
 
@@ -41,14 +43,14 @@ export default function Contact() {
               {submitted ? (
                 <div className="bg-[#F5F5F5] rounded-2xl p-8 text-center">
                   <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">MESSAGE SENT!</h2>
-                  <p className="text-gray-600 font-body mb-4">Thank you for reaching out. We'll get back to you within 24 hours.</p>
+                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">{t.contactPage.messageSent}</h2>
+                  <p className="text-gray-600 font-body mb-4">{t.contactPage.messageSentDesc}</p>
                   <button onClick={() => { setSubmitted(false); setForm({ name: '', email: '', phone: '', subject: '', message: '' }); }}
-                    className="text-[#F15929] font-display text-sm hover:underline">SEND ANOTHER MESSAGE</button>
+                    className="text-[#F15929] font-display text-sm hover:underline">{t.contactPage.sendAnother}</button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="bg-[#F5F5F5] rounded-2xl p-6 space-y-4">
-                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">SEND US A MESSAGE</h2>
+                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">{t.contactPage.sendMessage}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-gray-500 font-body block mb-1">Name *</label>
@@ -71,13 +73,13 @@ export default function Contact() {
                       <label className="text-xs text-gray-500 font-body block mb-1">Subject</label>
                       <select value={form.subject} onChange={e => setForm({...form, subject: e.target.value})}
                         className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]">
-                        <option value="">Select a topic</option>
-                        <option value="order">Order Inquiry</option>
-                        <option value="shipping">Shipping Question</option>
-                        <option value="product">Product Question</option>
-                        <option value="verification">ID Verification</option>
-                        <option value="rewards">Rewards Program</option>
-                        <option value="other">Other</option>
+                        <option value="">{t.contactPage.selectTopic}</option>
+                        <option value="order">{t.contactPage.orderInquiry}</option>
+                        <option value="shipping">{t.contactPage.shippingQuestion}</option>
+                        <option value="product">{t.contactPage.productQuestion}</option>
+                        <option value="verification">{t.contactPage.idVerification}</option>
+                        <option value="rewards">{t.contactPage.rewardsProgram}</option>
+                        <option value="other">{t.contactPage.other}</option>
                       </select>
                     </div>
                   </div>
@@ -87,7 +89,7 @@ export default function Contact() {
                       className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] resize-none" required />
                   </div>
                   <button type="submit" className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2">
-                    <Send size={18} /> SEND MESSAGE
+                    <Send size={18} /> {t.contactPage.sendMessageBtn}
                   </button>
                 </form>
               )}
@@ -96,34 +98,34 @@ export default function Contact() {
             {/* Contact Info */}
             <div className="space-y-6">
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-xl text-[#4B2D8E] mb-4">GET IN TOUCH</h2>
+                <h2 className="font-display text-xl text-[#4B2D8E] mb-4">{t.contactPage.getInTouch}</h2>
                 <div className="space-y-4">
                   <a href="tel:4372154722" className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors">
                     <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0"><Phone size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm">CALL US</p>
+                      <p className="font-display text-sm">{t.contactPage.callUs}</p>
                       <p className="text-sm font-body text-gray-600">(437) 215-4722</p>
                     </div>
                   </a>
                   <a href="mailto:support@mylegacycannabis.ca" className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors">
                     <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0"><Mail size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm">EMAIL US</p>
+                      <p className="font-display text-sm">{t.contactPage.emailUsLabel}</p>
                       <p className="text-sm font-body text-gray-600">support@mylegacycannabis.ca</p>
                     </div>
                   </a>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#F15929] flex items-center justify-center shrink-0"><Clock size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm text-[#333]">HOURS</p>
-                      <p className="text-sm font-body text-gray-600">Open 24/7 — All locations</p>
+                      <p className="font-display text-sm text-[#333]">{t.contactPage.hours}</p>
+                      <p className="text-sm font-body text-gray-600">{t.contactPage.allLocations}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h3 className="font-display text-lg text-[#4B2D8E] mb-3">OUR LOCATIONS</h3>
+                <h3 className="font-display text-lg text-[#4B2D8E] mb-3">{t.contactPage.ourLocations}</h3>
                 <div className="space-y-3">
                   {storeLocations.map(loc => (
                     <div key={loc.id} className="flex items-center gap-3 bg-white rounded-xl p-3">
@@ -136,7 +138,7 @@ export default function Contact() {
                     </div>
                   ))}
                 </div>
-                <Link href="/locations" className="text-sm text-[#4B2D8E] hover:text-[#F15929] font-display mt-3 inline-block">VIEW ALL LOCATIONS →</Link>
+                <Link href="/locations" className="text-sm text-[#4B2D8E] hover:text-[#F15929] font-display mt-3 inline-block">{t.contactPage.viewAllLocations} →</Link>
               </div>
             </div>
           </div>

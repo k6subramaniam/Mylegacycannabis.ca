@@ -4,6 +4,7 @@ import { storeLocations } from '@/lib/data';
 import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp';
 function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
@@ -83,6 +84,7 @@ function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
 }
 
 export default function Locations() {
+  const { t } = useT();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     loop: false,
@@ -143,9 +145,9 @@ export default function Locations() {
         </div>
         <div className="container relative z-10 py-6 md:py-10">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Locations' }]} variant="dark" />
-          <h1 className="font-display text-3xl md:text-4xl text-white mb-3">OUR LOCATIONS</h1>
+          <h1 className="font-display text-3xl md:text-4xl text-white mb-3">{t.locationsPage.title}</h1>
           <p className="text-white/70 font-body max-w-lg">
-            5 locations across the Greater Toronto Area and Ottawa — all open 24/7.
+            {t.locationsPage.subtitle}
           </p>
         </div>
         <WaveDivider color="#ffffff" />
@@ -157,9 +159,9 @@ export default function Locations() {
           {/* Header with navigation arrows */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-display text-2xl md:text-3xl text-[#4B2D8E]">FIND A STORE</h2>
+              <h2 className="font-display text-2xl md:text-3xl text-[#4B2D8E]">{t.locationsPage.findAStore}</h2>
               <p className="text-gray-500 font-body text-sm mt-1">
-                Swipe or use arrows to browse all locations
+                {t.locationsPage.swipeToBrowse}
               </p>
             </div>
             <div className="flex items-center gap-2">

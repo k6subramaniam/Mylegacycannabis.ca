@@ -6,11 +6,13 @@ import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp';
 
 export default function Home() {
   const { addItem } = useCart();
+  const { t } = useT();
   const featured = products.filter(p => p.featured).slice(0, 4);
 
   return (
@@ -39,22 +41,22 @@ export default function Home() {
         </div>
         <div className="container relative z-10 py-16 md:py-24 lg:py-32">
           <div className="max-w-2xl">
-            <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">OPEN 24/7 — 5 LOCATIONS</span>
+            <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">{t.home.heroTag}</span>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-4">
-              WELCOME TO<br /><span className="text-[#F15929]">MY LEGACY</span>
+              {t.home.heroTitle1}<br /><span className="text-[#F15929]">{t.home.heroTitle2}</span>
             </h1>
             <p className="text-white/80 text-lg md:text-xl font-body mb-8 max-w-xl leading-relaxed">
-              My Legacy Cannabis is your go-to 24/7 dispensary with locations across the Greater Toronto Area and Ottawa. We're passionate about providing premium cannabis products at fair prices, with knowledgeable staff ready to help you find exactly what you need.
+              {t.home.heroDesc1}
             </p>
             <p className="text-white/80 text-lg md:text-xl font-body mb-8 max-w-xl leading-relaxed">
-              Whether you prefer shopping in-store or online, we've got you covered with nationwide shipping across Canada via Canada Post. No taxes on any orders, and <strong className="text-[#F15929] font-display">FREE shipping on orders over $150</strong>.
+              {t.home.heroDesc2} <strong className="text-[#F15929] font-display">{t.home.heroFreeShipping}</strong>.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display text-base py-3.5 px-8 rounded-full transition-all hover:scale-105 active:scale-95">
-                SHOP NOW <ArrowRight size={18} />
+                {t.common.shopNow} <ArrowRight size={18} />
               </Link>
               <Link href="/locations" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-display text-base py-3.5 px-8 rounded-full transition-all border border-white/30">
-                FIND A STORE <MapPin size={18} />
+                {t.common.findAStore} <MapPin size={18} />
               </Link>
             </div>
           </div>
@@ -67,10 +69,10 @@ export default function Home() {
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: Truck, label: 'Free Shipping', sub: 'Orders over $150' },
-              { icon: Clock, label: 'Open 24/7', sub: 'Always available' },
-              { icon: Shield, label: 'Age Verified', sub: 'Safe & secure' },
-              { icon: Gift, label: 'Earn Rewards', sub: '1 point per $1' },
+              { icon: Truck, label: t.home.trustFreeShipping, sub: t.home.trustFreeShippingSub },
+              { icon: Clock, label: t.home.trustOpen247, sub: t.home.trustOpen247Sub },
+              { icon: Shield, label: t.home.trustAgeVerified, sub: t.home.trustAgeVerifiedSub },
+              { icon: Gift, label: t.home.trustEarnRewards, sub: t.home.trustEarnRewardsSub },
             ].map((badge, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F5F5]">
                 <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
@@ -90,8 +92,8 @@ export default function Home() {
       <section className="bg-white py-12 md:py-16">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">FIND YOUR LEGACY</h2>
-            <p className="text-gray-600 font-body max-w-lg mx-auto">Browse our curated selection of premium cannabis products.</p>
+            <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">{t.home.findYourLegacy}</h2>
+            <p className="text-gray-600 font-body max-w-lg mx-auto">{t.home.findYourLegacyDesc}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {categories.map((cat) => (
@@ -123,8 +125,8 @@ export default function Home() {
       <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl md:text-4xl text-white mb-3">FEATURED PRODUCTS</h2>
-            <p className="text-white/70 font-body max-w-lg mx-auto">Hand-picked favourites from our collection.</p>
+            <h2 className="font-display text-3xl md:text-4xl text-white mb-3">{t.home.featuredProducts}</h2>
+            <p className="text-white/70 font-body max-w-lg mx-auto">{t.home.featuredProductsDesc}</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {featured.map((product) => (
@@ -171,7 +173,7 @@ export default function Home() {
           </div>
           <div className="text-center mt-8">
             <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-8 rounded-full transition-all hover:scale-105">
-              VIEW ALL PRODUCTS <ArrowRight size={18} />
+              {t.home.viewAllProducts} <ArrowRight size={18} />
             </Link>
           </div>
         </div>
@@ -188,8 +190,8 @@ export default function Home() {
                 <Truck size={28} className="text-white" />
               </div>
               <div className="text-center md:text-left flex-1">
-                <h2 className="font-display text-2xl text-[#4B2D8E] mb-2">NATIONWIDE SHIPPING</h2>
-                <p className="text-gray-600 font-body">We ship coast-to-coast across Canada via Canada Post. <strong className="text-[#F15929]">FREE shipping on orders over ${FREE_SHIPPING_THRESHOLD}!</strong></p>
+                <h2 className="font-display text-2xl text-[#4B2D8E] mb-2">{t.home.nationwideShipping}</h2>
+                <p className="text-gray-600 font-body">{t.home.nationwideShippingDesc} <strong className="text-[#F15929]">{t.home.freeShippingOver.replace('{threshold}', String(FREE_SHIPPING_THRESHOLD))}</strong></p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-4 font-mono-legacy text-xs">
                   {[['ON', '$10'], ['QC', '$12'], ['West', '$15'], ['Atlantic', '$18'], ['North', '$25']].map(([r, p]) => (
                     <span key={r} className="bg-[#F5F5F5] px-3 py-1.5 rounded-full text-[#333]">{r}: {p}</span>
@@ -218,11 +220,11 @@ export default function Home() {
                 <Gift size={28} className="text-white" />
               </div>
               <div className="text-center md:text-left flex-1">
-                <h2 className="font-display text-2xl mb-2">MY LEGACY REWARDS</h2>
-                <p className="text-white/80 font-body">Earn 1 point for every $1 spent. Redeem for discounts up to $150 OFF. Get 25 bonus points just for signing up!</p>
+                <h2 className="font-display text-2xl mb-2">{t.home.myLegacyRewards}</h2>
+                <p className="text-white/80 font-body">{t.home.myLegacyRewardsDesc}</p>
               </div>
               <Link href="/rewards" className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-6 rounded-full transition-all hover:scale-105 shrink-0">
-                JOIN NOW
+                {t.common.joinNow}
               </Link>
             </div>
           </div>
@@ -235,8 +237,8 @@ export default function Home() {
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">OUR LOCATIONS</h2>
-            <p className="text-gray-600 font-body max-w-lg mx-auto">Visit any of our 5 locations across the GTA and Ottawa — open 24/7.</p>
+            <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">{t.home.ourLocations}</h2>
+            <p className="text-gray-600 font-body max-w-lg mx-auto">{t.home.ourLocationsDesc}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {storeLocations.slice(0, 3).map((loc) => (
@@ -263,7 +265,7 @@ export default function Home() {
           </div>
           <div className="text-center mt-6">
             <Link href="/locations" className="text-[#4B2D8E] hover:text-[#F15929] font-display text-sm transition-colors inline-flex items-center gap-1">
-              VIEW ALL 5 LOCATIONS <ArrowRight size={16} />
+              {t.home.viewAllLocations} <ArrowRight size={16} />
             </Link>
           </div>
         </div>
@@ -274,8 +276,8 @@ export default function Home() {
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
             <Leaf size={32} className="text-white/50 mx-auto mb-4" />
-            <h2 className="font-display text-3xl text-white mb-3">STAY IN THE LOOP</h2>
-            <p className="text-white/80 font-body mb-6">Subscribe for exclusive deals, new product drops, and rewards program updates.</p>
+            <h2 className="font-display text-3xl text-white mb-3">{t.home.stayInTheLoop}</h2>
+            <p className="text-white/80 font-body mb-6">{t.home.stayInTheLoopDesc}</p>
             <NewsletterForm />
           </div>
         </div>
@@ -288,9 +290,10 @@ export default function Home() {
 
 function NewsletterForm() {
   const [email, setEmail] = useState('');
+  const { t } = useT();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) { toast.success('Thanks for subscribing!'); setEmail(''); }
+    if (email) { toast.success(t.home.thanksSubscribing); setEmail(''); }
   };
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
@@ -299,13 +302,13 @@ function NewsletterForm() {
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="Enter your email"
+          placeholder={t.home.enterEmail}
           className="w-full px-6 py-4 rounded-xl bg-[#F15929]/70 border border-white/30 text-white placeholder-white/50 font-mono-legacy text-base focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-[#F15929]/80 transition-all"
           required
           aria-label="Email address"
         />
         <button type="submit" className="mt-4 w-full bg-[#4B2D8E] hover:bg-[#3a2270] text-white font-display py-3.5 px-8 rounded-xl transition-all hover:scale-105 active:scale-95">
-          SUBSCRIBE
+          {t.common.subscribe}
         </button>
       </div>
     </form>
