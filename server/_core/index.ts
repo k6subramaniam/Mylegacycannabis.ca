@@ -72,6 +72,15 @@ async function startServer() {
     console.log(`Server running on http://0.0.0.0:${port}/`);
   });
 
+  // ─── GRACEFUL SHUTDOWN (fixes EADDRINUSE on tsx watch restarts) ───
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+    // Force exit after 3s if connections linger
+    setTimeout(() => process.exit(0), 3000);
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+
   // ─── BACKGROUND JOBS ───
   // Run auto-cancel for unpaid orders every hour
   setInterval(async () => {
