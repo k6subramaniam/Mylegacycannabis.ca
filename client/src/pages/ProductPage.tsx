@@ -119,9 +119,10 @@ export default function ProductPage() {
     <>
       <SEOHead
         title={`${product.name} — ${product.category}`}
-        description={product.shortDescription || product.description || ''}
+        description={product.shortDescription || product.description || `Shop ${product.name} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`}
         canonical={canonicalUrl}
         ogType="product"
+        ogImage={product.image || undefined}
       />
 
       {/* Product JSON-LD */}

@@ -52,7 +52,12 @@ export default function Shop() {
 
   return (
     <>
-      <SEOHead title={pageTitle} description={activeCat ? activeCat.description : 'Browse our full selection of premium cannabis products — flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.'} canonical={`https://mylegacycannabisca-production.up.railway.app/shop${selectedCategory ? '/' + selectedCategory : ''}`} />
+      <SEOHead
+        title={pageTitle}
+        description={activeCat ? activeCat.description : 'Browse our full selection of premium cannabis products — flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.'}
+        canonical={`https://mylegacycannabisca-production.up.railway.app/shop${selectedCategory ? '/' + selectedCategory : ''}`}
+        ogImage={HERO_IMG}
+      />
 
       {/* Hero */}
       <section className="relative bg-[#4B2D8E] py-6 md:py-10 overflow-hidden">

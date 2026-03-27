@@ -153,6 +153,7 @@ export default function Register() {
         title="Create Account — My Legacy Cannabis"
         description="Create your My Legacy Cannabis account to earn rewards, track orders, and get exclusive deals."
         canonical="https://mylegacycannabisca-production.up.railway.app/register"
+        noindex
       />
 
       <div className="min-h-screen bg-gradient-to-br from-[#4B2D8E] via-[#3a2270] to-[#2a1855] flex items-center justify-center p-4">

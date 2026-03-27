@@ -89,7 +89,7 @@ export default function IDVerification() {
   if (!idVerificationEnabled) {
     return (
       <>
-        <SEOHead title="ID Verification" noindex />
+        <SEOHead title="ID Verification" description="ID verification is not required at this time." noindex />
         <section className="container py-12">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'ID Verification' }]} />
           <div className="max-w-lg mx-auto text-center">
@@ -111,7 +111,7 @@ export default function IDVerification() {
   if ((isAuthenticated && user?.idVerified) || submittedStatus === 'approved') {
     return (
       <>
-        <SEOHead title="ID Verified" noindex />
+        <SEOHead title="ID Verified" description="Your identity has been verified. You can now place orders." noindex />
         <section className="container py-12">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'ID Verification' }]} />
           <div className="max-w-lg mx-auto text-center">
@@ -137,7 +137,7 @@ export default function IDVerification() {
   ) {
     return (
       <>
-        <SEOHead title="ID Under Review" noindex />
+        <SEOHead title="ID Under Review" description="Your ID verification is under review. We will notify you once approved." noindex />
         <section className="container py-12">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'ID Verification' }]} />
           <div className="max-w-lg mx-auto text-center">
@@ -178,7 +178,7 @@ export default function IDVerification() {
   if (submittedStatus === 'rejected' || (isAuthenticated && user?.idVerificationStatus === 'rejected')) {
     return (
       <>
-        <SEOHead title="ID Verification — Rejected" noindex />
+        <SEOHead title="ID Verification — Rejected" description="Your ID verification was not approved. Please resubmit with a valid government-issued photo ID." noindex />
         <section className="container py-12">
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'ID Verification' }]} />
           <div className="max-w-lg mx-auto text-center">
