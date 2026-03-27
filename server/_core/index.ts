@@ -35,6 +35,84 @@ async function startServer() {
     });
   });
 
+  // ─── ROBOTS.TXT ───
+  app.get("/robots.txt", (_req, res) => {
+    const SITE = "https://mylegacycannabisca-production.up.railway.app";
+    res.type("text/plain").send(
+      `User-agent: *\n` +
+      `Allow: /\n` +
+      `Disallow: /admin\n` +
+      `Disallow: /admin/*\n` +
+      `Disallow: /api/\n` +
+      `Disallow: /cart\n` +
+      `Disallow: /checkout\n` +
+      `Disallow: /account\n` +
+      `Disallow: /account/*\n` +
+      `Disallow: /verify-id\n` +
+      `Disallow: /verify-mobile\n` +
+      `Disallow: /login\n` +
+      `Disallow: /register\n` +
+      `Disallow: /complete-profile\n\n` +
+      `# Sitemap\n` +
+      `Sitemap: ${SITE}/sitemap.xml\n`
+    );
+  });
+
+  // ─── XML SITEMAP ───
+  app.get("/sitemap.xml", async (_req, res) => {
+    const SITE = "https://mylegacycannabisca-production.up.railway.app";
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // Static pages with priority and changefreq
+    const staticPages = [
+      { loc: "/",              priority: "1.0", changefreq: "daily"   },
+      { loc: "/shop",          priority: "0.9", changefreq: "daily"   },
+      { loc: "/rewards",       priority: "0.7", changefreq: "monthly" },
+      { loc: "/locations",     priority: "0.8", changefreq: "monthly" },
+      { loc: "/about",         priority: "0.6", changefreq: "monthly" },
+      { loc: "/shipping",      priority: "0.5", changefreq: "monthly" },
+      { loc: "/contact",       priority: "0.6", changefreq: "monthly" },
+      { loc: "/faq",           priority: "0.6", changefreq: "monthly" },
+      { loc: "/privacy-policy",priority: "0.3", changefreq: "yearly"  },
+      { loc: "/terms",         priority: "0.3", changefreq: "yearly"  },
+    ];
+
+    // Category pages
+    const categories = [
+      "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories",
+    ];
+
+    let urls = staticPages.map(p =>
+      `  <url>\n    <loc>${SITE}${p.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${p.changefreq}</changefreq>\n    <priority>${p.priority}</priority>\n  </url>`
+    );
+
+    // Add category pages
+    for (const cat of categories) {
+      urls.push(
+        `  <url>\n    <loc>${SITE}/shop/${cat}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>`
+      );
+    }
+
+    // Try to add product pages dynamically from DB
+    try {
+      const { db } = await import("../db");
+      const products = db.prepare?.("SELECT slug, updated_at FROM products WHERE active = 1 ORDER BY updated_at DESC")?.all?.() as any[];
+      if (products && products.length > 0) {
+        for (const p of products) {
+          const lastmod = p.updated_at ? new Date(p.updated_at).toISOString().split("T")[0] : today;
+          urls.push(
+            `  <url>\n    <loc>${SITE}/product/${p.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+          );
+        }
+      }
+    } catch {
+      // Products not available from DB — skip dynamic product URLs
+    }
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;
+    res.type("application/xml").send(xml);
+  });
+
   // ─── GEO-LOCATION ENDPOINT (for auto-translation) ───
   // Returns the user's province/region from their IP via free ipapi.co service.
   // Quebec customers get French; everyone else gets English.

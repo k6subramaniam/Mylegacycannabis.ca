@@ -475,10 +475,21 @@ function Header() {
           </div>
         </div>
 
-        {/* Shipping banner: explicit h-8 (32px) so height never shifts */}
-        <div className="h-8 bg-[#F15929] text-white flex items-center justify-center text-xs md:text-sm font-medium font-body whitespace-nowrap overflow-hidden">
-          <Truck size={14} className="inline-block shrink-0 mr-1.5" />
-          {t.header.freeShippingBanner}
+        {/* Shipping banner: scrolling marquee, explicit h-8 (32px) so height never shifts */}
+        <div className="h-8 bg-[#F15929] text-white overflow-hidden relative" aria-label="Promotional announcements">
+          <div className="marquee-track flex items-center h-full">
+            {/* Duplicate the message set twice for seamless infinite loop */}
+            {[0, 1].map(setIndex => (
+              <div key={setIndex} className="marquee-content flex items-center shrink-0" aria-hidden={setIndex === 1 ? 'true' : undefined}>
+                {t.header.bannerMessages.map((msg: string, i: number) => (
+                  <span key={`${setIndex}-${i}`} className="flex items-center whitespace-nowrap text-xs md:text-sm font-medium font-body mx-8">
+                    <Truck size={14} className="inline-block shrink-0 mr-1.5" />
+                    {msg}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </header>
 

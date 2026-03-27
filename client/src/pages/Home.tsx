@@ -19,8 +19,9 @@ export default function Home() {
     <>
       <SEOHead
         title="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa"
-        description="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide."
+        description="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide. No taxes on any order."
         canonical="https://mylegacycannabisca-production.up.railway.app/"
+        ogImage="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png"
       />
 
       {/* HERO SECTION — no animations, content immediately visible for LCP */}

@@ -64,6 +64,12 @@ const fr: Translations = {
   // ── Header / Nav ─────────────────────────────────────────────
   header: {
     freeShippingBanner: 'Livraison GRATUITE pour les commandes de plus de 150 $ — Livraison partout au Canada',
+    bannerMessages: [
+      'Livraison GRATUITE pour les commandes de plus de 150 $ — Livraison partout au Canada',
+      'Ouvert 24/7 — 5 emplacements dans le GTA et Ottawa',
+      'Gagnez des récompenses à chaque achat — 1 point par 1 $ dépensé',
+      'Aucune taxe sur toutes les commandes — Magasinez et économisez',
+    ],
     shoppingCart: 'Panier',
     openMenu: 'Ouvrir le menu de navigation',
     closeMenu: 'Fermer le menu de navigation',

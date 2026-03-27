@@ -172,4 +172,37 @@
     background: #4B2D8E;
     border-radius: 4px;
   }
+
+  /* ── Scrolling marquee banner ── */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 30s linear infinite;
+  }
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+  .marquee-content {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  @keyframes marquee-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+      justify-content: center;
+    }
+    .marquee-content:nth-child(2) {
+      display: none;
+    }
+  }
 }
