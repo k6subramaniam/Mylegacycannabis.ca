@@ -62,6 +62,12 @@ const en = {
   // ── Header / Nav ─────────────────────────────────────────────
   header: {
     freeShippingBanner: 'FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada',
+    bannerMessages: [
+      'FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada',
+      'Open 24/7 — 5 Locations Across GTA & Ottawa',
+      'Earn Rewards on Every Purchase — 1 Point per $1 Spent',
+      'No Taxes on Any Orders — Shop & Save Today',
+    ],
     shoppingCart: 'Shopping cart',
     openMenu: 'Open navigation menu',
     closeMenu: 'Close navigation menu',

@@ -127,6 +127,7 @@ export default function Locations() {
         title="Store Locations — 24/7 Cannabis Dispensary"
         description="Visit any of our 5 My Legacy Cannabis locations across the GTA and Ottawa. Open 24/7. Mississauga, Hamilton, Queen St Toronto, Dundas Toronto, and Merivale Ottawa."
         canonical="https://mylegacycannabisca-production.up.railway.app/locations"
+        ogImage={HERO_IMG}
       />
 
       {/* Hero */}

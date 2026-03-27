@@ -15,6 +15,7 @@ export default function Rewards() {
         title="My Legacy Rewards — Loyalty Program"
         description="Earn 1 point for every $1 spent at My Legacy Cannabis. Redeem for discounts up to $150 OFF. Get 25 bonus points just for signing up. Birthday bonuses, referral rewards, and more."
         canonical="https://mylegacycannabisca-production.up.railway.app/rewards"
+        ogImage={HERO_IMG}
       />
 
       {/* Hero */}

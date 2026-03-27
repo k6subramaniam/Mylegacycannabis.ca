@@ -14,6 +14,7 @@ export default function About() {
         title="About Us — My Legacy Cannabis"
         description="Learn about My Legacy Cannabis — a 24/7 cannabis dispensary serving the GTA and Ottawa since 2020. Our mission, values, and commitment to premium cannabis products."
         canonical="https://mylegacycannabisca-production.up.railway.app/about"
+        ogImage={HERO_IMG}
       />
 
       {/* Hero */}
