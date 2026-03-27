@@ -7,10 +7,12 @@ import { ShoppingCart, SlidersHorizontal, X, ChevronDown, Star, Loader } from 'l
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-shop-5tiqFdCHUdeMeR3zPVXYu5.webp';
 
 export default function Shop() {
+  const { t } = useT();
   const params = useParams<{ category?: string }>();
   const searchStr = useSearch();
   const searchParams = new URLSearchParams(searchStr);
