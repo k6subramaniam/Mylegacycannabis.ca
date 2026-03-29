@@ -648,6 +648,12 @@ const fr: Translations = {
     avgSmoothness: 'Douceur moy.',
     verifiedPurchase: 'Achat verifie',
     topTags: 'Comment les clients decrivent ce produit',
+    // Edit review
+    editReview: 'MODIFIER VOTRE AVIS',
+    editLabel: 'Modifier',
+    cancelEdit: 'Annuler',
+    updateReview: 'METTRE A JOUR L\'AVIS',
+    reviewUpdated: 'Avis mis a jour avec succes !',
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────

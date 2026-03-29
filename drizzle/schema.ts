@@ -316,7 +316,7 @@ export const productReviews = pgTable("product_reviews", {
   usageTiming: varchar("usage_timing", { length: 20 }),         // "daytime", "nighttime", "anytime"
   wouldRecommend: boolean("would_recommend"),
   // ── Moderation & rewards ──
-  isApproved: boolean("is_approved").default(false).notNull(),
+  isApproved: boolean("is_approved").default(true).notNull(),
   pointsAwarded: boolean("points_awarded").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

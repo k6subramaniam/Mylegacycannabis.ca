@@ -234,7 +234,7 @@ export default function ProductPage() {
           </div>
 
           {/* Customer Reviews Section */}
-          <ProductReviews productId={product.id} isLoggedIn={!!authUser} />
+          <ProductReviews productId={product.id} isLoggedIn={!!authUser} userId={authUser?.id} />
         </div>
       </section>
     </>

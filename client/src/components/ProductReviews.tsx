@@ -4,11 +4,14 @@
  * Captures recommendation signals: star rating, descriptor tags, strength/smoothness
  * sliders, effect tags, experience level, usage timing, and would-recommend.
  *
- * All labels are internationalised via useT().
+ * Supports:
+ * - New review submission (auto-approved, appears immediately)
+ * - Edit own existing review (logged-in users)
+ * - All labels are internationalised via useT()
  */
 
-import { useState } from 'react';
-import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useT } from '@/i18n';
 import { toast } from 'sonner';
@@ -119,32 +122,62 @@ function formatDate(d: string | Date) {
 }
 
 // ────────────────────────────────────────────────────────────────
-// REVIEW FORM
+// REVIEW FORM (create + edit modes)
 // ────────────────────────────────────────────────────────────────
 
-function ReviewForm({ productId, onSuccess }: { productId: number; onSuccess: () => void }) {
+interface ReviewFormProps {
+  productId: number;
+  onSuccess: () => void;
+  editReview?: any; // if provided, switches to edit mode
+  onCancelEdit?: () => void;
+}
+
+function ReviewForm({ productId, onSuccess, editReview, onCancelEdit }: ReviewFormProps) {
   const { t } = useT();
   const rv = t.reviews;
+  const isEditing = !!editReview;
 
-  const [rating, setRating] = useState(0);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [strengthRating, setStrengthRating] = useState(3);
-  const [smoothnessRating, setSmoothnessRating] = useState(3);
-  const [effectTags, setEffectTags] = useState<string[]>([]);
-  const [experienceLevel, setExperienceLevel] = useState<string>('');
-  const [usageTiming, setUsageTiming] = useState<string>('');
-  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
+  const [rating, setRating] = useState(editReview?.rating || 0);
+  const [title, setTitle] = useState(editReview?.title || '');
+  const [body, setBody] = useState(editReview?.body || '');
+  const [tags, setTags] = useState<string[]>(editReview?.tags || []);
+  const [strengthRating, setStrengthRating] = useState(editReview?.strengthRating || 3);
+  const [smoothnessRating, setSmoothnessRating] = useState(editReview?.smoothnessRating || 3);
+  const [effectTags, setEffectTags] = useState<string[]>(editReview?.effectTags || []);
+  const [experienceLevel, setExperienceLevel] = useState<string>(editReview?.experienceLevel || '');
+  const [usageTiming, setUsageTiming] = useState<string>(editReview?.usageTiming || '');
+  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(editReview?.wouldRecommend ?? null);
+
+  // Re-sync form if editReview changes
+  useEffect(() => {
+    if (editReview) {
+      setRating(editReview.rating || 0);
+      setTitle(editReview.title || '');
+      setBody(editReview.body || '');
+      setTags(editReview.tags || []);
+      setStrengthRating(editReview.strengthRating || 3);
+      setSmoothnessRating(editReview.smoothnessRating || 3);
+      setEffectTags(editReview.effectTags || []);
+      setExperienceLevel(editReview.experienceLevel || '');
+      setUsageTiming(editReview.usageTiming || '');
+      setWouldRecommend(editReview.wouldRecommend ?? null);
+    }
+  }, [editReview]);
 
   const submitMutation = trpc.store.submitReview.useMutation({
     onSuccess: () => {
       toast.success(rv.thankYou);
       onSuccess();
     },
-    onError: (err) => {
-      toast.error(err.message);
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateMutation = trpc.store.updateReview.useMutation({
+    onSuccess: () => {
+      toast.success(rv.reviewUpdated || 'Review updated!');
+      onSuccess();
     },
+    onError: (err) => toast.error(err.message),
   });
 
   const toggleTag = (tag: string) =>
@@ -158,8 +191,7 @@ function ReviewForm({ productId, onSuccess }: { productId: number; onSuccess: ()
       toast.error('Please select a star rating');
       return;
     }
-    submitMutation.mutate({
-      productId,
+    const payload = {
       rating,
       title: title.trim() || undefined,
       body: body.trim() || undefined,
@@ -170,12 +202,28 @@ function ReviewForm({ productId, onSuccess }: { productId: number; onSuccess: ()
       experienceLevel: experienceLevel ? experienceLevel as any : undefined,
       usageTiming: usageTiming ? usageTiming as any : undefined,
       wouldRecommend: wouldRecommend ?? undefined,
-    });
+    };
+    if (isEditing) {
+      updateMutation.mutate({ reviewId: editReview.id, ...payload });
+    } else {
+      submitMutation.mutate({ productId, ...payload });
+    }
   };
+
+  const isPending = submitMutation.isPending || updateMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit} className="bg-[#FAFAFA] rounded-2xl p-6 border border-gray-200 space-y-6">
-      <h3 className="font-display text-lg text-[#4B2D8E]">{rv.writeReview}</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-lg text-[#4B2D8E]">
+          {isEditing ? (rv.editReview || 'Edit Your Review') : rv.writeReview}
+        </h3>
+        {isEditing && onCancelEdit && (
+          <button type="button" onClick={onCancelEdit} className="text-sm text-gray-500 hover:text-gray-700 font-display">
+            {rv.cancelEdit || 'Cancel'}
+          </button>
+        )}
+      </div>
 
       {/* Star Rating */}
       <div>
@@ -321,10 +369,14 @@ function ReviewForm({ productId, onSuccess }: { productId: number; onSuccess: ()
       {/* Submit */}
       <button
         type="submit"
-        disabled={submitMutation.isPending || rating === 0}
+        disabled={isPending || rating === 0}
         className="w-full bg-[#4B2D8E] hover:bg-[#3a2270] disabled:opacity-50 disabled:cursor-not-allowed text-white font-display py-3 rounded-full transition-all"
       >
-        {submitMutation.isPending ? rv.submitting : rv.submitReview}
+        {isPending
+          ? rv.submitting
+          : isEditing
+            ? (rv.updateReview || 'Update Review')
+            : rv.submitReview}
       </button>
     </form>
   );
@@ -334,7 +386,7 @@ function ReviewForm({ productId, onSuccess }: { productId: number; onSuccess: ()
 // REVIEW CARD
 // ────────────────────────────────────────────────────────────────
 
-function ReviewCard({ review }: { review: any }) {
+function ReviewCard({ review, isOwn, onEdit }: { review: any; isOwn?: boolean; onEdit?: () => void }) {
   const { t } = useT();
   const rv = t.reviews;
 
@@ -352,7 +404,19 @@ function ReviewCard({ review }: { review: any }) {
             )}
           </div>
         </div>
-        <span className="text-xs text-gray-400 font-body shrink-0">{formatDate(review.createdAt)}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {isOwn && onEdit && (
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-1 text-xs text-[#4B2D8E] hover:text-[#3a2270] font-display transition-colors"
+              title={rv.editReview || 'Edit'}
+            >
+              <Pencil size={13} />
+              {rv.editLabel || 'Edit'}
+            </button>
+          )}
+          <span className="text-xs text-gray-400 font-body">{formatDate(review.createdAt)}</span>
+        </div>
       </div>
 
       {review.body && <p className="text-sm text-gray-600 font-body mb-3 leading-relaxed">{review.body}</p>}
@@ -407,32 +471,68 @@ function ReviewCard({ review }: { review: any }) {
 // MAIN EXPORT: ProductReviews
 // ────────────────────────────────────────────────────────────────
 
-export default function ProductReviews({ productId, isLoggedIn }: { productId: number; isLoggedIn: boolean }) {
+export default function ProductReviews({ productId, isLoggedIn, userId }: { productId: number; isLoggedIn: boolean; userId?: number }) {
   const { t } = useT();
   const rv = t.reviews;
 
   const { data, isLoading, refetch } = trpc.store.productReviews.useQuery({ productId });
   const [formOpen, setFormOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [editingReview, setEditingReview] = useState<any>(null);
 
   const reviews = data?.reviews || [];
   const agg = data?.aggregate;
   const visibleReviews = showAll ? reviews : reviews.slice(0, 3);
 
+  // Check if user already reviewed this product
+  const userReview = userId ? reviews.find((r: any) => r.userId === userId) : null;
+  const hasReviewed = !!userReview;
+
   if (isLoading) return null;
+
+  const handleEditClick = (review: any) => {
+    setEditingReview(review);
+    setFormOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    setEditingReview(null);
+    refetch();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReview(null);
+    if (hasReviewed) setFormOpen(false);
+  };
 
   return (
     <section className="mt-12 pt-10 border-t border-gray-200" id="reviews">
       {/* Section header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl text-[#4B2D8E]">{rv.title}</h2>
-        {isLoggedIn && (
+        {isLoggedIn && !formOpen && (
           <button
-            onClick={() => setFormOpen(!formOpen)}
+            onClick={() => {
+              if (hasReviewed) {
+                // Edit existing review
+                setEditingReview(userReview);
+              }
+              setFormOpen(true);
+            }}
             className="flex items-center gap-1.5 text-sm font-display text-[#F15929] hover:text-[#d94d22] transition-colors"
           >
-            <MessageSquare size={16} />
-            {rv.writeReview}
+            {hasReviewed ? (
+              <>
+                <Pencil size={16} />
+                {rv.editReview || 'Edit Your Review'}
+              </>
+            ) : (
+              <>
+                <MessageSquare size={16} />
+                {rv.writeReview}
+              </>
+            )}
           </button>
         )}
       </div>
@@ -503,10 +603,15 @@ export default function ProductReviews({ productId, isLoggedIn }: { productId: n
         </div>
       )}
 
-      {/* Review form */}
+      {/* Review form — new or edit */}
       {formOpen && isLoggedIn && (
         <div className="mb-8">
-          <ReviewForm productId={productId} onSuccess={() => { setFormOpen(false); refetch(); }} />
+          <ReviewForm
+            productId={productId}
+            editReview={editingReview}
+            onSuccess={handleFormSuccess}
+            onCancelEdit={handleCancelEdit}
+          />
         </div>
       )}
 
@@ -521,7 +626,12 @@ export default function ProductReviews({ productId, isLoggedIn }: { productId: n
       ) : (
         <div className="space-y-5">
           {visibleReviews.map((r: any) => (
-            <ReviewCard key={r.id} review={r} />
+            <ReviewCard
+              key={r.id}
+              review={r}
+              isOwn={!!userId && r.userId === userId}
+              onEdit={() => handleEditClick(r)}
+            />
           ))}
         </div>
       )}
