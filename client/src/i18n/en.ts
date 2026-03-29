@@ -662,6 +662,8 @@ const en = {
     cancelEdit: 'Cancel',
     updateReview: 'UPDATE REVIEW',
     reviewUpdated: 'Review updated successfully!',
+    moreDetails: 'Details',
+    lessDetails: 'Less',
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────

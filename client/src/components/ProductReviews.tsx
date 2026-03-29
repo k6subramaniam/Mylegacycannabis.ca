@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil } from 'lucide-react';
+import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil, Info } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useT } from '@/i18n';
 import { toast } from 'sonner';
@@ -110,9 +110,9 @@ function TagToggle({ label, active, onClick }: { label: string; active: boolean;
 
 function PillBadge({ tag, count }: { tag: string; count: number }) {
   return (
-    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-display bg-[#F5F0FF] text-[#4B2D8E] border border-[#E0D4F5]">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display bg-[#F5F0FF] text-[#4B2D8E] border border-[#E0D4F5]">
       {tag}
-      <span className="bg-[#4B2D8E] text-white rounded-full px-1.5 text-[10px] leading-4">{count}</span>
+      <span className="bg-[#4B2D8E] text-white rounded-full px-1 text-[10px] leading-4">{count}</span>
     </span>
   );
 }
@@ -389,18 +389,37 @@ function ReviewForm({ productId, onSuccess, editReview, onCancelEdit }: ReviewFo
 function ReviewCard({ review, isOwn, onEdit }: { review: any; isOwn?: boolean; onEdit?: () => void }) {
   const { t } = useT();
   const rv = t.reviews;
+  const [expanded, setExpanded] = useState(false);
+
+  // Check if the review has any structured details worth showing
+  const hasTags = review.tags && review.tags.length > 0;
+  const hasEffects = review.effectTags && review.effectTags.length > 0;
+  const hasStrength = !!review.strengthRating;
+  const hasSmoothness = !!review.smoothnessRating;
+  const hasExperience = !!review.experienceLevel;
+  const hasTiming = !!review.usageTiming;
+  const hasRecommend = review.wouldRecommend !== null && review.wouldRecommend !== undefined;
+  const hasDetails = hasTags || hasEffects || hasStrength || hasSmoothness || hasExperience || hasTiming || hasRecommend;
+
+  // Build a compact inline summary (shown always when details exist)
+  const summaryParts: string[] = [];
+  if (hasStrength) summaryParts.push(`${rv.strengthLabel} ${review.strengthRating}/5`);
+  if (hasSmoothness) summaryParts.push(`${rv.smoothnessLabel} ${review.smoothnessRating}/5`);
+  if (hasExperience) summaryParts.push((rv.experienceLevels as any)[review.experienceLevel]);
+  if (hasTiming) summaryParts.push((rv.timings as any)[review.usageTiming]);
 
   return (
-    <article className="border-b border-gray-200 pb-5 last:border-b-0">
-      <div className="flex items-start justify-between gap-4 mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
-            <User size={16} className="text-white" />
+    <article className="border-b border-gray-200 pb-4 last:border-b-0">
+      {/* Header: avatar, stars, title, date, edit */}
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
+            <User size={14} className="text-white" />
           </div>
-          <div>
-            <StarRating value={review.rating} size={16} />
+          <div className="flex items-center gap-2">
+            <StarRating value={review.rating} size={14} />
             {review.title && (
-              <p className="font-display text-sm text-[#2C2C2C] mt-0.5">{review.title}</p>
+              <span className="font-display text-sm text-[#2C2C2C]">— {review.title}</span>
             )}
           </div>
         </div>
@@ -411,58 +430,79 @@ function ReviewCard({ review, isOwn, onEdit }: { review: any; isOwn?: boolean; o
               className="flex items-center gap-1 text-xs text-[#4B2D8E] hover:text-[#3a2270] font-display transition-colors"
               title={rv.editReview || 'Edit'}
             >
-              <Pencil size={13} />
+              <Pencil size={12} />
               {rv.editLabel || 'Edit'}
             </button>
           )}
-          <span className="text-xs text-gray-400 font-body">{formatDate(review.createdAt)}</span>
+          <span className="text-[11px] text-gray-400 font-body">{formatDate(review.createdAt)}</span>
         </div>
       </div>
 
-      {review.body && <p className="text-sm text-gray-600 font-body mb-3 leading-relaxed">{review.body}</p>}
+      {/* Body text */}
+      {review.body && <p className="text-sm text-gray-600 font-body leading-relaxed ml-[42px] mb-1">{review.body}</p>}
 
-      {/* Tags */}
-      {review.tags && review.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {review.tags.map((tag: string) => (
-            <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F0FF] text-[#4B2D8E] font-display">
-              {(rv.tags as any)[tag] || tag}
-            </span>
-          ))}
+      {/* Compact detail summary + toggle */}
+      {hasDetails && (
+        <div className="ml-[42px]">
+          {/* Inline compact chips: recommend + top tags (max 3) shown always */}
+          <div className="flex items-center flex-wrap gap-1.5 mt-1">
+            {hasRecommend && review.wouldRecommend && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-display border border-green-200">
+                <ThumbsUp size={10} /> {rv.recommended}
+              </span>
+            )}
+            {hasTags && review.tags.slice(0, 3).map((tag: string) => (
+              <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F0FF] text-[#4B2D8E] font-display">
+                {(rv.tags as any)[tag] || tag}
+              </span>
+            ))}
+            {hasEffects && review.effectTags.slice(0, 2).map((tag: string) => (
+              <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#F15929] font-display">
+                {(rv.effects as any)[tag] || tag}
+              </span>
+            ))}
+            {/* "more" toggle */}
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="inline-flex items-center gap-0.5 text-[11px] text-gray-400 hover:text-[#4B2D8E] font-display transition-colors"
+            >
+              <Info size={11} />
+              {expanded ? (rv.lessDetails || 'Less') : (rv.moreDetails || 'Details')}
+            </button>
+          </div>
+
+          {/* Expanded details */}
+          {expanded && (
+            <div className="mt-2 pl-1 space-y-1.5 text-[11px] text-gray-500 font-body border-l-2 border-[#E0D4F5] ml-1">
+              {/* All tags */}
+              {hasTags && (
+                <div className="flex flex-wrap gap-1 pl-2">
+                  {review.tags.map((tag: string) => (
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-[#F5F0FF] text-[#4B2D8E] font-display">
+                      {(rv.tags as any)[tag] || tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* All effects */}
+              {hasEffects && (
+                <div className="flex flex-wrap gap-1 pl-2">
+                  {review.effectTags.map((tag: string) => (
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-[#FFF4F0] text-[#F15929] font-display">
+                      {(rv.effects as any)[tag] || tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Metrics row */}
+              {summaryParts.length > 0 && (
+                <p className="pl-2">{summaryParts.join(' · ')}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
-
-      {/* Effects */}
-      {review.effectTags && review.effectTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {review.effectTags.map((tag: string) => (
-            <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#F15929] font-display">
-              {(rv.effects as any)[tag] || tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Structured info row */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 font-body">
-        {review.strengthRating && (
-          <span>{rv.strengthLabel}: {review.strengthRating}/5</span>
-        )}
-        {review.smoothnessRating && (
-          <span>{rv.smoothnessLabel}: {review.smoothnessRating}/5</span>
-        )}
-        {review.experienceLevel && (
-          <span>{(rv.experienceLevels as any)[review.experienceLevel]}</span>
-        )}
-        {review.usageTiming && (
-          <span>{(rv.timings as any)[review.usageTiming]}</span>
-        )}
-        {review.wouldRecommend !== null && review.wouldRecommend !== undefined && (
-          <span className={review.wouldRecommend ? 'text-green-600' : 'text-red-500'}>
-            {review.wouldRecommend ? `👍 ${rv.recommended}` : ''}
-          </span>
-        )}
-      </div>
     </article>
   );
 }
@@ -537,69 +577,60 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
         )}
       </div>
 
-      {/* Aggregate summary */}
+      {/* Aggregate summary — compact single row */}
       {agg && agg.count > 0 && (
-        <div className="bg-[#FAFAFA] rounded-2xl p-5 mb-6 border border-gray-100">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#FAFAFA] rounded-xl px-4 py-3 mb-5 border border-gray-100">
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-2">
             {/* Average rating */}
-            <div className="flex flex-col items-center text-center">
-              <div className="font-display text-4xl text-[#4B2D8E]">{agg.avgRating}</div>
-              <StarRating value={Math.round(agg.avgRating)} size={18} />
-              <p className="text-xs text-gray-500 font-body mt-1">
-                {agg.count} {rv.reviews}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="font-display text-2xl text-[#4B2D8E] leading-none">{agg.avgRating}</span>
+              <div>
+                <StarRating value={Math.round(agg.avgRating)} size={14} />
+                <p className="text-[11px] text-gray-500 font-body">{agg.count} {rv.reviews}</p>
+              </div>
             </div>
+
+            <span className="hidden sm:block w-px h-8 bg-gray-200" />
 
             {/* Avg Strength */}
             {agg.avgStrength !== null && (
-              <div className="flex flex-col items-center text-center">
-                <div className="font-display text-2xl text-[#4B2D8E]">{agg.avgStrength}/5</div>
-                <p className="text-xs text-gray-500 font-body">{rv.avgStrength}</p>
+              <div className="text-center">
+                <div className="font-display text-base text-[#4B2D8E] leading-tight">{agg.avgStrength}/5</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.avgStrength}</p>
               </div>
             )}
 
             {/* Avg Smoothness */}
             {agg.avgSmoothness !== null && (
-              <div className="flex flex-col items-center text-center">
-                <div className="font-display text-2xl text-[#4B2D8E]">{agg.avgSmoothness}/5</div>
-                <p className="text-xs text-gray-500 font-body">{rv.avgSmoothness}</p>
+              <div className="text-center">
+                <div className="font-display text-base text-[#4B2D8E] leading-tight">{agg.avgSmoothness}/5</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.avgSmoothness}</p>
               </div>
             )}
 
             {/* Recommend % */}
             {agg.recommendPercent !== null && (
-              <div className="flex flex-col items-center text-center">
-                <div className="font-display text-2xl text-green-600">{agg.recommendPercent}%</div>
-                <p className="text-xs text-gray-500 font-body">{rv.recommended}</p>
+              <div className="text-center">
+                <div className="font-display text-base text-green-600 leading-tight">{agg.recommendPercent}%</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.recommended}</p>
               </div>
             )}
+
+            <span className="hidden sm:block w-px h-8 bg-gray-200" />
+
+            {/* Top tags + effects — inline */}
+            <div className="flex flex-wrap gap-1.5">
+              {agg.topTags.slice(0, 4).map((t: any) => (
+                <PillBadge key={t.tag} tag={(rv.tags as any)[t.tag] || t.tag} count={t.count} />
+              ))}
+              {agg.topEffects.slice(0, 3).map((t: any) => (
+                <span key={t.tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display bg-[#FFF4F0] text-[#F15929] border border-[#FFD6C7]">
+                  {(rv.effects as any)[t.tag] || t.tag}
+                  <span className="bg-[#F15929] text-white rounded-full px-1 text-[10px] leading-4">{t.count}</span>
+                </span>
+              ))}
+            </div>
           </div>
-
-          {/* Top tags */}
-          {agg.topTags.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 font-body mb-2">{rv.topTags}</p>
-              <div className="flex flex-wrap gap-2">
-                {agg.topTags.map((t: any) => (
-                  <PillBadge key={t.tag} tag={(rv.tags as any)[t.tag] || t.tag} count={t.count} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Top effects */}
-          {agg.topEffects.length > 0 && (
-            <div className="mt-3">
-              <div className="flex flex-wrap gap-2">
-                {agg.topEffects.map((t: any) => (
-                  <span key={t.tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-display bg-[#FFF4F0] text-[#F15929] border border-[#FFD6C7]">
-                    {(rv.effects as any)[t.tag] || t.tag}
-                    <span className="bg-[#F15929] text-white rounded-full px-1.5 text-[10px] leading-4">{t.count}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -624,7 +655,7 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
       {reviews.length === 0 ? (
         <p className="text-sm text-gray-500 font-body italic">{rv.noReviews}</p>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-3">
           {visibleReviews.map((r: any) => (
             <ReviewCard
               key={r.id}
