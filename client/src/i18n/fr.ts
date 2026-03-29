@@ -654,6 +654,8 @@ const fr: Translations = {
     cancelEdit: 'Annuler',
     updateReview: 'METTRE A JOUR L\'AVIS',
     reviewUpdated: 'Avis mis a jour avec succes !',
+    moreDetails: 'Details',
+    lessDetails: 'Moins',
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────
