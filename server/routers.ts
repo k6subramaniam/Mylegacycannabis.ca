@@ -700,24 +700,52 @@ export const appRouter = router({
       list: adminProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(50) })).query(async ({ input }) => {
         return db.getAllReviews(input);
       }),
+      get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+        return db.getReviewById(input.id);
+      }),
       approve: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
         await db.approveReview(input.id);
         // Award review bonus points (10 pts) if not already awarded
         const REVIEW_BONUS = 10;
-        if (db.USE_PERSISTENT_DB) {
-          // For persistent DB, use the schema directly
-          const reviews = await db.getAllReviews({ page: 1, limit: 1000 });
-          const review = reviews.data.find((r: any) => r.id === input.id);
-          if (review && !review.pointsAwarded) {
-            const user = await db.getUserById(review.userId);
-            if (user) {
-              await db.updateUser(user.id, { rewardPoints: (user.rewardPoints || 0) + REVIEW_BONUS } as any);
-              await db.addRewardsHistory({ userId: user.id, points: REVIEW_BONUS, type: 'review' as any, description: 'Review bonus: +10 points for approved product review' } as any);
-              await db.updateReviewPointsAwarded(input.id);
-            }
+        const review = await db.getReviewById(input.id);
+        if (review && !review.pointsAwarded) {
+          const user = await db.getUserById(review.userId);
+          if (user) {
+            await db.updateUser(user.id, { rewardPoints: (user.rewardPoints || 0) + REVIEW_BONUS } as any);
+            await db.addRewardsHistory({ userId: user.id, points: REVIEW_BONUS, type: 'review' as any, description: 'Review bonus: +10 points for approved product review' } as any);
+            await db.updateReviewPointsAwarded(input.id);
           }
         }
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'approve', entityType: 'review', entityId: input.id, details: `Approved review #${input.id}` });
+        return { success: true };
+      }),
+      unapprove: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        await db.updateProductReview(input.id, { isApproved: false } as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'unapprove', entityType: 'review', entityId: input.id, details: `Unapproved review #${input.id}` });
+        return { success: true };
+      }),
+      update: adminProcedure.input(z.object({
+        id: z.number(),
+        rating: z.number().min(1).max(5).optional(),
+        title: z.string().max(255).optional(),
+        body: z.string().max(2000).optional(),
+        tags: z.array(z.string()).optional(),
+        strengthRating: z.number().min(1).max(5).optional(),
+        smoothnessRating: z.number().min(1).max(5).optional(),
+        effectTags: z.array(z.string()).optional(),
+        experienceLevel: z.enum(['beginner', 'intermediate', 'experienced']).optional(),
+        usageTiming: z.enum(['daytime', 'nighttime', 'anytime']).optional(),
+        wouldRecommend: z.boolean().optional(),
+        isApproved: z.boolean().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        await db.updateProductReview(id, data as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'update', entityType: 'review', entityId: id, details: `Updated review #${id}` });
+        return { success: true };
+      }),
+      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        await db.deleteProductReview(input.id);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || 'Admin', action: 'delete', entityType: 'review', entityId: input.id, details: `Deleted review #${input.id}` });
         return { success: true };
       }),
     }),
@@ -966,8 +994,32 @@ export const appRouter = router({
       if (existing.some((r: any) => r.productId === input.productId)) {
         throw new Error('You have already reviewed this product.');
       }
-      const id = await db.createProductReview({ userId, ...input });
-      return { id, message: 'Review submitted! It will appear after admin approval.' };
+      // Reviews appear immediately (isApproved = true)
+      const id = await db.createProductReview({ userId, ...input, isApproved: true } as any);
+      return { id, message: 'Review submitted! Thank you for your feedback.' };
+    }),
+    // ─── UPDATE OWN REVIEW (authenticated) ───
+    updateReview: protectedProcedure.input(z.object({
+      reviewId: z.number(),
+      rating: z.number().min(1).max(5).optional(),
+      title: z.string().max(255).optional(),
+      body: z.string().max(2000).optional(),
+      tags: z.array(z.string()).optional(),
+      strengthRating: z.number().min(1).max(5).optional(),
+      smoothnessRating: z.number().min(1).max(5).optional(),
+      effectTags: z.array(z.string()).optional(),
+      experienceLevel: z.enum(['beginner', 'intermediate', 'experienced']).optional(),
+      usageTiming: z.enum(['daytime', 'nighttime', 'anytime']).optional(),
+      wouldRecommend: z.boolean().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+      const review = await db.getReviewById(input.reviewId);
+      if (!review) throw new Error('Review not found.');
+      if (review.userId !== userId) throw new Error('You can only edit your own reviews.');
+      const { reviewId, ...updateData } = input;
+      await db.updateProductReview(reviewId, updateData as any);
+      return { success: true, message: 'Review updated successfully.' };
     }),
     // ─── GET PRODUCT REVIEWS (public) ───
     productReviews: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {

@@ -340,7 +340,7 @@ export async function initializeDatabase(): Promise<void> {
       experience_level VARCHAR(20),
       usage_timing VARCHAR(20),
       would_recommend BOOLEAN,
-      is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+      is_approved BOOLEAN NOT NULL DEFAULT TRUE,
       points_awarded BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -1012,7 +1012,7 @@ export async function createProductReview(data: schema.InsertProductReview): Pro
 
 export async function getProductReviews(productId: number) {
   if (!USE_PERSISTENT_DB) return _mem_getProductReviews(productId);
-  return getDb().select().from(schema.productReviews).where(and(eq(schema.productReviews.productId, productId), eq(schema.productReviews.isApproved, true))).orderBy(desc(schema.productReviews.createdAt));
+  return getDb().select().from(schema.productReviews).where(eq(schema.productReviews.productId, productId)).orderBy(desc(schema.productReviews.createdAt));
 }
 
 export async function getUserReviews(userId: number) {
@@ -1039,6 +1039,22 @@ export async function approveReview(id: number): Promise<void> {
 export async function updateReviewPointsAwarded(id: number): Promise<void> {
   if (!USE_PERSISTENT_DB) { _mem_updateReviewPointsAwarded(id); return; }
   await getDb().update(schema.productReviews).set({ pointsAwarded: true, updatedAt: new Date() }).where(eq(schema.productReviews.id, id));
+}
+
+export async function updateProductReview(id: number, data: Partial<schema.InsertProductReview>): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_updateProductReview(id, data); return; }
+  await getDb().update(schema.productReviews).set({ ...data, updatedAt: new Date() } as any).where(eq(schema.productReviews.id, id));
+}
+
+export async function deleteProductReview(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_deleteProductReview(id); return; }
+  await getDb().delete(schema.productReviews).where(eq(schema.productReviews.id, id));
+}
+
+export async function getReviewById(id: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getReviewById(id);
+  const rows = await getDb().select().from(schema.productReviews).where(eq(schema.productReviews.id, id)).limit(1);
+  return rows[0];
 }
 
 // ─── STOCK MANAGEMENT ───
@@ -1586,9 +1602,12 @@ function _mem_trackReferral(data: any) { const id = nextId(); _referralTracking.
 function _mem_getReferralTracking(referrerId: number) { return [..._referralTracking].filter((r: any) => r.referrerId === referrerId).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
 
 // ─── IN-MEMORY REVIEW STUBS ───
-function _mem_createProductReview(data: any) { const id = nextId(); _productReviews.push({ id, ...data, isApproved: false, pointsAwarded: false, createdAt: new Date(), updatedAt: new Date() }); return id; }
-function _mem_getProductReviews(productId: number) { return _productReviews.filter((r: any) => r.productId === productId && r.isApproved).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
+function _mem_createProductReview(data: any) { const id = nextId(); _productReviews.push({ id, ...data, isApproved: true, pointsAwarded: false, createdAt: new Date(), updatedAt: new Date() }); return id; }
+function _mem_getProductReviews(productId: number) { return _productReviews.filter((r: any) => r.productId === productId).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
 function _mem_getUserReviews(userId: number) { return _productReviews.filter((r: any) => r.userId === userId).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
 function _mem_getAllReviews(opts?: any) { const sorted = [..._productReviews].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); return { data: paginate(sorted, opts?.page ?? 1, opts?.limit ?? 50), total: sorted.length }; }
 function _mem_approveReview(id: number) { const r = _productReviews.find((r: any) => r.id === id); if (r) { r.isApproved = true; r.updatedAt = new Date(); } }
 function _mem_updateReviewPointsAwarded(id: number) { const r = _productReviews.find((r: any) => r.id === id); if (r) { r.pointsAwarded = true; r.updatedAt = new Date(); } }
+function _mem_updateProductReview(id: number, data: any) { const r = _productReviews.find((r: any) => r.id === id); if (r) Object.assign(r, data, { updatedAt: new Date() }); }
+function _mem_deleteProductReview(id: number) { const idx = _productReviews.findIndex((r: any) => r.id === id); if (idx !== -1) _productReviews.splice(idx, 1); }
+function _mem_getReviewById(id: number) { return _productReviews.find((r: any) => r.id === id); }

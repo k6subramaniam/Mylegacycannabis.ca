@@ -656,6 +656,12 @@ const en = {
     avgSmoothness: 'Avg. Smoothness',
     verifiedPurchase: 'Verified Purchase',
     topTags: 'How customers describe this product',
+    // Edit review
+    editReview: 'EDIT YOUR REVIEW',
+    editLabel: 'Edit',
+    cancelEdit: 'Cancel',
+    updateReview: 'UPDATE REVIEW',
+    reviewUpdated: 'Review updated successfully!',
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────
