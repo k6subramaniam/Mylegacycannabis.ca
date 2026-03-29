@@ -656,6 +656,19 @@ const fr: Translations = {
     reviewUpdated: 'Avis mis a jour avec succes !',
     moreDetails: 'Details',
     lessDetails: 'Moins',
+    // Filters
+    filters: {
+      filterReviews: 'Filtrer et trier',
+      clearAll: 'Tout effacer',
+      rating: 'Note',
+      newest: 'Plus recents',
+      oldest: 'Plus anciens',
+      highest: 'Mieux notes',
+      lowest: 'Moins bien notes',
+      recommendedOnly: 'Recommandes',
+      noResults: 'Aucun avis ne correspond aux filtres actuels.',
+      noFilterOptions: 'Aucune option de filtre disponible pour les avis actuels.',
+    },
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────

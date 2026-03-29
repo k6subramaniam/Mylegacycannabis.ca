@@ -10,8 +10,8 @@
  * - All labels are internationalised via useT()
  */
 
-import { useState, useEffect } from 'react';
-import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil, Info } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil, Info, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useT } from '@/i18n';
 import { toast } from 'sonner';
@@ -119,6 +119,342 @@ function PillBadge({ tag, count }: { tag: string; count: number }) {
 
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ────────────────────────────────────────────────────────────────
+// FILTER CHIP (small reusable toggle used by the filter bar)
+// ────────────────────────────────────────────────────────────────
+
+function FilterChip({ label, active, onClick, color = 'purple' }: {
+  label: string; active: boolean; onClick: () => void;
+  color?: 'purple' | 'orange' | 'green';
+}) {
+  const styles = {
+    purple: active
+      ? 'bg-[#4B2D8E] text-white border-[#4B2D8E]'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-[#4B2D8E] hover:text-[#4B2D8E]',
+    orange: active
+      ? 'bg-[#F15929] text-white border-[#F15929]'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-[#F15929] hover:text-[#F15929]',
+    green: active
+      ? 'bg-green-600 text-white border-green-600'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-green-600 hover:text-green-600',
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2 py-0.5 rounded-full text-[11px] font-display border transition-all leading-normal ${styles[color]}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// REVIEW FILTERS
+// ────────────────────────────────────────────────────────────────
+
+type SortOption = 'newest' | 'oldest' | 'highest' | 'lowest';
+
+interface ReviewFilters {
+  starFilter: number | null;      // null = all, 1-5 = exact
+  sort: SortOption;
+  tagFilters: string[];           // intersection — review must have ALL selected
+  effectFilters: string[];        // intersection
+  experienceFilter: string | null;
+  timingFilter: string | null;
+  recommendedOnly: boolean;
+}
+
+const INITIAL_FILTERS: ReviewFilters = {
+  starFilter: null,
+  sort: 'newest',
+  tagFilters: [],
+  effectFilters: [],
+  experienceFilter: null,
+  timingFilter: null,
+  recommendedOnly: false,
+};
+
+function hasActiveFilters(f: ReviewFilters) {
+  return (
+    f.starFilter !== null ||
+    f.sort !== 'newest' ||
+    f.tagFilters.length > 0 ||
+    f.effectFilters.length > 0 ||
+    f.experienceFilter !== null ||
+    f.timingFilter !== null ||
+    f.recommendedOnly
+  );
+}
+
+/** Derive which tags/effects actually appear in the current review set */
+function collectAvailableOptions(reviews: any[]) {
+  const tagSet = new Map<string, number>();
+  const effectSet = new Map<string, number>();
+  const expSet = new Map<string, number>();
+  const timSet = new Map<string, number>();
+  for (const r of reviews) {
+    if (r.tags) for (const t of r.tags) tagSet.set(t, (tagSet.get(t) || 0) + 1);
+    if (r.effectTags) for (const t of r.effectTags) effectSet.set(t, (effectSet.get(t) || 0) + 1);
+    if (r.experienceLevel) expSet.set(r.experienceLevel, (expSet.get(r.experienceLevel) || 0) + 1);
+    if (r.usageTiming) timSet.set(r.usageTiming, (timSet.get(r.usageTiming) || 0) + 1);
+  }
+  return { tagSet, effectSet, expSet, timSet };
+}
+
+function applyFilters(reviews: any[], f: ReviewFilters): any[] {
+  let result = [...reviews];
+
+  // Star rating
+  if (f.starFilter !== null) {
+    result = result.filter(r => r.rating === f.starFilter);
+  }
+
+  // Tags (intersection)
+  if (f.tagFilters.length > 0) {
+    result = result.filter(r => r.tags && f.tagFilters.every(t => r.tags.includes(t)));
+  }
+
+  // Effects (intersection)
+  if (f.effectFilters.length > 0) {
+    result = result.filter(r => r.effectTags && f.effectFilters.every(t => r.effectTags.includes(t)));
+  }
+
+  // Experience level
+  if (f.experienceFilter) {
+    result = result.filter(r => r.experienceLevel === f.experienceFilter);
+  }
+
+  // Timing
+  if (f.timingFilter) {
+    result = result.filter(r => r.usageTiming === f.timingFilter);
+  }
+
+  // Recommended only
+  if (f.recommendedOnly) {
+    result = result.filter(r => r.wouldRecommend === true);
+  }
+
+  // Sort
+  switch (f.sort) {
+    case 'oldest':
+      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      break;
+    case 'highest':
+      result.sort((a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      break;
+    case 'lowest':
+      result.sort((a, b) => a.rating - b.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      break;
+    case 'newest':
+    default:
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      break;
+  }
+
+  return result;
+}
+
+function ReviewFilterBar({ reviews, filters, onChange }: {
+  reviews: any[];
+  filters: ReviewFilters;
+  onChange: (f: ReviewFilters) => void;
+}) {
+  const { t } = useT();
+  const rv = t.reviews;
+  const fl = (rv as any).filters || {};
+  const [open, setOpen] = useState(false);
+  const active = hasActiveFilters(filters);
+  const { tagSet, effectSet, expSet, timSet } = useMemo(() => collectAvailableOptions(reviews), [reviews]);
+
+  // Sort tags/effects by frequency descending
+  const sortedTags = useMemo(() => [...tagSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [tagSet]);
+  const sortedEffects = useMemo(() => [...effectSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [effectSet]);
+  const sortedExp = useMemo(() => [...expSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [expSet]);
+  const sortedTim = useMemo(() => [...timSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [timSet]);
+
+  const toggleTagFilter = (tag: string) => {
+    const next = filters.tagFilters.includes(tag)
+      ? filters.tagFilters.filter(t => t !== tag)
+      : [...filters.tagFilters, tag];
+    onChange({ ...filters, tagFilters: next });
+  };
+  const toggleEffectFilter = (tag: string) => {
+    const next = filters.effectFilters.includes(tag)
+      ? filters.effectFilters.filter(t => t !== tag)
+      : [...filters.effectFilters, tag];
+    onChange({ ...filters, effectFilters: next });
+  };
+
+  const noOptions = sortedTags.length === 0 && sortedEffects.length === 0 && sortedExp.length === 0 && sortedTim.length === 0;
+
+  return (
+    <div className="mb-4">
+      {/* Toggle bar */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className={`flex items-center gap-1.5 text-xs font-display transition-colors ${
+            active ? 'text-[#F15929]' : 'text-gray-500 hover:text-[#4B2D8E]'
+          }`}
+        >
+          <SlidersHorizontal size={14} />
+          {fl.filterReviews || 'Filter & Sort'}
+          {active && (
+            <span className="bg-[#F15929] text-white text-[10px] rounded-full px-1.5 leading-4 ml-0.5">
+              {[filters.starFilter !== null, filters.sort !== 'newest', filters.tagFilters.length > 0, filters.effectFilters.length > 0, filters.experienceFilter !== null, filters.timingFilter !== null, filters.recommendedOnly].filter(Boolean).length}
+            </span>
+          )}
+          {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange({ ...INITIAL_FILTERS })}
+            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-red-500 font-display transition-colors"
+          >
+            <X size={11} />
+            {fl.clearAll || 'Clear all'}
+          </button>
+        )}
+      </div>
+
+      {/* Filter panel */}
+      {open && (
+        <div className="mt-2 bg-[#FAFAFA] rounded-xl border border-gray-100 px-4 py-3 space-y-3">
+          {/* Row 1: Sort + Star Rating */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Sort dropdown */}
+            <div className="flex items-center gap-1.5">
+              <ArrowUpDown size={12} className="text-gray-400" />
+              <select
+                value={filters.sort}
+                onChange={(e) => onChange({ ...filters, sort: e.target.value as SortOption })}
+                className="text-[11px] font-display bg-white border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#4B2D8E] text-gray-600 cursor-pointer"
+              >
+                <option value="newest">{fl.newest || 'Newest'}</option>
+                <option value="oldest">{fl.oldest || 'Oldest'}</option>
+                <option value="highest">{fl.highest || 'Highest Rated'}</option>
+                <option value="lowest">{fl.lowest || 'Lowest Rated'}</option>
+              </select>
+            </div>
+
+            <span className="w-px h-5 bg-gray-200" />
+
+            {/* Star filter */}
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-gray-400 font-display mr-0.5">{fl.rating || 'Rating'}:</span>
+              {[5, 4, 3, 2, 1].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => onChange({ ...filters, starFilter: filters.starFilter === star ? null : star })}
+                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-display border transition-all ${
+                    filters.starFilter === star
+                      ? 'bg-[#F15929] text-white border-[#F15929]'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-[#F15929]'
+                  }`}
+                >
+                  {star}<Star size={9} className={filters.starFilter === star ? 'fill-white text-white' : 'fill-[#F15929] text-[#F15929]'} />
+                </button>
+              ))}
+            </div>
+
+            <span className="w-px h-5 bg-gray-200" />
+
+            {/* Recommended toggle */}
+            <FilterChip
+              label={`👍 ${fl.recommendedOnly || 'Recommended'}`}
+              active={filters.recommendedOnly}
+              onClick={() => onChange({ ...filters, recommendedOnly: !filters.recommendedOnly })}
+              color="green"
+            />
+          </div>
+
+          {/* Row 2: Tags (only if reviews have them) */}
+          {sortedTags.length > 0 && (
+            <div>
+              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.descriptorTags}</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {sortedTags.map((tag) => (
+                  <FilterChip
+                    key={tag}
+                    label={`${(rv.tags as any)[tag] || tag} (${tagSet.get(tag)})`}
+                    active={filters.tagFilters.includes(tag)}
+                    onClick={() => toggleTagFilter(tag)}
+                    color="purple"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Row 3: Effects */}
+          {sortedEffects.length > 0 && (
+            <div>
+              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.effectsLabel}</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {sortedEffects.map((tag) => (
+                  <FilterChip
+                    key={tag}
+                    label={`${(rv.effects as any)[tag] || tag} (${effectSet.get(tag)})`}
+                    active={filters.effectFilters.includes(tag)}
+                    onClick={() => toggleEffectFilter(tag)}
+                    color="orange"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Row 4: Experience + Timing */}
+          {(sortedExp.length > 0 || sortedTim.length > 0) && (
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {sortedExp.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.experienceLabel}</span>
+                  <div className="flex gap-1.5 mt-1">
+                    {sortedExp.map((lvl) => (
+                      <FilterChip
+                        key={lvl}
+                        label={`${(rv.experienceLevels as any)[lvl] || lvl} (${expSet.get(lvl)})`}
+                        active={filters.experienceFilter === lvl}
+                        onClick={() => onChange({ ...filters, experienceFilter: filters.experienceFilter === lvl ? null : lvl })}
+                        color="purple"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sortedTim.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.timingLabel}</span>
+                  <div className="flex gap-1.5 mt-1">
+                    {sortedTim.map((tim) => (
+                      <FilterChip
+                        key={tim}
+                        label={`${(rv.timings as any)[tim] || tim} (${timSet.get(tim)})`}
+                        active={filters.timingFilter === tim}
+                        onClick={() => onChange({ ...filters, timingFilter: filters.timingFilter === tim ? null : tim })}
+                        color="purple"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {noOptions && (
+            <p className="text-[11px] text-gray-400 font-body italic">{fl.noFilterOptions || 'No filter options available for current reviews.'}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -519,10 +855,13 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
   const [formOpen, setFormOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [editingReview, setEditingReview] = useState<any>(null);
+  const [filters, setFilters] = useState<ReviewFilters>({ ...INITIAL_FILTERS });
 
   const reviews = data?.reviews || [];
   const agg = data?.aggregate;
-  const visibleReviews = showAll ? reviews : reviews.slice(0, 3);
+  const isFiltering = hasActiveFilters(filters);
+  const filteredReviews = useMemo(() => applyFilters(reviews, filters), [reviews, filters]);
+  const visibleReviews = showAll ? filteredReviews : filteredReviews.slice(0, 3);
 
   // Check if user already reviewed this product
   const userReview = userId ? reviews.find((r: any) => r.userId === userId) : null;
@@ -634,6 +973,11 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
         </div>
       )}
 
+      {/* Review filters — shown when there are reviews */}
+      {reviews.length > 0 && (
+        <ReviewFilterBar reviews={reviews} filters={filters} onChange={setFilters} />
+      )}
+
       {/* Review form — new or edit */}
       {formOpen && isLoggedIn && (
         <div className="mb-8">
@@ -654,6 +998,8 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
       {/* Reviews list */}
       {reviews.length === 0 ? (
         <p className="text-sm text-gray-500 font-body italic">{rv.noReviews}</p>
+      ) : filteredReviews.length === 0 ? (
+        <p className="text-sm text-gray-500 font-body italic">{(rv as any).filters?.noResults || 'No reviews match the current filters.'}</p>
       ) : (
         <div className="space-y-3">
           {visibleReviews.map((r: any) => (
@@ -668,7 +1014,7 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
       )}
 
       {/* Show more / less */}
-      {reviews.length > 3 && (
+      {filteredReviews.length > 3 && (
         <button
           onClick={() => setShowAll(!showAll)}
           className="flex items-center gap-1 mt-4 text-sm font-display text-[#4B2D8E] hover:text-[#3a2270] transition-colors"
@@ -676,7 +1022,7 @@ export default function ProductReviews({ productId, isLoggedIn, userId }: { prod
           {showAll ? (
             <>Show Less <ChevronUp size={16} /></>
           ) : (
-            <>Show All {reviews.length} {rv.reviews} <ChevronDown size={16} /></>
+            <>Show All {filteredReviews.length} {rv.reviews} <ChevronDown size={16} /></>
           )}
         </button>
       )}
