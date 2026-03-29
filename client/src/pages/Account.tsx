@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { rewardTiers, getEligibleRewardTiers, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail } from 'lucide-react';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
@@ -187,7 +187,9 @@ function OrdersTab({ user }: { user: any }) {
   const statusColors: Record<string, string> = { pending: 'bg-orange-100 text-orange-700', processing: 'bg-yellow-100 text-yellow-700', confirmed: 'bg-blue-100 text-blue-700', shipped: 'bg-blue-100 text-blue-700', delivered: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700' };
   return (
     <div className="space-y-4">
-      {user.orders.map((order: any) => (
+      {user.orders.map((order: any) => {
+        const isDelivered = order.status === 'delivered';
+        return (
         <div key={order.id} className="bg-[#F5F5F5] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -198,9 +200,27 @@ function OrdersTab({ user }: { user: any }) {
           </div>
           <div className="space-y-2 mb-3">
             {order.items.map((item: any, i: number) => (
-              <div key={i} className="flex justify-between text-sm font-body">
-                <span className="text-gray-600">{item.quantity}x {item.name}</span>
-                <span className="font-mono-legacy text-[#333]">${(item.price * item.quantity).toFixed(2)}</span>
+              <div key={i} className="flex items-center justify-between text-sm font-body gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {item.productSlug ? (
+                    <Link href={`/product/${item.productSlug}`} className="text-gray-600 hover:text-[#4B2D8E] transition-colors truncate">
+                      {item.quantity}x {item.name}
+                    </Link>
+                  ) : (
+                    <span className="text-gray-600 truncate">{item.quantity}x {item.name}</span>
+                  )}
+                  {isDelivered && item.productSlug && (
+                    <Link
+                      href={`/product/${item.productSlug}#reviews`}
+                      className="shrink-0 inline-flex items-center gap-1 text-[11px] font-display text-[#F15929] hover:text-[#d94d22] transition-colors"
+                    >
+                      <MessageSquare size={11} />
+                      <span className="hidden sm:inline">Write a Review</span>
+                      <span className="sm:hidden">Review</span>
+                    </Link>
+                  )}
+                </div>
+                <span className="font-mono-legacy text-[#333] shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -209,7 +229,8 @@ function OrdersTab({ user }: { user: any }) {
             {order.trackingNumber && <span className="text-xs text-gray-500 font-mono-legacy">Tracking: {order.trackingNumber}</span>}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
