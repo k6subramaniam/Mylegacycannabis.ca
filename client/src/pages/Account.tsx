@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { rewardTiers, getEligibleRewardTiers, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare } from 'lucide-react';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
@@ -276,14 +276,24 @@ function RewardsTab({ user }: { user: any }) {
       {/* Referral */}
       <div className="bg-[#F5F5F5] rounded-2xl p-6">
         <h3 className="font-display text-lg text-[#4B2D8E] mb-3">REFER A FRIEND</h3>
-        <p className="text-sm text-gray-600 font-body mb-3">Share your referral code and earn {REFERRAL_BONUS_REFERRER} points when your friend makes their first purchase!</p>
-        <div className="flex items-center gap-2">
+        <p className="text-sm text-gray-600 font-body mb-3">Share your referral code or link and earn {REFERRAL_BONUS_REFERRER} points when your friend signs up!</p>
+        <div className="flex items-center gap-2 mb-2">
           <div className="flex-1 bg-white rounded-lg px-4 py-3 font-mono-legacy text-sm text-[#4B2D8E] font-medium">{user.referralCode}</div>
           <button onClick={() => { navigator.clipboard.writeText(user.referralCode); toast.success('Referral code copied!'); }}
             className="bg-[#F15929] text-white p-3 rounded-lg hover:bg-[#d94d22] transition-all" aria-label="Copy referral code">
             <Copy size={18} />
           </button>
         </div>
+        <button
+          onClick={() => {
+            const link = `${window.location.origin}/register?ref=${encodeURIComponent(user.referralCode)}`;
+            navigator.clipboard.writeText(link);
+            toast.success('Referral link copied!');
+          }}
+          className="flex items-center gap-1.5 text-xs font-display text-[#4B2D8E] hover:text-[#F15929] transition-colors"
+        >
+          <Share2 size={13} /> Copy shareable link
+        </button>
       </div>
 
       {/* History */}
