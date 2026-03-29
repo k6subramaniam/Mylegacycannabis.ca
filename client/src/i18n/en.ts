@@ -664,6 +664,19 @@ const en = {
     reviewUpdated: 'Review updated successfully!',
     moreDetails: 'Details',
     lessDetails: 'Less',
+    // Filters
+    filters: {
+      filterReviews: 'Filter & Sort',
+      clearAll: 'Clear all',
+      rating: 'Rating',
+      newest: 'Newest',
+      oldest: 'Oldest',
+      highest: 'Highest Rated',
+      lowest: 'Lowest Rated',
+      recommendedOnly: 'Recommended',
+      noResults: 'No reviews match the current filters.',
+      noFilterOptions: 'No filter options available for current reviews.',
+    },
   },
 
   // ── Maintenance Mode ─────────────────────────────────────────
