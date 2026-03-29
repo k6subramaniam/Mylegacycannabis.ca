@@ -296,7 +296,7 @@ export const referralTracking = pgTable("referral_tracking", {
 export type ReferralTracking = typeof referralTracking.$inferSelect;
 export type InsertReferralTracking = typeof referralTracking.$inferInsert;
 
-// ─── PRODUCT REVIEWS ───
+// ─── PRODUCT REVIEWS (with structured tags for recommendation signals) ───
 export const productReviews = pgTable("product_reviews", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -305,6 +305,17 @@ export const productReviews = pgTable("product_reviews", {
   rating: integer("rating").notNull(),
   title: varchar("title", { length: 255 }),
   body: text("body"),
+  // ── Structured recommendation tags (JSON arrays of string tags) ──
+  // These capture how customers actually describe their experience,
+  // forming the basis for future AI-powered recommendations.
+  tags: json("tags").$type<string[]>(),           // e.g. ["smooth","relaxing","good-value"]
+  strengthRating: integer("strength_rating"),       // 1-5 (1=mild, 5=very strong)
+  smoothnessRating: integer("smoothness_rating"),   // 1-5 (1=harsh, 5=very smooth)
+  effectTags: json("effect_tags").$type<string[]>(), // e.g. ["relaxing","sleepy","euphoric","focused","creative","social","pain-relief","anxiety-relief"]
+  experienceLevel: varchar("experience_level", { length: 20 }), // "beginner", "intermediate", "experienced"
+  usageTiming: varchar("usage_timing", { length: 20 }),         // "daytime", "nighttime", "anytime"
+  wouldRecommend: boolean("would_recommend"),
+  // ── Moderation & rewards ──
   isApproved: boolean("is_approved").default(false).notNull(),
   pointsAwarded: boolean("points_awarded").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
