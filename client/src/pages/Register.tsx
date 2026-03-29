@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import SEOHead from '@/components/SEOHead';
-import { Mail, Phone, User, Calendar, ArrowRight, ArrowLeft, Loader2, Shield, AlertCircle, Gift, Check } from 'lucide-react';
+import { Mail, Phone, User, Calendar, ArrowRight, ArrowLeft, Loader2, Shield, AlertCircle, Gift, Check, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
@@ -21,6 +21,19 @@ export default function Register() {
   const [error, setError] = useState('');
   const [smsAvailable, setSmsAvailable] = useState(false);
   const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [showReferral, setShowReferral] = useState(false);
+
+  // Auto-populate referral code from URL query param ?ref=MLC-XXXX
+  const searchString = useSearch();
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref.trim().toUpperCase());
+      setShowReferral(true);
+    }
+  }, [searchString]);
 
   useEffect(() => {
     fetch('/api/auth/sms-available').then(r => r.json()).then(d => setSmsAvailable(d.available)).catch(() => {});
@@ -127,6 +140,7 @@ export default function Register() {
             email: email.trim(),
             phone: phone.trim(),
             birthday: birthday || undefined,
+            referralCode: referralCode.trim() || undefined,
           },
         }),
       });
@@ -138,7 +152,10 @@ export default function Register() {
         return;
       }
 
-      toast.success('Account created! You earned 25 welcome bonus points! 🎉');
+      const bonusMsg = referralCode.trim()
+        ? 'Account created! You earned 25 welcome points + 25 referral bonus points! 🎉'
+        : 'Account created! You earned 25 welcome bonus points! 🎉';
+      toast.success(bonusMsg);
       window.location.href = '/account';
     } catch (err) {
       setError('Network error. Please try again.');
@@ -255,6 +272,36 @@ export default function Register() {
                   <p className="text-xs text-gray-400 font-body mt-1">Used for account verification and order updates</p>
                 </div>
 
+                {/* Referral Code (Optional) */}
+                <div>
+                  {!showReferral ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowReferral(true)}
+                      className="flex items-center gap-1.5 text-xs font-display text-[#F15929] hover:text-[#d94d22] transition-colors"
+                    >
+                      <Users size={14} />
+                      Have a referral code?
+                    </button>
+                  ) : (
+                    <>
+                      <label className="block text-xs font-display text-[#333] mb-1.5">REFERRAL CODE <span className="text-gray-400 font-body normal-case font-normal">(optional)</span></label>
+                      <div className="relative">
+                        <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          value={referralCode}
+                          onChange={e => { setReferralCode(e.target.value.toUpperCase()); setError(''); }}
+                          placeholder="MLC-XXXXXX"
+                          maxLength={20}
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#F15929] focus:ring-2 focus:ring-[#F15929]/20 outline-none font-mono text-sm transition-all uppercase tracking-wide"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 font-body mt-1">You and your friend both earn bonus points!</p>
+                    </>
+                  )}
+                </div>
+
                 {/* Birthday (Required — age gate) */}
                 <div>
                   <label className="block text-xs font-display text-[#333] mb-1.5">
@@ -361,6 +408,12 @@ export default function Register() {
                     <Check size={14} className="text-green-500" />
                     <span className="text-gray-600">+1 {phone}</span>
                   </div>
+                  {referralCode && (
+                    <div className="flex items-center gap-2 text-sm font-body">
+                      <Check size={14} className="text-green-500" />
+                      <span className="text-gray-600">Referral: <span className="font-mono text-[#F15929]">{referralCode}</span></span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Email Verification */}

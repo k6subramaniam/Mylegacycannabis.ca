@@ -171,6 +171,7 @@ export function registerCustomAuthRoutes(app: Express) {
           email: string;
           phone: string;
           birthday?: string;
+          referralCode?: string;
         };
       };
 
@@ -236,7 +237,37 @@ export function registerCustomAuthRoutes(app: Express) {
           } as any);
 
           // Log welcome bonus in rewards history
-          // (We'd call db.createRewardsHistory here if needed)
+          try {
+            await db.addRewardsHistory({ userId: newUser.id, points: 25, type: 'earned' as any, description: 'Welcome bonus for creating an account' } as any);
+          } catch (e) { console.warn("[Register] Failed to log welcome bonus history:", e); }
+
+          // ─── REFERRAL CODE: award points to both referrer and referee ───
+          if (registrationData.referralCode) {
+            try {
+              const REFERRAL_BONUS_REFERRER = 50;
+              const REFERRAL_BONUS_REFEREE = 25;
+              const refCode = await db.getReferralCodeByCode(registrationData.referralCode);
+              if (refCode && refCode.userId !== newUser.id) {
+                // Award referrer
+                const referrer = await db.getUserById(refCode.userId);
+                if (referrer) {
+                  await db.updateUser(referrer.id, { rewardPoints: (referrer.rewardPoints || 0) + REFERRAL_BONUS_REFERRER } as any);
+                  await db.addRewardsHistory({ userId: referrer.id, points: REFERRAL_BONUS_REFERRER, type: 'referral' as any, description: `Referral bonus: ${registrationData.name || registrationData.email} joined using your code` } as any);
+                }
+                // Award referee (new user)
+                const currentPoints = 25; // already set welcome bonus above
+                await db.updateUser(newUser.id, { rewardPoints: currentPoints + REFERRAL_BONUS_REFEREE, referredBy: refCode.userId } as any);
+                await db.addRewardsHistory({ userId: newUser.id, points: REFERRAL_BONUS_REFEREE, type: 'referral' as any, description: `Referral bonus: Used code ${registrationData.referralCode}` } as any);
+                // Track referral
+                await db.trackReferral({ referrerId: refCode.userId, refereeId: newUser.id, referralCodeId: refCode.id, referrerPointsAwarded: true, refereePointsAwarded: true });
+                console.log(`[Referral] ${registrationData.email} used code ${registrationData.referralCode}. Referrer +${REFERRAL_BONUS_REFERRER} pts, Referee +${REFERRAL_BONUS_REFEREE} pts`);
+              } else if (!refCode) {
+                console.warn(`[Referral] Invalid referral code: ${registrationData.referralCode}`);
+              }
+            } catch (refErr) {
+              console.warn("[Register] Referral processing failed (non-blocking):", refErr);
+            }
+          }
         }
 
         await setSessionCookie(res, req, openId, registrationData.name);
