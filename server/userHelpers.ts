@@ -11,16 +11,29 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
   const formattedOrders = [];
   for (const o of userOrders) {
     const items = await db.getOrderItems(o.id);
+    const formattedItems = [];
+    for (const i of items) {
+      let productSlug: string | undefined;
+      if ((i as any).productId) {
+        try {
+          const product = await db.getProductById((i as any).productId);
+          if (product) productSlug = product.slug;
+        } catch { /* product may have been deleted */ }
+      }
+      formattedItems.push({
+        name: (i as any).productName || 'Item',
+        quantity: (i as any).quantity || 1,
+        price: parseFloat((i as any).price || '0'),
+        productId: (i as any).productId || null,
+        productSlug: productSlug || null,
+      });
+    }
     formattedOrders.push({
       id: o.orderNumber || `ORD-${o.id}`,
       date: o.createdAt?.toISOString?.() || new Date().toISOString(),
       status: o.status || 'processing',
       total: parseFloat((o as any).total || '0'),
-      items: items.map((i: any) => ({
-        name: i.productName || 'Item',
-        quantity: i.quantity || 1,
-        price: parseFloat(i.price || '0'),
-      })),
+      items: formattedItems,
       trackingNumber: (o as any).trackingNumber || undefined,
     });
   }

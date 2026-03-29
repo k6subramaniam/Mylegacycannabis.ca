@@ -270,10 +270,10 @@ function ReviewFilterBar({ reviews, filters, onChange }: {
   const { tagSet, effectSet, expSet, timSet } = useMemo(() => collectAvailableOptions(reviews), [reviews]);
 
   // Sort tags/effects by frequency descending
-  const sortedTags = useMemo(() => [...tagSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [tagSet]);
-  const sortedEffects = useMemo(() => [...effectSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [effectSet]);
-  const sortedExp = useMemo(() => [...expSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [expSet]);
-  const sortedTim = useMemo(() => [...timSet.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]), [timSet]);
+  const sortedTags = useMemo(() => Array.from(tagSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [tagSet]);
+  const sortedEffects = useMemo(() => Array.from(effectSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [effectSet]);
+  const sortedExp = useMemo(() => Array.from(expSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [expSet]);
+  const sortedTim = useMemo(() => Array.from(timSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [timSet]);
 
   const toggleTagFilter = (tag: string) => {
     const next = filters.tagFilters.includes(tag)
