@@ -16,6 +16,12 @@ export default function ProductPage() {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
 
+  // All hooks must be called before any early return to satisfy React's rules of hooks
+  const { data: reviewsData } = trpc.store.productReviews.useQuery(
+    { productId: product?.id ?? 0 },
+    { enabled: !!product?.id }
+  );
+
   if (isLoading) {
     return (
       <div className="container py-20 flex items-center justify-center">
@@ -36,12 +42,6 @@ export default function ProductPage() {
   const points = calculatePointsEarned(parseFloat(product.price.toString()) * quantity);
   const priceNum = parseFloat(product.price.toString()).toFixed(2);
   const canonicalUrl = `https://mylegacycannabisca-production.up.railway.app/product/${product.slug}`;
-
-  // Fetch reviews for JSON-LD aggregate
-  const { data: reviewsData } = trpc.store.productReviews.useQuery(
-    { productId: product.id },
-    { enabled: !!product.id }
-  );
   const reviewAgg = reviewsData?.aggregate;
 
   // Product JSON-LD for Google rich results
