@@ -333,12 +333,28 @@ export async function initializeDatabase(): Promise<void> {
       rating INTEGER NOT NULL,
       title VARCHAR(255),
       body TEXT,
+      tags JSON,
+      strength_rating INTEGER,
+      smoothness_rating INTEGER,
+      effect_tags JSON,
+      experience_level VARCHAR(20),
+      usage_timing VARCHAR(20),
+      would_recommend BOOLEAN,
       is_approved BOOLEAN NOT NULL DEFAULT FALSE,
       points_awarded BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `;
+
+  // ─── Add structured review columns if table was created before this update ───
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS tags JSON`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS strength_rating INTEGER`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS smoothness_rating INTEGER`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS effect_tags JSON`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS experience_level VARCHAR(20)`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS usage_timing VARCHAR(20)`;
+  await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS would_recommend BOOLEAN`;
 
   console.log("[DB] PostgreSQL tables created / verified");
 

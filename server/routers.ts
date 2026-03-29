@@ -948,17 +948,58 @@ export const appRouter = router({
       productId: z.number(),
       orderId: z.number().optional(),
       rating: z.number().min(1).max(5),
-      title: z.string().optional(),
-      body: z.string().optional(),
+      title: z.string().max(255).optional(),
+      body: z.string().max(2000).optional(),
+      // Structured recommendation signals
+      tags: z.array(z.string()).optional(),
+      strengthRating: z.number().min(1).max(5).optional(),
+      smoothnessRating: z.number().min(1).max(5).optional(),
+      effectTags: z.array(z.string()).optional(),
+      experienceLevel: z.enum(['beginner', 'intermediate', 'experienced']).optional(),
+      usageTiming: z.enum(['daytime', 'nighttime', 'anytime']).optional(),
+      wouldRecommend: z.boolean().optional(),
     })).mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new Error('Not authenticated');
+      // Check for duplicate review on same product
+      const existing = await db.getUserReviews(userId);
+      if (existing.some((r: any) => r.productId === input.productId)) {
+        throw new Error('You have already reviewed this product.');
+      }
       const id = await db.createProductReview({ userId, ...input });
       return { id, message: 'Review submitted! It will appear after admin approval.' };
     }),
     // ─── GET PRODUCT REVIEWS (public) ───
     productReviews: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      return db.getProductReviews(input.productId);
+      const reviews = await db.getProductReviews(input.productId);
+      // Compute aggregate stats
+      const count = reviews.length;
+      const avgRating = count > 0 ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / count : 0;
+      // Aggregate tag counts
+      const tagCounts: Record<string, number> = {};
+      const effectCounts: Record<string, number> = {};
+      let strengthSum = 0, strengthCount = 0;
+      let smoothnessSum = 0, smoothnessCount = 0;
+      let recommendCount = 0;
+      for (const r of reviews as any[]) {
+        if (r.tags) for (const t of r.tags) tagCounts[t] = (tagCounts[t] || 0) + 1;
+        if (r.effectTags) for (const t of r.effectTags) effectCounts[t] = (effectCounts[t] || 0) + 1;
+        if (r.strengthRating) { strengthSum += r.strengthRating; strengthCount++; }
+        if (r.smoothnessRating) { smoothnessSum += r.smoothnessRating; smoothnessCount++; }
+        if (r.wouldRecommend) recommendCount++;
+      }
+      return {
+        reviews,
+        aggregate: {
+          count,
+          avgRating: Math.round(avgRating * 10) / 10,
+          avgStrength: strengthCount > 0 ? Math.round((strengthSum / strengthCount) * 10) / 10 : null,
+          avgSmoothness: smoothnessCount > 0 ? Math.round((smoothnessSum / smoothnessCount) * 10) / 10 : null,
+          recommendPercent: count > 0 ? Math.round((recommendCount / count) * 100) : null,
+          topTags: Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([tag, ct]) => ({ tag, count: ct })),
+          topEffects: Object.entries(effectCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([tag, ct]) => ({ tag, count: ct })),
+        },
+      };
     }),
     // ─── GET REFERRAL CODE (authenticated) ───
     myReferralCode: protectedProcedure.query(async ({ ctx }) => {

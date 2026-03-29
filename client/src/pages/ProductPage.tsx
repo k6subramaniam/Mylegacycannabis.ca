@@ -1,6 +1,7 @@
 import { useParams, Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import ProductReviews from '@/components/ProductReviews';
 import { useCart } from '@/contexts/CartContext';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, calculatePointsEarned } from '@/lib/data';
 import { ShoppingCart, Minus, Plus, Truck, Star, Shield, Clock, Gift, ArrowRight, Loader } from 'lucide-react';
@@ -11,6 +12,7 @@ import { trpc } from '@/lib/trpc';
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = trpc.store.product.useQuery({ slug: slug || '' });
+  const { data: authUser } = trpc.auth.me.useQuery();
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
 
@@ -34,6 +36,13 @@ export default function ProductPage() {
   const points = calculatePointsEarned(parseFloat(product.price.toString()) * quantity);
   const priceNum = parseFloat(product.price.toString()).toFixed(2);
   const canonicalUrl = `https://mylegacycannabisca-production.up.railway.app/product/${product.slug}`;
+
+  // Fetch reviews for JSON-LD aggregate
+  const { data: reviewsData } = trpc.store.productReviews.useQuery(
+    { productId: product.id },
+    { enabled: !!product.id }
+  );
+  const reviewAgg = reviewsData?.aggregate;
 
   // Product JSON-LD for Google rich results
   const productSchema = {
@@ -100,6 +109,16 @@ export default function ProductPage() {
         },
       },
     },
+    // AggregateRating for Google rich results (only if reviews exist)
+    ...(reviewAgg && reviewAgg.count > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: reviewAgg.avgRating,
+        bestRating: 5,
+        worstRating: 1,
+        reviewCount: reviewAgg.count,
+      },
+    } : {}),
     additionalProperty: product.thc ? [
       {
         '@type': 'PropertyValue',
@@ -213,6 +232,9 @@ export default function ProductPage() {
               </div>
             </div>
           </div>
+
+          {/* Customer Reviews Section */}
+          <ProductReviews productId={product.id} isLoggedIn={!!authUser} />
         </div>
       </section>
     </>
