@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
-import { Mail, Edit2, Save, X, Eye, Check, Ban, Plus, Code, Users, UserCheck, ShieldCheck } from "lucide-react";
+import { useState, useRef } from "react";
+import { Mail, Edit2, Save, X, Eye, Check, Ban, Plus, Code, Users, UserCheck, ShieldCheck, Image, Upload, Link } from "lucide-react";
 import { toast } from "sonner";
 
 // Category groups for organizing templates
@@ -9,7 +9,7 @@ const TEMPLATE_CATEGORIES: { label: string; icon: any; slugs: string[]; color: s
     label: "Registered Users",
     icon: Users,
     color: "#4B2D8E",
-    slugs: ["welcome-email", "id-verified", "id-rejected", "order-confirmation", "payment-received-customer"],
+    slugs: ["welcome-email", "id-verified", "id-rejected", "order-confirmation", "payment-received-customer", "order-shipped", "order-status-update"],
   },
   {
     label: "Guest Orders",
@@ -72,6 +72,9 @@ export default function AdminEmailTemplates() {
           <Plus size={16} /> New Template
         </button>
       </div>
+
+      {/* Email Logo Card */}
+      <EmailLogoCard />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -257,6 +260,133 @@ export default function AdminEmailTemplates() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Email Logo Card ──
+function EmailLogoCard() {
+  const utils = trpc.useUtils();
+  const { data: logoData, isLoading } = trpc.admin.emailLogo.get.useQuery();
+  const updateMutation = trpc.admin.emailLogo.update.useMutation({
+    onSuccess: () => {
+      utils.admin.emailLogo.get.invalidate();
+      utils.store.siteConfig.invalidate();
+      toast.success("Email logo updated");
+      setEditing(false);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const uploadMutation = trpc.admin.upload.useMutation();
+
+  const [editing, setEditing] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const currentUrl = logoData?.url || "";
+
+  const startEditing = () => {
+    setUrlInput(currentUrl);
+    setEditing(true);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const result = await uploadMutation.mutateAsync({
+          fileName: file.name,
+          base64,
+          contentType: file.type,
+        });
+        setUrlInput(result.url);
+        updateMutation.mutate({ url: result.url });
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      toast.error("Upload failed");
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-[#1a1a2e] flex items-center justify-center">
+            <Image size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-800 text-sm">Email Header Logo</h3>
+            <p className="text-xs text-gray-400">Appears at the top of every email template via <code className="bg-gray-100 px-1 rounded">{"{{logo_url}}"}</code></p>
+          </div>
+        </div>
+        {!editing && (
+          <button onClick={startEditing} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+            <Edit2 size={14} /> Change
+          </button>
+        )}
+      </div>
+
+      {/* Current logo preview */}
+      {!isLoading && currentUrl && (
+        <div className="bg-[#1a1a2e] rounded-lg p-4 mb-4 text-center">
+          <img src={currentUrl} alt="Email logo" style={{ maxWidth: 280, height: "auto", margin: "0 auto" }} />
+          <div style={{ height: 4, background: "linear-gradient(90deg, #F5C518 0%, #D4952A 33%, #E8792B 66%, #C42B2B 100%)", marginTop: 12, borderRadius: 2 }} />
+        </div>
+      )}
+
+      {/* Edit mode */}
+      {editing && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1"><Link size={12} /> Logo Image URL</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://example.com/logo.png"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm"
+              />
+              <button
+                onClick={() => { if (urlInput) updateMutation.mutate({ url: urlInput }); }}
+                disabled={!urlInput || updateMutation.isPending}
+                className="bg-[#4B2D8E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#3a2270] disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Save size={14} /> Save
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">or</span>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <Upload size={14} /> {uploading ? "Uploading..." : "Upload Image"}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <button onClick={() => setEditing(false)} className="ml-auto text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+          </div>
+          <p className="text-xs text-gray-400">Recommended: PNG with transparent background, 280-560px wide. Max 2 MB.</p>
         </div>
       )}
     </div>

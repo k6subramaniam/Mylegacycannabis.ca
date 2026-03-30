@@ -11,6 +11,8 @@ import * as db from "./db";
 import { sendCustomerEmail, sendAdminTemplatedEmail } from "./emailService";
 import { ENV } from "./_core/env";
 
+const DEFAULT_LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png";
+
 // ─── Site URL helper ───
 function getSiteUrl(): string {
   // Railway sets RAILWAY_PUBLIC_DOMAIN in production
@@ -96,9 +98,11 @@ async function sendToAdminAndCustomer(
 
 // ─── Default variable values (common across templates) ───
 
-function commonVars(): Record<string, string> {
+async function commonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
+  const logoUrl = await db.getSiteSetting("email_logo_url") || DEFAULT_LOGO_URL;
   return {
+    logo_url: logoUrl,
     unsubscribe_url: `${base}/unsubscribe`,
     privacy_url: `${base}/privacy`,
     terms_url: `${base}/terms`,
@@ -119,7 +123,7 @@ export async function triggerWelcomeEmail(params: {
   await sendTemplatedEmail("welcome-email", params.customerEmail, {
     customer_name: params.customerName,
     account_url: `${base}/account`,
-    ...commonVars(),
+    ...await commonVars(),
   });
 }
 
@@ -145,7 +149,7 @@ export async function triggerOrderConfirmation(params: {
     payment_amount: `$${params.paymentAmount}`,
     payment_reference: params.orderId,
     action_url: `${base}/account`,
-    ...commonVars(),
+    ...await commonVars(),
   };
 
   // Customer gets order confirmation
@@ -169,7 +173,7 @@ export async function triggerPaymentReceived(params: {
     order_id: params.orderId,
     order_total: `$${params.orderTotal}`,
     action_url: `${base}/admin/orders`,
-    ...commonVars(),
+    ...await commonVars(),
   };
 
   // Customer notification
@@ -205,7 +209,7 @@ export async function triggerIdSubmitted(params: {
     order_id: "",
     order_total: "",
     action_url: `${base}/admin/verifications`,
-    ...commonVars(),
+    ...await commonVars(),
   };
 
   // Admin gets notified
@@ -228,7 +232,7 @@ export async function triggerIdApproved(params: {
     order_id: "",
     order_total: "",
     action_url: `${base}/shop`,
-    ...commonVars(),
+    ...await commonVars(),
   };
 
   const slug = params.isGuest ? "guest-id-verified" : "id-verified";
@@ -250,7 +254,7 @@ export async function triggerOrderShipped(params: {
     order_id: params.orderId,
     tracking_number: params.trackingNumber,
     tracking_url: params.trackingUrl,
-    ...commonVars(),
+    ...await commonVars(),
   });
 }
 
@@ -268,7 +272,7 @@ export async function triggerOrderStatusUpdate(params: {
     order_status: params.orderStatus,
     update_date: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
     status_message: params.statusMessage,
-    ...commonVars(),
+    ...await commonVars(),
   });
 }
 
@@ -287,7 +291,7 @@ export async function triggerIdRejected(params: {
     order_id: "",
     order_total: "",
     action_url: `${base}/id-verification`,
-    ...commonVars(),
+    ...await commonVars(),
   };
 
   const slug = params.isGuest ? "guest-id-rejected" : "id-rejected";
