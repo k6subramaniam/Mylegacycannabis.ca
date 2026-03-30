@@ -335,3 +335,31 @@ export const siteSettings = pgTable("site_settings", {
 
 export type SiteSetting = typeof siteSettings.$inferSelect;
 export type InsertSiteSetting = typeof siteSettings.$inferInsert;
+
+// ─── E-TRANSFER PAYMENT RECORDS ───
+export const etransferMatchConfidenceEnum = pgEnum("etransfer_match_confidence", ["exact", "high", "low", "none"]);
+export const etransferStatusEnum = pgEnum("etransfer_status", ["auto_matched", "manual_matched", "unmatched", "ignored"]);
+
+export const paymentRecords = pgTable("payment_records", {
+  id: serial("id").primaryKey(),
+  emailId: varchar("email_id", { length: 255 }).notNull().unique(), // Gmail message ID (dedup)
+  senderName: varchar("sender_name", { length: 255 }),
+  senderEmail: varchar("sender_email", { length: 320 }),
+  amount: numeric("amount", { precision: 10, scale: 2 }),
+  memo: text("memo"),
+  rawSubject: varchar("raw_subject", { length: 500 }),
+  rawBodySnippet: text("raw_body_snippet"),       // first 500 chars for debugging
+  receivedAt: timestamp("received_at"),
+  matchedOrderId: integer("matched_order_id"),
+  matchedOrderNumber: varchar("matched_order_number", { length: 30 }),
+  matchConfidence: etransferMatchConfidenceEnum("match_confidence").default("none"),
+  matchMethod: varchar("match_method", { length: 100 }),  // "memo_order_number", "exact_amount", "amount_name", "manual"
+  status: etransferStatusEnum("status").default("unmatched").notNull(),
+  reviewedBy: integer("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PaymentRecord = typeof paymentRecords.$inferSelect;
+export type InsertPaymentRecord = typeof paymentRecords.$inferInsert;

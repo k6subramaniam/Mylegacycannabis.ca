@@ -248,7 +248,19 @@ export default function Checkout() {
             <h3 className="font-display text-sm text-[#4B2D8E] mb-2">E-TRANSFER DETAILS</h3>
             <p className="text-sm font-body text-gray-600">Email: <strong>payments@mylegacycannabis.ca</strong></p>
             <p className="text-sm font-body text-gray-600">Amount: <strong>${total.toFixed(2)}</strong></p>
-            <p className="text-xs text-gray-400 font-body mt-2">Include your order number in the e-Transfer message.</p>
+            <div className="mt-3 bg-[#4B2D8E]/10 border border-[#4B2D8E]/20 rounded-lg p-3">
+              <p className="text-xs font-display text-[#4B2D8E] mb-1">⚡ IMPORTANT — INCLUDE THIS IN THE MEMO:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-white rounded-lg px-3 py-2 font-mono text-sm text-[#4B2D8E] font-bold tracking-wide border">{orderNumber}</code>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(orderNumber); toast.success('Order number copied!'); }}
+                  className="shrink-0 bg-[#F15929] text-white text-xs font-display px-3 py-2 rounded-lg hover:bg-[#d94d22] transition-all"
+                >
+                  COPY
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 font-body mt-2">Including your order number ensures your payment is matched instantly.</p>
+            </div>
           </div>
 
           {isAuthenticated && (
@@ -566,7 +578,7 @@ export default function Checkout() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 font-body bg-[#F5F5F5] rounded-lg p-3">
-                    After placing your order, send an e-Transfer to <strong>payments@mylegacycannabis.ca</strong>. Include your order number in the message. Your order will be processed once payment is received.
+                    After placing your order, send an e-Transfer to <strong>payments@mylegacycannabis.ca</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Your order will be processed once payment is received.
                   </p>
                 </div>
               </div>

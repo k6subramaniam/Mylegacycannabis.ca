@@ -15,6 +15,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
 import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses } from "../db";
+import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
@@ -216,13 +217,33 @@ async function startServer() {
     }
   }, 6 * 60 * 60 * 1000); // every 6 hours
 
-  // Run both immediately on startup (after a short delay to let DB settle)
+  // Poll Gmail for e-Transfer deposit notifications every 5 minutes
+  const ETRANSFER_POLL_INTERVAL = parseInt(process.env.ETRANSFER_POLL_INTERVAL || "300000", 10);
+  if (isETransferServiceConfigured()) {
+    console.log(`[ETransfer] Service configured — polling every ${ETRANSFER_POLL_INTERVAL / 1000}s`);
+    setInterval(async () => {
+      try {
+        await pollETransferEmails();
+      } catch (err) {
+        console.error("[Cron] E-Transfer poll error:", err);
+      }
+    }, ETRANSFER_POLL_INTERVAL);
+  } else {
+    console.log("[ETransfer] Gmail API not configured — e-Transfer auto-matching disabled");
+  }
+
+  // Run all jobs immediately on startup (after a short delay to let DB settle)
   setTimeout(async () => {
     try {
       const cancelCount = await autoCancelUnpaidOrders();
       if (cancelCount > 0) console.log(`[Startup] Auto-cancelled ${cancelCount} unpaid order(s)`);
       const birthdayCount = await checkBirthdayBonuses();
       if (birthdayCount > 0) console.log(`[Startup] Awarded birthday bonus to ${birthdayCount} user(s)`);
+      // Initial e-Transfer poll
+      if (isETransferServiceConfigured()) {
+        const etStats = await pollETransferEmails();
+        console.log(`[Startup] E-Transfer poll: ${etStats.processed} processed, ${etStats.matched} matched`);
+      }
     } catch (err) {
       console.error("[Startup] Background job error:", err);
     }
