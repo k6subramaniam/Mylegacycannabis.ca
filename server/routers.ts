@@ -834,15 +834,17 @@ export const appRouter = router({
     }),
 
     siteConfig: publicProcedure.query(async () => {
-      const [idVerificationEnabled, maintenance, storeHoursConfig] = await Promise.all([
+      const [idVerificationEnabled, maintenance, storeHoursConfig, paymentEmail] = await Promise.all([
         db.isIdVerificationEnabled(),
         db.getMaintenanceConfig(),
         db.getStoreHoursConfig(),
+        db.getSiteSetting("payment_email"),
       ]);
       return {
         idVerificationEnabled,
         maintenance,
         storeHours: storeHoursConfig,
+        paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
       };
     }),
     products: publicProcedure.input(z.object({
@@ -1220,12 +1222,29 @@ export const appRouter = router({
       return stats;
     }),
 
-    // Admin: check if service is configured
-    status: adminProcedure.query(() => {
+    // Admin: check if service is configured + get/set payment email
+    status: adminProcedure.query(async () => {
+      const savedEmail = await db.getSiteSetting("payment_email");
       return {
         configured: isETransferServiceConfigured(),
-        paymentEmail: process.env.GMAIL_PAYMENT_EMAIL || "Not set",
+        paymentEmail: savedEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
       };
+    }),
+
+    // Admin: update the customer-facing payment email address
+    updatePaymentEmail: adminProcedure.input(z.object({
+      email: z.string().email(),
+    })).mutation(async ({ input, ctx }) => {
+      await db.setSiteSetting("payment_email", input.email);
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "update_payment_email",
+        entityType: "site_setting",
+        entityId: 0,
+        details: `Updated payment email to ${input.email}`,
+      });
+      return { success: true, email: input.email };
     }),
   }),
 });

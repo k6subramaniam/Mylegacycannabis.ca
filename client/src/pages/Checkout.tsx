@@ -172,7 +172,7 @@ export default function Checkout() {
   const { t } = useT();
   const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
-  const { idVerificationEnabled } = useSiteConfig();
+  const { idVerificationEnabled, paymentEmail } = useSiteConfig();
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -246,7 +246,7 @@ export default function Checkout() {
 
           <div className="bg-[#F5F5F5] rounded-xl p-4 mb-6 text-left">
             <h3 className="font-display text-sm text-[#4B2D8E] mb-2">E-TRANSFER DETAILS</h3>
-            <p className="text-sm font-body text-gray-600">Email: <strong>payments@mylegacycannabis.ca</strong></p>
+            <p className="text-sm font-body text-gray-600">Email: <strong>{paymentEmail}</strong></p>
             <p className="text-sm font-body text-gray-600">Amount: <strong>${total.toFixed(2)}</strong></p>
             <div className="mt-3 bg-[#4B2D8E]/10 border border-[#4B2D8E]/20 rounded-lg p-3">
               <p className="text-xs font-display text-[#4B2D8E] mb-1">⚡ IMPORTANT — INCLUDE THIS IN THE MEMO:</p>
@@ -578,7 +578,7 @@ export default function Checkout() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 font-body bg-[#F5F5F5] rounded-lg p-3">
-                    After placing your order, send an e-Transfer to <strong>payments@mylegacycannabis.ca</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Your order will be processed once payment is received.
+                    After placing your order, send an e-Transfer to <strong>{paymentEmail}</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Your order will be processed once payment is received.
                   </p>
                 </div>
               </div>
