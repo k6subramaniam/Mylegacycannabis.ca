@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState, useRef } from "react";
-import { Mail, Edit2, Save, X, Eye, Check, Ban, Plus, Code, Users, UserCheck, ShieldCheck, Image, Upload, Link } from "lucide-react";
+import { Mail, Edit2, Save, X, Eye, Check, Ban, Plus, Code, Users, UserCheck, ShieldCheck, Image, Upload, Link, Sparkles, Wand2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 // Category groups for organizing templates
@@ -25,6 +25,26 @@ const TEMPLATE_CATEGORIES: { label: string; icon: any; slugs: string[]; color: s
   },
 ];
 
+// All known template variables for the variable picker
+const ALL_VARIABLES = [
+  { key: "customer_name", label: "Customer Name", group: "Customer" },
+  { key: "order_id", label: "Order Number", group: "Order" },
+  { key: "order_total", label: "Order Total", group: "Order" },
+  { key: "order_items", label: "Order Items", group: "Order" },
+  { key: "delivery_address", label: "Delivery Address", group: "Order" },
+  { key: "order_status", label: "Order Status", group: "Order" },
+  { key: "update_date", label: "Update Date", group: "Order" },
+  { key: "status_message", label: "Status Message", group: "Order" },
+  { key: "payment_amount", label: "Payment Amount", group: "Payment" },
+  { key: "payment_reference", label: "Payment Reference", group: "Payment" },
+  { key: "tracking_number", label: "Tracking Number", group: "Shipping" },
+  { key: "tracking_url", label: "Tracking URL", group: "Shipping" },
+  { key: "rejection_reason", label: "Rejection Reason", group: "Verification" },
+  { key: "shop_url", label: "Shop Link", group: "Links" },
+  { key: "account_url", label: "Account Link", group: "Links" },
+  { key: "action_url", label: "CTA Link", group: "Links" },
+];
+
 export default function AdminEmailTemplates() {
   const utils = trpc.useUtils();
   const { data: templates, isLoading } = trpc.admin.emailTemplates.list.useQuery(undefined, { refetchOnWindowFocus: true });
@@ -40,6 +60,7 @@ export default function AdminEmailTemplates() {
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ slug: "", name: "", subject: "", bodyHtml: "", variables: "", isActive: true });
+  const [showAiGenerate, setShowAiGenerate] = useState(false);
 
   const resetNewForm = () => setNewForm({ slug: "", name: "", subject: "", bodyHtml: "", variables: "", isActive: true });
 
@@ -68,9 +89,14 @@ export default function AdminEmailTemplates() {
             {inactiveTemplates.length > 0 && <span className="text-gray-400">({inactiveTemplates.length} inactive)</span>}
           </p>
         </div>
-        <button onClick={() => setShowNew(true)} className="bg-[#4B2D8E] text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#3a2270]">
-          <Plus size={16} /> New Template
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowAiGenerate(true)} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:opacity-90 shadow-md">
+            <Sparkles size={16} /> AI Generate
+          </button>
+          <button onClick={() => setShowNew(true)} className="bg-[#4B2D8E] text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#3a2270]">
+            <Plus size={16} /> New Template
+          </button>
+        </div>
       </div>
 
       {/* Email Logo Card */}
@@ -170,51 +196,14 @@ export default function AdminEmailTemplates() {
 
       {/* Edit Modal */}
       {editingTemplate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-3xl my-8 shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">Edit: {editingTemplate.name}</h2>
-                <p className="text-xs text-gray-400 font-mono">{editingTemplate.slug}</p>
-              </div>
-              <button onClick={() => setEditingTemplate(null)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
-            </div>
-            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editingTemplate.id, ...editForm }); }} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Subject Line</label>
-                <input type="text" value={editForm.subject} onChange={(e) => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1"><Code size={12} /> HTML Body</label>
-                <textarea value={editForm.bodyHtml} onChange={(e) => setEditForm(f => ({ ...f, bodyHtml: e.target.value }))}
-                  rows={14} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono resize-y" />
-              </div>
-              {editingTemplate.variables && editingTemplate.variables.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Click a variable to copy it</p>
-                  <div className="flex flex-wrap gap-1">
-                    {(editingTemplate.variables as string[]).map((v: string) => (
-                      <span key={v} className="px-2 py-1 rounded-full text-xs bg-[#4B2D8E]/10 text-[#4B2D8E] font-mono cursor-pointer hover:bg-[#4B2D8E]/20"
-                        onClick={() => { navigator.clipboard.writeText(`{{${v}}}`); toast.success(`Copied {{${v}}}`); }}>{`{{${v}}}`}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm(f => ({ ...f, isActive: e.target.checked }))} className="w-4 h-4" />
-                <span className="text-sm text-gray-700">Active</span>
-              </label>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditingTemplate(null)} className="px-5 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={updateMutation.isPending}
-                  className="bg-[#4B2D8E] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#3a2270] disabled:opacity-50 flex items-center gap-2">
-                  <Save size={14} /> Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EditTemplateModal
+          template={editingTemplate}
+          editForm={editForm}
+          setEditForm={setEditForm}
+          onClose={() => setEditingTemplate(null)}
+          onSave={() => updateMutation.mutate({ id: editingTemplate.id, ...editForm })}
+          isSaving={updateMutation.isPending}
+        />
       )}
 
       {/* New Template Modal */}
@@ -262,11 +251,388 @@ export default function AdminEmailTemplates() {
           </div>
         </div>
       )}
+
+      {/* AI Generate Modal */}
+      {showAiGenerate && (
+        <AiGenerateModal
+          onClose={() => setShowAiGenerate(false)}
+          onCreated={() => {
+            utils.admin.emailTemplates.list.invalidate();
+            setShowAiGenerate(false);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ── Email Logo Card ──
+// ═══════════════════════════════════════════════════════════
+// AI GENERATE MODAL
+// ═══════════════════════════════════════════════════════════
+function AiGenerateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const aiMutation = trpc.admin.emailTemplates.aiGenerate.useMutation({
+    onError: (err: any) => toast.error(err.message || "AI generation failed"),
+  });
+  const createMutation = trpc.admin.emailTemplates.create.useMutation({
+    onSuccess: () => { toast.success("Template saved!"); onCreated(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const [prompt, setPrompt] = useState("");
+  const [tone, setTone] = useState<"professional" | "friendly" | "urgent" | "celebratory" | "minimal">("professional");
+  const [audience, setAudience] = useState<"customer" | "admin">("customer");
+  const [selectedVars, setSelectedVars] = useState<string[]>(["customer_name"]);
+  const [generated, setGenerated] = useState<{ slug: string; name: string; subject: string; bodyHtml: string; variables: string[] } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const toggleVar = (key: string) => {
+    setSelectedVars(prev => prev.includes(key) ? prev.filter(v => v !== key) : [...prev, key]);
+  };
+
+  const handleGenerate = () => {
+    if (!prompt.trim()) { toast.error("Describe the email you want"); return; }
+    setGenerated(null);
+    aiMutation.mutate({ prompt, tone, audience, variables: selectedVars }, {
+      onSuccess: (data) => {
+        setGenerated(data);
+        setShowPreview(true);
+      },
+    });
+  };
+
+  const handleSave = () => {
+    if (!generated) return;
+    createMutation.mutate({
+      slug: generated.slug,
+      name: generated.name,
+      subject: generated.subject,
+      bodyHtml: generated.bodyHtml,
+      variables: generated.variables,
+      isActive: true,
+    });
+  };
+
+  const toneOptions = [
+    { value: "professional", label: "Professional", emoji: "briefcase" },
+    { value: "friendly", label: "Friendly", emoji: "wave" },
+    { value: "urgent", label: "Urgent", emoji: "alert" },
+    { value: "celebratory", label: "Celebratory", emoji: "party" },
+    { value: "minimal", label: "Minimal", emoji: "clean" },
+  ];
+
+  const varGroups = ALL_VARIABLES.reduce((acc, v) => {
+    (acc[v.group] = acc[v.group] || []).push(v);
+    return acc;
+  }, {} as Record<string, typeof ALL_VARIABLES>);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-4xl my-8 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 flex items-center justify-center">
+              <Sparkles size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-800">AI Email Template Generator</h2>
+              <p className="text-xs text-gray-400">Describe the email you want and AI will create a branded template</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Prompt */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">What email do you need?</label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={'e.g. "A promotional email for 20% off all edibles this weekend" or "An email to notify customers their order has been delayed"'}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Tone + Audience row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Tone</label>
+              <div className="flex flex-wrap gap-2">
+                {toneOptions.map(t => (
+                  <button key={t.value} type="button"
+                    onClick={() => setTone(t.value as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      tone === t.value
+                        ? "bg-violet-100 border-violet-300 text-violet-700"
+                        : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Audience</label>
+              <div className="flex gap-2">
+                {(["customer", "admin"] as const).map(a => (
+                  <button key={a} type="button"
+                    onClick={() => setAudience(a)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      audience === a
+                        ? "bg-violet-100 border-violet-300 text-violet-700"
+                        : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {a === "customer" ? "Customer" : "Admin"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Variable picker */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">Include these variables <span className="text-gray-400">(optional — AI will pick relevant ones either way)</span></label>
+            <div className="space-y-2">
+              {Object.entries(varGroups).map(([group, vars]) => (
+                <div key={group} className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400 font-medium w-20 shrink-0">{group}</span>
+                  {vars.map(v => (
+                    <button key={v.key} type="button"
+                      onClick={() => toggleVar(v.key)}
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-mono border transition-colors ${
+                        selectedVars.includes(v.key)
+                          ? "bg-violet-100 border-violet-300 text-violet-700"
+                          : "bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100"
+                      }`}
+                    >
+                      {v.key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Generate button */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleGenerate}
+              disabled={aiMutation.isPending || !prompt.trim()}
+              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2 shadow-lg"
+            >
+              {aiMutation.isPending ? (
+                <><Loader2 size={16} className="animate-spin" /> Generating...</>
+              ) : (
+                <><Wand2 size={16} /> Generate Template</>
+              )}
+            </button>
+          </div>
+
+          {/* Generated result */}
+          {generated && (
+            <div className="border border-violet-200 rounded-xl bg-violet-50/50 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">{generated.name}</h3>
+                  <p className="text-xs text-gray-400 font-mono">{generated.slug}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-white"
+                  >
+                    <Eye size={14} /> {showPreview ? "Hide" : "Preview"}
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={aiMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 text-sm text-violet-600 hover:bg-violet-100"
+                  >
+                    <RefreshCw size={14} /> Regenerate
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600"><strong>Subject:</strong> {generated.subject}</p>
+
+              {generated.variables.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {generated.variables.map(v => (
+                    <span key={v} className="px-2 py-0.5 rounded-full text-[10px] bg-violet-100 text-violet-600 font-mono">{`{{${v}}}`}</span>
+                  ))}
+                </div>
+              )}
+
+              {showPreview && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+                  <iframe
+                    srcDoc={generated.bodyHtml}
+                    title="AI Email Preview"
+                    className="w-full border-0"
+                    style={{ minHeight: "500px" }}
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={createMutation.isPending}
+                  className="bg-[#4B2D8E] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#3a2270] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  Save Template
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// EDIT TEMPLATE MODAL (with AI Improve)
+// ═══════════════════════════════════════════════════════════
+function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, isSaving }: {
+  template: any;
+  editForm: { subject: string; bodyHtml: string; isActive: boolean };
+  setEditForm: React.Dispatch<React.SetStateAction<{ subject: string; bodyHtml: string; isActive: boolean }>>;
+  onClose: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) {
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [showAiPanel, setShowAiPanel] = useState(false);
+
+  const aiImprove = trpc.admin.emailTemplates.aiImprove.useMutation({
+    onSuccess: (data) => {
+      setEditForm({ subject: data.subject, bodyHtml: data.bodyHtml, isActive: editForm.isActive });
+      toast.success("AI applied improvements");
+      setShowAiPanel(false);
+      setAiInstruction("");
+    },
+    onError: (err: any) => toast.error(err.message || "AI improvement failed"),
+  });
+
+  const handleAiImprove = () => {
+    if (!aiInstruction.trim()) { toast.error("Tell AI what to improve"); return; }
+    aiImprove.mutate({
+      currentSubject: editForm.subject,
+      currentBodyHtml: editForm.bodyHtml,
+      currentVariables: template.variables || [],
+      instruction: aiInstruction,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-3xl my-8 shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">Edit: {template.name}</h2>
+            <p className="text-xs text-gray-400 font-mono">{template.slug}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAiPanel(!showAiPanel)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                showAiPanel
+                  ? "bg-violet-100 border-violet-300 text-violet-700"
+                  : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              <Wand2 size={14} /> AI Improve
+            </button>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+          </div>
+        </div>
+
+        {/* AI Improve Panel */}
+        {showAiPanel && (
+          <div className="p-5 bg-gradient-to-r from-violet-50 to-fuchsia-50 border-b border-violet-100">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles size={14} className="text-white" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Tell AI how to improve this template</p>
+                <textarea
+                  value={aiInstruction}
+                  onChange={(e) => setAiInstruction(e.target.value)}
+                  placeholder='e.g. "Make the tone more friendly and add a coupon section" or "Translate to French" or "Add a section about delivery times" or "Make it shorter and more concise"'
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl border border-violet-200 text-sm resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleAiImprove}
+                    disabled={aiImprove.isPending || !aiInstruction.trim()}
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl text-xs font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {aiImprove.isPending ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                    {aiImprove.isPending ? "Improving..." : "Apply AI Improvements"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Subject Line</label>
+            <input type="text" value={editForm.subject} onChange={(e) => setEditForm(f => ({ ...f, subject: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1"><Code size={12} /> HTML Body</label>
+            <textarea value={editForm.bodyHtml} onChange={(e) => setEditForm(f => ({ ...f, bodyHtml: e.target.value }))}
+              rows={14} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono resize-y" />
+          </div>
+          {template.variables && template.variables.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Click a variable to copy it</p>
+              <div className="flex flex-wrap gap-1">
+                {(template.variables as string[]).map((v: string) => (
+                  <span key={v} className="px-2 py-1 rounded-full text-xs bg-[#4B2D8E]/10 text-[#4B2D8E] font-mono cursor-pointer hover:bg-[#4B2D8E]/20"
+                    onClick={() => { navigator.clipboard.writeText(`{{${v}}}`); toast.success(`Copied {{${v}}}`); }}>{`{{${v}}}`}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm(f => ({ ...f, isActive: e.target.checked }))} className="w-4 h-4" />
+            <span className="text-sm text-gray-700">Active</span>
+          </label>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button type="submit" disabled={isSaving}
+              className="bg-[#4B2D8E] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#3a2270] disabled:opacity-50 flex items-center gap-2">
+              <Save size={14} /> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// EMAIL LOGO CARD
+// ═══════════════════════════════════════════════════════════
 function EmailLogoCard() {
   const utils = trpc.useUtils();
   const { data: logoData, isLoading } = trpc.admin.emailLogo.get.useQuery();
@@ -393,7 +759,9 @@ function EmailLogoCard() {
   );
 }
 
-// ── Template card sub-component ──
+// ═══════════════════════════════════════════════════════════
+// TEMPLATE CARD
+// ═══════════════════════════════════════════════════════════
 function TemplateCard({ template, onPreview, onEdit, accentColor, inactive }: {
   template: any; onPreview: (t: any) => void; onEdit: (t: any) => void; accentColor?: string; inactive?: boolean;
 }) {

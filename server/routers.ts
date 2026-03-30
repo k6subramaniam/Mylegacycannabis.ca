@@ -28,6 +28,7 @@ import {
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
+import { invokeLLM } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
 
 export const appRouter = router({
@@ -481,6 +482,234 @@ export const appRouter = router({
         const id = await db.createEmailTemplate(input as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "email_template", entityId: id, details: `Created email template: ${input.name}` });
         return { id };
+      }),
+
+      // ─── AI: GENERATE EMAIL TEMPLATE ───
+      aiGenerate: adminProcedure.input(z.object({
+        prompt: z.string().min(5).max(2000),
+        variables: z.array(z.string()).optional(),
+        tone: z.enum(["professional", "friendly", "urgent", "celebratory", "minimal"]).default("professional"),
+        audience: z.enum(["customer", "admin"]).default("customer"),
+      })).mutation(async ({ input }) => {
+        const logoUrl = await db.getSiteSetting("email_logo_url") || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png";
+
+        const systemPrompt = `You are an email template designer for MyLegacy Cannabis, a premium cannabis delivery service in the Greater Toronto Area (GTA), Canada.
+
+BRAND CONTEXT:
+- Business: MyLegacy Cannabis — GTA's premier cannabis delivery
+- Hours: 10 AM – 10 PM Daily
+- Payment: Interac e-Transfer
+- Support email: support@mylegacycannabis.ca
+- Website: https://mylegacycannabis.ca
+
+TEMPLATE STRUCTURE — MANDATORY:
+Every email MUST use this exact HTML shell. Do NOT modify the header or footer. Only generate the BODY ROWS that go between the header and footer.
+
+The full email document is wrapped like this:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[TITLE]</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- LOGO HEADER (auto-injected, do NOT include) -->
+                    <tr>
+                        <td style="background-color:#1a1a2e; padding:24px 30px; text-align:center; border-radius:8px 8px 0 0;">
+                            <a href="https://mylegacycannabis.ca" style="text-decoration:none;">
+                                <img src="{{logo_url}}" alt="My Legacy Cannabis" style="max-width:280px; height:auto;" />
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:4px; background:linear-gradient(90deg, #F5C518 0%, #D4952A 33%, #E8792B 66%, #C42B2B 100%);"></td>
+                    </tr>
+
+                    [YOUR BODY ROWS GO HERE — this is what you generate]
+
+                    <!-- FOOTER (auto-injected, do NOT include) -->
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+YOUR OUTPUT must be the COMPLETE HTML document including the header and footer shown above. Include the full <!DOCTYPE html> wrapper.
+
+DESIGN RULES:
+- Use inline CSS only (no <style> blocks) — email clients strip them
+- Primary brand purple: #720eec / #4B2D8E
+- Accent colors: success #4CAF50, warning #FF9800, danger #F44336, info #2196F3
+- Always start body with a colored heading row: <tr><td style="background:linear-gradient(135deg, #COLOR1 0%, #COLOR2 100%); padding:20px 30px; text-align:center;"><h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">HEADING</h1></td></tr>
+- Then a body row: <tr><td style="padding:40px 30px;">...content...</td></tr>
+- Use {{variable_name}} placeholders for dynamic content
+- CTA buttons: <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Button Text</a>
+- Info boxes: <div style="background-color:#E3F2FD; border-left:4px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">...</div>
+- Warning boxes: <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">...</div>
+- Always end with: Questions? Contact us at support@mylegacycannabis.ca
+- Do NOT use emoji characters in the HTML
+
+AVAILABLE TEMPLATE VARIABLES (use ONLY these — the engine auto-injects logo_url, unsubscribe_url, privacy_url, terms_url):
+- {{customer_name}} — recipient's name
+- {{order_id}} — order number (e.g. MLC-1042)
+- {{order_total}} — dollar amount with $
+- {{order_items}} — HTML list of line items
+- {{delivery_address}} — shipping address
+- {{payment_amount}} — e-Transfer amount
+- {{payment_reference}} — payment reference code
+- {{tracking_number}} — Canada Post tracking number
+- {{tracking_url}} — link to track package
+- {{order_status}} — current order status text
+- {{update_date}} — date/time of status change
+- {{status_message}} — description of what happened
+- {{rejection_reason}} — why ID was rejected
+- {{shop_url}} — link to the shop
+- {{account_url}} — link to user account
+- {{action_url}} — generic CTA link
+- {{logo_url}} — brand logo image URL (auto-injected)
+- {{unsubscribe_url}}, {{privacy_url}}, {{terms_url}} — footer links (auto-injected)
+You may also introduce NEW custom variables using the {{new_variable_name}} format if the admin's request requires information not covered above.
+
+RESPONSE FORMAT — return valid JSON only, no markdown:
+{
+  "slug": "kebab-case-slug",
+  "name": "Human Readable Name",
+  "subject": "Subject line with {{variables}}",
+  "bodyHtml": "COMPLETE HTML document string",
+  "variables": ["array","of","variable","names","used"]
+}`;
+
+        const userMessage = `Generate an email template with these requirements:
+
+PROMPT: ${input.prompt}
+TONE: ${input.tone}
+AUDIENCE: ${input.audience}
+${input.variables && input.variables.length > 0 ? `MUST USE THESE VARIABLES: ${input.variables.join(", ")}` : ""}
+
+Return ONLY the JSON object, no extra text or markdown fences.`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          responseFormat: { type: "json_object" },
+          maxTokens: 16384,
+        });
+
+        const content = typeof result.choices[0]?.message?.content === "string"
+          ? result.choices[0].message.content
+          : "";
+
+        if (!content) {
+          throw new Error("AI returned an empty response — please try again");
+        }
+
+        // Parse JSON — strip markdown fences if present
+        const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        let parsed: any;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+          console.error("[AI Generate] Failed to parse AI response:", cleaned.slice(0, 500));
+          throw new Error("AI returned invalid JSON — please try again with a simpler prompt");
+        }
+
+        // Validate required fields
+        if (!parsed.slug || !parsed.name || !parsed.subject || !parsed.bodyHtml) {
+          throw new Error("AI returned incomplete template — missing slug, name, subject, or bodyHtml");
+        }
+
+        return {
+          slug: String(parsed.slug),
+          name: String(parsed.name),
+          subject: String(parsed.subject),
+          bodyHtml: String(parsed.bodyHtml),
+          variables: Array.isArray(parsed.variables) ? parsed.variables.map(String) : [],
+        };
+      }),
+
+      // ─── AI: IMPROVE EXISTING TEMPLATE ───
+      aiImprove: adminProcedure.input(z.object({
+        currentSubject: z.string(),
+        currentBodyHtml: z.string(),
+        currentVariables: z.array(z.string()),
+        instruction: z.string().min(5).max(2000),
+      })).mutation(async ({ input }) => {
+        const systemPrompt = `You are an email template designer for MyLegacy Cannabis, a premium cannabis delivery service in the GTA, Canada.
+
+You will be given an EXISTING email template and an instruction to improve it. Return the improved version.
+
+RULES:
+- Keep the exact same HTML shell structure (<!DOCTYPE html> wrapper, header with logo, accent stripe, footer)
+- Only modify the CONTENT between header and footer unless specifically asked to change structure
+- Preserve all existing {{variable}} placeholders unless told to remove them
+- Use inline CSS only — no <style> blocks
+- Brand purple: #720eec / #4B2D8E
+- Do NOT use emoji characters
+- Keep the same slug/name unless the admin asks for a rename
+
+RESPONSE FORMAT — return valid JSON only, no markdown:
+{
+  "subject": "Improved subject line with {{variables}}",
+  "bodyHtml": "COMPLETE improved HTML document",
+  "variables": ["array","of","all","variable","names","used"]
+}`;
+
+        const userMessage = `Here is the current template:
+
+SUBJECT: ${input.currentSubject}
+
+HTML BODY:
+${input.currentBodyHtml}
+
+CURRENT VARIABLES: ${input.currentVariables.join(", ")}
+
+ADMIN INSTRUCTION: ${input.instruction}
+
+Return ONLY the JSON object with the improved template.`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          responseFormat: { type: "json_object" },
+          maxTokens: 16384,
+        });
+
+        const content = typeof result.choices[0]?.message?.content === "string"
+          ? result.choices[0].message.content
+          : "";
+
+        if (!content) {
+          throw new Error("AI returned an empty response — please try again");
+        }
+
+        const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        let parsed: any;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+          console.error("[AI Improve] Failed to parse AI response:", cleaned.slice(0, 500));
+          throw new Error("AI returned invalid JSON — please try again with different instructions");
+        }
+
+        if (!parsed.subject || !parsed.bodyHtml) {
+          throw new Error("AI returned incomplete result — missing subject or bodyHtml");
+        }
+
+        return {
+          subject: String(parsed.subject),
+          bodyHtml: String(parsed.bodyHtml),
+          variables: Array.isArray(parsed.variables) ? parsed.variables.map(String) : input.currentVariables,
+        };
       }),
     }),
 
