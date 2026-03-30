@@ -28,6 +28,8 @@ export function useSiteConfig() {
       hours: (data?.storeHours?.hours ?? null) as StoreHours | null,
       note: data?.storeHours?.note ?? "",
     },
+    /** E-Transfer payment email (configurable from admin) */
+    paymentEmail: data?.paymentEmail ?? "payments@mylegacycannabis.ca",
     isLoading,
   };
 }

@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import {
   DollarSign, Search, RefreshCw, Check, X, Eye, AlertCircle,
-  CheckCircle2, Clock, Ban, Link2, Zap, HelpCircle, Mail
+  CheckCircle2, Clock, Ban, Link2, Zap, HelpCircle, Mail, Save, Edit3
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -33,6 +33,8 @@ export default function AdminPayments() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [matchOrderId, setMatchOrderId] = useState<Record<number, string>>({});
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
 
   const statusFilter = tab === "all" ? undefined : tab;
 
@@ -41,8 +43,19 @@ export default function AdminPayments() {
     { refetchInterval: 30000 }
   );
 
-  const { data: serviceStatus } = trpc.etransfer.status.useQuery();
+  const { data: serviceStatus, refetch: refetchStatus } = trpc.etransfer.status.useQuery(undefined, {
+    onSuccess: (d: any) => { if (!emailInput) setEmailInput(d.paymentEmail || ""); },
+  });
   const { data: pendingOrders } = trpc.etransfer.pendingOrders.useQuery();
+
+  const updateEmailMutation = trpc.etransfer.updatePaymentEmail.useMutation({
+    onSuccess: (res: any) => {
+      toast.success(`Payment email updated to ${res.email}`);
+      setEditingEmail(false);
+      refetchStatus();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   const pollMutation = trpc.etransfer.poll.useMutation({
     onSuccess: (stats) => {
@@ -110,6 +123,58 @@ export default function AdminPayments() {
             <RefreshCw size={14} className={pollMutation.isPending ? "animate-spin" : ""} />
             {pollMutation.isPending ? "Polling..." : "Check Now"}
           </button>
+        </div>
+      </div>
+
+      {/* Payment Email Configuration */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#4B2D8E]/10 flex items-center justify-center">
+              <Mail size={18} className="text-[#4B2D8E]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Customer-Facing Payment Email</h3>
+              <p className="text-xs text-gray-400">This is shown on Checkout, FAQ, and order confirmations</p>
+            </div>
+          </div>
+          {!editingEmail ? (
+            <div className="flex items-center gap-2">
+              <code className="bg-gray-100 px-3 py-1.5 rounded-lg text-sm font-mono text-[#4B2D8E]">
+                {serviceStatus?.paymentEmail || "payments@mylegacycannabis.ca"}
+              </code>
+              <button
+                onClick={() => { setEmailInput(serviceStatus?.paymentEmail || ""); setEditingEmail(true); }}
+                className="p-2 text-gray-400 hover:text-[#4B2D8E] rounded-lg hover:bg-gray-100 transition-colors"
+                title="Edit"
+              >
+                <Edit3 size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                placeholder="e.g. kumar.subramaniam@hotmail.com"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-mono w-72 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none"
+              />
+              <button
+                onClick={() => { if (emailInput.includes("@")) updateEmailMutation.mutate({ email: emailInput.trim() }); }}
+                disabled={updateEmailMutation.isPending || !emailInput.includes("@")}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 disabled:opacity-50 transition-all"
+              >
+                <Save size={12} /> Save
+              </button>
+              <button
+                onClick={() => setEditingEmail(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
