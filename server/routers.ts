@@ -806,6 +806,28 @@ export const appRouter = router({
         return { success: true, ...result };
       }),
     }),
+
+    // ─── EMAIL LOGO ───
+    emailLogo: router({
+      get: adminProcedure.query(async () => {
+        const url = await db.getSiteSetting("email_logo_url");
+        return { url: url || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png" };
+      }),
+      update: adminProcedure.input(z.object({
+        url: z.string().url(),
+      })).mutation(async ({ input, ctx }) => {
+        await db.setSiteSetting("email_logo_url", input.url);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "update_email_logo",
+          entityType: "site_setting",
+          entityId: 0,
+          details: `Updated email logo URL`,
+        });
+        return { success: true, url: input.url };
+      }),
+    }),
   }),
 
   // ─── PUBLIC: STOREFRONT API ───
@@ -834,17 +856,19 @@ export const appRouter = router({
     }),
 
     siteConfig: publicProcedure.query(async () => {
-      const [idVerificationEnabled, maintenance, storeHoursConfig, paymentEmail] = await Promise.all([
+      const [idVerificationEnabled, maintenance, storeHoursConfig, paymentEmail, emailLogoUrl] = await Promise.all([
         db.isIdVerificationEnabled(),
         db.getMaintenanceConfig(),
         db.getStoreHoursConfig(),
         db.getSiteSetting("payment_email"),
+        db.getSiteSetting("email_logo_url"),
       ]);
       return {
         idVerificationEnabled,
         maintenance,
         storeHours: storeHoursConfig,
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
+        emailLogoUrl: emailLogoUrl || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
       };
     }),
     products: publicProcedure.input(z.object({
