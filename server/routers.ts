@@ -27,6 +27,7 @@ import {
   triggerOrderStatusUpdate,
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
+import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
 import { nanoid as nanoidSmall } from "nanoid";
 
 export const appRouter = router({
@@ -1140,6 +1141,91 @@ export const appRouter = router({
       }).catch(err => console.warn("[Verification] Admin email failed:", err.message));
 
       return { id, status: "pending" };
+    }),
+  }),
+
+  // ─── E-TRANSFER PAYMENT MATCHING ───
+  etransfer: router({
+    // Admin: list all payment records
+    list: adminProcedure.input(z.object({
+      page: z.number().optional(),
+      limit: z.number().optional(),
+      status: z.string().optional(),
+    }).optional()).query(async ({ input }) => {
+      return db.getAllPaymentRecords({
+        page: input?.page ?? 1,
+        limit: input?.limit ?? 50,
+        status: input?.status,
+      });
+    }),
+
+    // Admin: get pending (unmatched) orders for manual matching dropdown
+    pendingOrders: adminProcedure.query(async () => {
+      const orders = await db.getPendingETransferOrders();
+      return orders.map(o => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        total: o.total,
+        guestName: o.guestName,
+        guestEmail: o.guestEmail,
+        createdAt: o.createdAt,
+      }));
+    }),
+
+    // Admin: manually match a payment to an order
+    manualMatch: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      orderId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      const success = await manualMatchPayment(input.paymentId, input.orderId, ctx.user?.id || 0);
+      if (!success) throw new Error("Failed to match payment to order");
+      // Get the order to update its matched order number
+      const order = await db.getOrderById(input.orderId);
+      if (order) {
+        await db.updatePaymentRecord(input.paymentId, {
+          matchedOrderNumber: order.orderNumber,
+        } as any);
+      }
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "etransfer_manual_match",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Manually matched payment #${input.paymentId} to order #${input.orderId}`,
+      });
+      return { success: true };
+    }),
+
+    // Admin: ignore a payment record
+    ignore: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      await db.updatePaymentRecord(input.paymentId, {
+        status: "ignored" as any,
+        reviewedBy: ctx.user?.id || 0,
+        reviewedAt: new Date(),
+        adminNotes: input.notes || "Ignored by admin",
+      } as any);
+      return { success: true };
+    }),
+
+    // Admin: trigger a manual poll
+    poll: adminProcedure.mutation(async () => {
+      if (!isETransferServiceConfigured()) {
+        throw new Error("Gmail API is not configured. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN.");
+      }
+      const stats = await pollETransferEmails();
+      return stats;
+    }),
+
+    // Admin: check if service is configured
+    status: adminProcedure.query(() => {
+      return {
+        configured: isETransferServiceConfigured(),
+        paymentEmail: process.env.GMAIL_PAYMENT_EMAIL || "Not set",
+      };
     }),
   }),
 });

@@ -356,6 +356,33 @@ export async function initializeDatabase(): Promise<void> {
   await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS usage_timing VARCHAR(20)`;
   await _sql!`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS would_recommend BOOLEAN`;
 
+  // ─── E-Transfer Payment Records ───
+  // Create enums first (PostgreSQL requires DO block for IF NOT EXISTS on enums)
+  await _sql!`DO $$ BEGIN CREATE TYPE etransfer_match_confidence AS ENUM ('exact','high','low','none'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`;
+  await _sql!`DO $$ BEGIN CREATE TYPE etransfer_status AS ENUM ('auto_matched','manual_matched','unmatched','ignored'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`;
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS payment_records (
+      id SERIAL PRIMARY KEY,
+      email_id VARCHAR(255) NOT NULL UNIQUE,
+      sender_name VARCHAR(255),
+      sender_email VARCHAR(320),
+      amount NUMERIC(10,2),
+      memo TEXT,
+      raw_subject VARCHAR(500),
+      raw_body_snippet TEXT,
+      received_at TIMESTAMP,
+      matched_order_id INTEGER,
+      matched_order_number VARCHAR(30),
+      match_confidence etransfer_match_confidence DEFAULT 'none',
+      match_method VARCHAR(100),
+      status etransfer_status NOT NULL DEFAULT 'unmatched',
+      reviewed_by INTEGER,
+      reviewed_at TIMESTAMP,
+      admin_notes TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -1274,6 +1301,51 @@ export async function getTopProducts(limit = 10) {
   return rows.map(r => ({ productName: r.productName, totalSold: Number(r.totalSold), totalRevenue: String(r.totalRevenue) }));
 }
 
+// ─── E-TRANSFER PAYMENT RECORD HELPERS ───
+
+export async function createPaymentRecord(data: schema.InsertPaymentRecord): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _mem_createPaymentRecord(data);
+  const result = await getDb().insert(schema.paymentRecords).values(data).returning({ id: schema.paymentRecords.id });
+  return result[0].id;
+}
+
+export async function getPaymentRecordByEmailId(emailId: string) {
+  if (!USE_PERSISTENT_DB) return _mem_paymentRecords.find((p: any) => p.emailId === emailId) || null;
+  const rows = await getDb().select().from(schema.paymentRecords).where(eq(schema.paymentRecords.emailId, emailId)).limit(1);
+  return rows[0] || null;
+}
+
+export async function getAllPaymentRecords(opts?: { page?: number; limit?: number; status?: string }) {
+  if (!USE_PERSISTENT_DB) return _mem_getAllPaymentRecords(opts);
+  const db = getDb();
+  const page = opts?.page ?? 1;
+  const limit = opts?.limit ?? 50;
+  const offset = (page - 1) * limit;
+  const conditions: any[] = [];
+  if (opts?.status) conditions.push(eq(schema.paymentRecords.status, opts.status as any));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const data = await db.select().from(schema.paymentRecords).where(where).orderBy(desc(schema.paymentRecords.createdAt)).offset(offset).limit(limit);
+  const [{ value: total }] = await db.select({ value: count() }).from(schema.paymentRecords).where(where);
+  return { data, total };
+}
+
+export async function updatePaymentRecord(id: number, data: Partial<schema.InsertPaymentRecord>): Promise<void> {
+  if (!USE_PERSISTENT_DB) { _mem_updatePaymentRecord(id, data); return; }
+  await getDb().update(schema.paymentRecords).set(data as any).where(eq(schema.paymentRecords.id, id));
+}
+
+export async function getUnmatchedPaymentRecords() {
+  if (!USE_PERSISTENT_DB) return _mem_paymentRecords.filter((p: any) => p.status === 'unmatched');
+  return getDb().select().from(schema.paymentRecords).where(eq(schema.paymentRecords.status, 'unmatched')).orderBy(desc(schema.paymentRecords.createdAt));
+}
+
+export async function getPendingETransferOrders() {
+  if (!USE_PERSISTENT_DB) return _mem_getPendingETransferOrders();
+  return getDb().select().from(schema.orders)
+    .where(and(eq(schema.orders.paymentStatus, 'pending'), or(eq(schema.orders.status, 'pending'), eq(schema.orders.status, 'confirmed'))))
+    .orderBy(desc(schema.orders.createdAt));
+}
+
 // ========================================================================================
 // SEED DATA (PostgreSQL)
 // ========================================================================================
@@ -1611,3 +1683,10 @@ function _mem_updateReviewPointsAwarded(id: number) { const r = _productReviews.
 function _mem_updateProductReview(id: number, data: any) { const r = _productReviews.find((r: any) => r.id === id); if (r) Object.assign(r, data, { updatedAt: new Date() }); }
 function _mem_deleteProductReview(id: number) { const idx = _productReviews.findIndex((r: any) => r.id === id); if (idx !== -1) _productReviews.splice(idx, 1); }
 function _mem_getReviewById(id: number) { return _productReviews.find((r: any) => r.id === id); }
+
+// ─── IN-MEMORY E-TRANSFER PAYMENT STUBS ───
+const _mem_paymentRecords: any[] = [];
+function _mem_createPaymentRecord(data: any) { const id = nextId(); _mem_paymentRecords.push({ id, ...data, createdAt: new Date() }); return id; }
+function _mem_getAllPaymentRecords(opts?: any) { const sorted = [..._mem_paymentRecords].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); const filtered = opts?.status ? sorted.filter((p: any) => p.status === opts.status) : sorted; return { data: paginate(filtered, opts?.page ?? 1, opts?.limit ?? 50), total: filtered.length }; }
+function _mem_updatePaymentRecord(id: number, data: any) { const r = _mem_paymentRecords.find((p: any) => p.id === id); if (r) Object.assign(r, data); }
+function _mem_getPendingETransferOrders() { return [..._orders].filter(o => o.paymentStatus === 'pending' && (o.status === 'pending' || o.status === 'confirmed')).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); }
