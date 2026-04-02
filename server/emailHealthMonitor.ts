@@ -15,6 +15,12 @@ import nodemailer from "nodemailer";
 import dns from "node:dns/promises";
 import { ENV } from "./_core/env";
 
+// ─── Logo URL helper ───
+function getLogoUrl(): string {
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
+  return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
+}
+
 // ─── Types ───
 
 export type EmailProvider = "resend" | "smtp" | "sendgrid" | "mailgun" | "ses" | "unknown";
@@ -338,7 +344,7 @@ export async function sendTestEmail(to: string): Promise<{
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png"
+        <img src="${getLogoUrl()}"
              alt="My Legacy Cannabis" style="height: 48px;" />
       </div>
       <div style="background: #10B981; color: white; padding: 16px 20px; border-radius: 12px; text-align: center; margin-bottom: 16px;">

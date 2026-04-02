@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Mail, Phone, User, Calendar, ArrowRight, ArrowLeft, Loader2, Shield, AlertCircle, Gift, Check, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
+const LOGO_URL = '/logo.png';
 
 type Step = 'info' | 'verify' | 'otp';
 

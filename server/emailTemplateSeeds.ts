@@ -4,7 +4,16 @@
  *
  * The {{logo_url}} variable is auto-injected by the template engine from
  * the site_settings "email_logo_url" row (configurable in Admin → Email Templates).
+ *
+ * IMPORTANT: The shared layout (header, footer, accent stripe, shell) lives in
+ * `emailLayout.ts`. Edit that file to change the look of ALL emails at once.
  */
+import {
+  emailShell,
+  CUSTOMER_FOOTER,
+  ADMIN_FOOTER,
+} from './emailLayout';
+
 export interface EmailTemplateSeed {
   slug: string;
   name: string;
@@ -12,81 +21,6 @@ export interface EmailTemplateSeed {
   bodyHtml: string;
   variables: string[];
   isActive: boolean;
-}
-
-// ─── Shared HTML fragments ──────────────────────────────────────
-// These keep every template visually consistent.  When the admin changes
-// the logo URL in site_settings the {{logo_url}} placeholder is replaced
-// at send-time so every email picks it up automatically.
-
-const BRAND_HEADER = `
-                    <!-- LOGO HEADER -->
-                    <tr>
-                        <td style="background-color:#1a1a2e; padding:24px 30px; text-align:center; border-radius:8px 8px 0 0;">
-                            <a href="https://mylegacycannabis.ca" style="text-decoration:none;">
-                                <img src="{{logo_url}}" alt="My Legacy Cannabis" style="max-width:280px; height:auto;" />
-                            </a>
-                        </td>
-                    </tr>
-                    <!-- ACCENT STRIPE -->
-                    <tr>
-                        <td style="height:4px; background:linear-gradient(90deg, #F5C518 0%, #D4952A 33%, #E8792B 66%, #C42B2B 100%);"></td>
-                    </tr>`;
-
-const CUSTOMER_FOOTER = `
-                    <!-- FOOTER -->
-                    <tr>
-                        <td style="background-color:#1a1a2e; padding:24px 30px; text-align:center; border-radius:0 0 8px 8px;">
-                            <a href="https://mylegacycannabis.ca" style="text-decoration:none;">
-                                <img src="{{logo_url}}" alt="My Legacy Cannabis" style="max-width:160px; height:auto; margin-bottom:12px;" />
-                            </a>
-                            <p style="color:#cccccc; font-size:12px; line-height:1.5; margin:0 0 8px 0;">
-                                MyLegacy Cannabis &mdash; GTA's Premier Cannabis Delivery<br>
-                                Serving the Greater Toronto Area &bull; 10 AM &ndash; 10 PM Daily
-                            </p>
-                            <p style="color:#999999; font-size:11px; line-height:1.4; margin:0;">
-                                &copy; 2026 MyLegacy Cannabis. All rights reserved.<br>
-                                <a href="{{unsubscribe_url}}" style="color:#E8792B; text-decoration:none;">Unsubscribe</a> &nbsp;|&nbsp;
-                                <a href="{{privacy_url}}" style="color:#E8792B; text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp;
-                                <a href="{{terms_url}}" style="color:#E8792B; text-decoration:none;">Terms of Service</a>
-                            </p>
-                        </td>
-                    </tr>`;
-
-const ADMIN_FOOTER = `
-                    <!-- FOOTER -->
-                    <tr>
-                        <td style="background-color:#1a1a2e; padding:20px 30px; text-align:center; border-radius:0 0 8px 8px;">
-                            <p style="color:#999999; font-size:12px; line-height:1.5; margin:0;">
-                                MyLegacy Cannabis &mdash; Admin Notification System<br>
-                                &copy; 2026 MyLegacy Cannabis. All rights reserved.
-                            </p>
-                        </td>
-                    </tr>`;
-
-/** Wrap a body section in the full email document shell */
-function emailShell(title: string, bodyRows: string, footer: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title}</title>
-</head>
-<body style="margin:0; padding:0; background-color:#F5F5F5; font-family:Arial, Helvetica, sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
-        <tr>
-            <td align="center" style="padding:20px 0;">
-                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    ${BRAND_HEADER}
-                    ${bodyRows}
-                    ${footer}
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>`;
 }
 
 // ─── Template definitions ───────────────────────────────────────
