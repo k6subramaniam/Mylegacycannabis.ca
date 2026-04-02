@@ -17,7 +17,7 @@ export const roleEnum = pgEnum("role", ["user", "admin"]);
 export const verificationCodeTypeEnum = pgEnum("verification_code_type", ["sms", "email"]);
 export const verificationCodePurposeEnum = pgEnum("verification_code_purpose", ["login", "register", "verify"]);
 export const productCategoryEnum = pgEnum("product_category", [
-  "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories",
+  "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake",
 ]);
 export const strainTypeEnum = pgEnum("strain_type", ["Sativa", "Indica", "Hybrid", "CBD", "N/A"]);
 export const orderStatusEnum = pgEnum("order_status", [
@@ -95,6 +95,8 @@ export const products = pgTable("products", {
   isNew: boolean("is_new").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   flavor: varchar("flavor", { length: 100 }),
+  subcategory: varchar("subcategory", { length: 100 }),
+  grade: varchar("grade", { length: 20 }),
   rewardPoints: integer("reward_points").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -3,13 +3,32 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { categories } from '@/lib/data';
-import { ShoppingCart, SlidersHorizontal, X, ChevronDown, Star, Loader } from 'lucide-react';
+import { ShoppingCart, SlidersHorizontal, X, ChevronDown, Star, Loader, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-shop-5tiqFdCHUdeMeR3zPVXYu5.webp';
+
+// Subcategory map for Flower category — mirrors the menu image structure
+const FLOWER_SUBCATEGORIES = [
+  { label: 'All Flower', value: '' },
+  { label: 'Indica', value: 'Indica Flower' },
+  { label: 'Sativa', value: 'Sativa Flower' },
+  { label: 'Hybrid', value: 'Hybrid Flower' },
+];
+
+// Grade colour badge mapping
+const GRADE_COLORS: Record<string, string> = {
+  'AAAA': 'bg-amber-500 text-white',
+  'AAA+': 'bg-emerald-600 text-white',
+  'AAA': 'bg-blue-600 text-white',
+  'AAA-': 'bg-sky-500 text-white',
+  'AA+': 'bg-purple-500 text-white',
+  'AA': 'bg-gray-500 text-white',
+  'SHAKE': 'bg-orange-500 text-white',
+};
 
 export default function Shop() {
   const { t } = useT();
@@ -19,10 +38,16 @@ export default function Shop() {
   const urlCategory = params.category || searchParams.get('category') || '';
 
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
+  const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [selectedStrain, setSelectedStrain] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { addItem } = useCart();
+
+  // Reset subcategory when category changes
+  useEffect(() => {
+    setSelectedSubcategory('');
+  }, [selectedCategory]);
 
   // Fetch products from backend
   const { data: productsData, isLoading } = trpc.store.products.useQuery({
@@ -34,18 +59,31 @@ export default function Shop() {
 
   const filtered = useMemo(() => {
     let result = [...products];
+    // Apply subcategory filter (for flower)
+    if (selectedSubcategory) {
+      result = result.filter((p: any) => p.subcategory === selectedSubcategory);
+    }
     if (selectedStrain) result = result.filter(p => p.strainType === selectedStrain);
     switch (sortBy) {
       case 'price-low': result.sort((a, b) => parseFloat(a.price.toString()) - parseFloat(b.price.toString())); break;
       case 'price-high': result.sort((a, b) => parseFloat(b.price.toString()) - parseFloat(a.price.toString())); break;
       case 'name': result.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case 'grade': result.sort((a, b) => {
+        const gradeOrder = ['AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'AA-', 'A+', 'A', 'SHAKE'];
+        const aIdx = gradeOrder.indexOf((a as any).grade || '') || 999;
+        const bIdx = gradeOrder.indexOf((b as any).grade || '') || 999;
+        return aIdx - bIdx;
+      }); break;
       default: result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
     return result;
-  }, [products, selectedStrain, sortBy]);
+  }, [products, selectedSubcategory, selectedStrain, sortBy]);
 
   const activeCat = categories.find(c => c.slug === selectedCategory);
   const pageTitle = activeCat ? `${activeCat.name} — Shop` : 'Shop All Products';
+
+  // Show subcategory tabs when viewing flower
+  const showSubcategories = selectedCategory === 'flower';
 
   const breadcrumbs = [{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }];
   if (activeCat) breadcrumbs.push({ label: activeCat.name, href: '' });
@@ -73,6 +111,29 @@ export default function Shop() {
         </div>
       </section>
 
+      {/* Subcategory Tabs — shown for Flower */}
+      {showSubcategories && (
+        <section className="bg-[#F5F5F5] border-b border-gray-200">
+          <div className="container">
+            <div className="flex items-center gap-1 overflow-x-auto py-3 -mx-2 px-2 scrollbar-hide">
+              {FLOWER_SUBCATEGORIES.map(sub => (
+                <button
+                  key={sub.value}
+                  onClick={() => setSelectedSubcategory(sub.value)}
+                  className={`shrink-0 px-4 py-2 rounded-full font-display text-xs transition-all ${
+                    selectedSubcategory === sub.value
+                      ? 'bg-[#4B2D8E] text-white shadow-md'
+                      : 'bg-white text-gray-600 hover:bg-[#4B2D8E]/10 hover:text-[#4B2D8E]'
+                  }`}
+                >
+                  {sub.label.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Main Content */}
       <section className="bg-white py-8 md:py-12">
         <div className="container">
@@ -90,8 +151,8 @@ export default function Shop() {
                 {/* Category Filter */}
                 <div className="mb-6">
                   <h4 className="font-display text-sm text-[#4B2D8E] mb-3">CATEGORY</h4>
-                  <div className="space-y-2">
-                    <button onClick={() => setSelectedCategory('')} className={`block w-full text-left px-3 py-2 rounded-lg transition-colors ${!selectedCategory ? 'bg-[#4B2D8E] text-white' : 'text-gray-600 hover:bg-white'}`}>
+                  <div className="space-y-1">
+                    <button onClick={() => setSelectedCategory('')} className={`block w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${!selectedCategory ? 'bg-[#4B2D8E] text-white' : 'text-gray-600 hover:bg-white'}`}>
                       All Products
                     </button>
                     {categories.map(cat => (
@@ -102,22 +163,24 @@ export default function Shop() {
                   </div>
                 </div>
 
-                {/* Strain Filter */}
+                {/* Strain Filter — hide for categories where strain doesn't apply */}
+                {selectedCategory !== 'accessories' && (
                 <div className="mb-6">
                   <h4 className="font-display text-sm text-[#4B2D8E] mb-3">STRAIN TYPE</h4>
                   <div className="space-y-2">
                     {['Sativa', 'Indica', 'Hybrid', 'CBD'].map(strain => (
                       <label key={strain} className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="strain" value={strain} checked={selectedStrain === strain} onChange={() => setSelectedStrain(strain)} className="w-4 h-4" />
+                        <input type="radio" name="strain" value={strain} checked={selectedStrain === strain} onChange={() => setSelectedStrain(strain)} className="w-4 h-4 accent-[#4B2D8E]" />
                         <span className="text-sm text-gray-600">{strain}</span>
                       </label>
                     ))}
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="strain" value="" checked={selectedStrain === ''} onChange={() => setSelectedStrain('')} className="w-4 h-4" />
+                      <input type="radio" name="strain" value="" checked={selectedStrain === ''} onChange={() => setSelectedStrain('')} className="w-4 h-4 accent-[#4B2D8E]" />
                       <span className="text-sm text-gray-600">All Strains</span>
                     </label>
                   </div>
                 </div>
+                )}
 
                 {/* Sort */}
                 <div>
@@ -127,6 +190,9 @@ export default function Shop() {
                     <option value="price-low">Price: Low to High</option>
                     <option value="price-high">Price: High to Low</option>
                     <option value="name">Name: A to Z</option>
+                    {(selectedCategory === 'flower' || selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake') && (
+                      <option value="grade">Grade: Best First</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -150,6 +216,13 @@ export default function Shop() {
               {/* Products */}
               {!isLoading && (
                 <>
+                  {/* Mix-and-match note for ounce deals and flower */}
+                  {(selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake') && (
+                    <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-3 mb-4 text-center">
+                      <p className="text-sm font-body text-[#4B2D8E]">*Mix and match available within same category/pricing</p>
+                    </div>
+                  )}
+
                   {filtered.length === 0 ? (
                     <div className="text-center py-12">
                       <p className="text-gray-500 font-body">No products found. Try adjusting your filters.</p>
@@ -158,13 +231,22 @@ export default function Shop() {
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                       {filtered.map((product, i) => (
                         <div key={product.id}
-                          className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
+                          className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all border border-gray-100">
                           <Link href={`/product/${product.slug}`} className="block">
                             <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
                               <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=400'} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
-                              {product.isNew && (
-                                <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
-                              )}
+                              {/* Badges row */}
+                              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                                {product.isNew && (
+                                  <span className="bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
+                                )}
+                                {/* Grade badge */}
+                                {(product as any).grade && (
+                                  <span className={`font-display text-[10px] px-2.5 py-1 rounded-full ${GRADE_COLORS[(product as any).grade] || 'bg-gray-400 text-white'}`}>
+                                    {(product as any).grade}
+                                  </span>
+                                )}
+                              </div>
                               <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono text-xs px-2 py-1 rounded-full">{product.strainType}</span>
                             </div>
                           </Link>

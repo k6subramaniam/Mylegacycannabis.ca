@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { useT } from '@/i18n';
 import { trpc } from '@/lib/trpc';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp';
 
@@ -16,6 +17,7 @@ export default function Home() {
   const { t } = useT();
   const featured = products.filter(p => p.featured).slice(0, 4);
   const { data: dbLocations } = trpc.store.locations.useQuery();
+  const { idVerificationEnabled } = useSiteConfig();
   const storeLocations = dbLocations && dbLocations.length > 0 ? dbLocations : fallbackLocations;
 
   return (
@@ -71,11 +73,11 @@ export default function Home() {
       {/* TRUST BADGES — static, no animation, immediately visible */}
       <section className="bg-white py-8 -mt-1">
         <div className="container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-2 ${idVerificationEnabled ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
             {[
               { icon: Truck, label: t.home.trustFreeShipping, sub: t.home.trustFreeShippingSub },
               { icon: Clock, label: t.home.trustOpen247, sub: t.home.trustOpen247Sub },
-              { icon: Shield, label: t.home.trustAgeVerified, sub: t.home.trustAgeVerifiedSub },
+              ...(idVerificationEnabled ? [{ icon: Shield, label: t.home.trustAgeVerified, sub: t.home.trustAgeVerifiedSub }] : []),
               { icon: Gift, label: t.home.trustEarnRewards, sub: t.home.trustEarnRewardsSub },
             ].map((badge, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F5F5]">

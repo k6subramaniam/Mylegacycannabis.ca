@@ -69,12 +69,14 @@ export interface RewardTier {
 // CATEGORIES
 // ============================================================
 export const categories: Category[] = [
-  { name: 'Flower', slug: 'flower', description: 'Premium dried cannabis flower — hand-trimmed buds in a variety of strains.', image: 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=600&q=80', productCount: 12 },
-  { name: 'Pre-Rolls', slug: 'pre-rolls', description: 'Ready-to-smoke pre-rolled joints — perfect for convenience.', image: 'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=600&q=80', productCount: 8 },
-  { name: 'Edibles', slug: 'edibles', description: 'Cannabis-infused gummies, chocolates, and beverages.', image: 'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?w=600&q=80', productCount: 10 },
-  { name: 'Vapes', slug: 'vapes', description: 'Vape cartridges and disposable pens for smooth sessions.', image: 'https://images.unsplash.com/photo-1563298723-dcfebaa392e3?w=600&q=80', productCount: 6 },
-  { name: 'Concentrates', slug: 'concentrates', description: 'Shatter, wax, live resin, and hash for experienced users.', image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80', productCount: 5 },
-  { name: 'Accessories', slug: 'accessories', description: 'Rolling papers, grinders, pipes, and more.', image: 'https://images.unsplash.com/photo-1570655652364-2e0a67455ac6?w=600&q=80', productCount: 8 },
+  { name: 'Flower', slug: 'flower', description: 'Premium dried cannabis flower — Indica, Sativa, and Hybrid strains in all grades.', image: 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=600&q=80', productCount: 25 },
+  { name: 'Pre-Rolls', slug: 'pre-rolls', description: 'Ready-to-smoke pre-rolled joints — perfect for convenience.', image: 'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=600&q=80', productCount: 3 },
+  { name: 'Edibles', slug: 'edibles', description: 'Cannabis-infused gummies, chocolates, and beverages.', image: 'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?w=600&q=80', productCount: 2 },
+  { name: 'Vapes', slug: 'vapes', description: 'Vape cartridges and disposable pens for smooth sessions.', image: 'https://images.unsplash.com/photo-1563298723-dcfebaa392e3?w=600&q=80', productCount: 2 },
+  { name: 'Concentrates', slug: 'concentrates', description: 'Live resin, diamonds, and hash for experienced users.', image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80', productCount: 2 },
+  { name: 'Ounce Deals', slug: 'ounce-deals', description: 'Full ounce deals at unbeatable prices. Mix and match available.', image: 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=600&q=80', productCount: 2 },
+  { name: 'Shake n Bake', slug: 'shake-n-bake', description: 'Budget-friendly shake — perfect for edibles, joints, or bowls.', image: 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=600&q=80', productCount: 2 },
+  { name: 'Accessories', slug: 'accessories', description: 'Grinders, pipes, batteries, and more.', image: 'https://images.unsplash.com/photo-1570655652364-2e0a67455ac6?w=600&q=80', productCount: 2 },
 ];
 
 // ============================================================

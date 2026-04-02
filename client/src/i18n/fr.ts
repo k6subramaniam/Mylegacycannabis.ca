@@ -146,6 +146,12 @@ const fr: Translations = {
     nameAZ: 'Nom : A a Z',
     noProducts: 'Aucun produit trouve. Essayez d\'ajuster vos filtres.',
     earnPoints: 'Gagnez {points} points',
+    gradeBestFirst: 'Qualite : Meilleure en premier',
+    mixAndMatch: '*Melange et assortiment disponible dans la meme categorie/prix',
+    allFlower: 'TOUTES LES FLEURS',
+    indicaFlower: 'INDICA',
+    sativaFlower: 'SATIVA',
+    hybridFlower: 'HYBRIDE',
   },
 
   // ── Cart Page ────────────────────────────────────────────────
@@ -678,6 +684,23 @@ const fr: Translations = {
     defaultMessage: 'Notre boutique est actuellement en maintenance. Veuillez revenir bientot !',
     visitInPerson: 'VISITEZ-NOUS EN PERSONNE',
     locationsDesc: '5 succursales dans la region du Grand Toronto et Ottawa — ouvertes 24/7',
+  },
+
+  // ── Product Page ──────────────────────────────────────────────
+  productPage: {
+    notFound: 'PRODUIT NON TROUVE',
+    backToShop: 'Retour a la boutique',
+    aboutThisProduct: 'A PROPOS DE CE PRODUIT',
+    quantity: 'QUANTITE',
+    addToCart: 'AJOUTER AU PANIER',
+    earnPointsWithPurchase: 'Gagnez {points} points avec cet achat',
+    addedToCartToast: '{quantity}x {name} ajoute au panier',
+    freeShipping: 'LIVRAISON GRATUITE',
+    freeShippingDesc: 'Pour les commandes de plus de {threshold} $',
+    ageVerified: 'AGE VERIFIE',
+    ageVerifiedDesc: 'Paiement securise avec verification d\'identite',
+    fastDelivery: 'LIVRAISON RAPIDE',
+    fastDeliveryDesc: 'Livraison partout au Canada',
   },
 
   // ── Language Toggle ──────────────────────────────────────────
