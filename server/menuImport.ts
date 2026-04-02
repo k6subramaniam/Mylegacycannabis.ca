@@ -10,34 +10,8 @@
  *   5. Old flower products are deactivated, new ones created/updated
  */
 
-import OpenAI from "openai";
-import * as fs from "fs";
-import * as path from "path";
-import * as yaml from "js-yaml";
 import * as db from "./db";
-
-// ─── OpenAI client (reads from GenSpark config) ───
-
-function getOpenAIClient(): OpenAI {
-  let apiKey = process.env.OPENAI_API_KEY;
-  let baseURL = process.env.OPENAI_BASE_URL;
-
-  // Try ~/.genspark_llm.yaml as fallback
-  if (!apiKey) {
-    try {
-      const configPath = path.join(require("os").homedir(), ".genspark_llm.yaml");
-      if (fs.existsSync(configPath)) {
-        const config = yaml.load(fs.readFileSync(configPath, "utf8")) as any;
-        apiKey = config?.openai?.api_key || apiKey;
-        baseURL = config?.openai?.base_url || baseURL;
-      }
-    } catch {}
-  }
-
-  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
-  return new OpenAI({ apiKey, baseURL });
-}
+import { getAiConfig } from "./_core/llm";
 
 // ─── Types ───
 
@@ -89,35 +63,75 @@ Example output format:
 ]`;
 
 export async function parseMenuImage(base64Image: string, mimeType: string = "image/png"): Promise<ParsedMenuItem[]> {
-  const client = getOpenAIClient();
+  const config = await getAiConfig();
 
-  console.log("[MenuImport] Sending image to GPT vision for parsing...");
+  console.log(`[MenuImport] Sending image to ${config.provider} vision for parsing...`);
   const startTime = Date.now();
 
-  const response = await client.chat.completions.create({
-    model: "gpt-5",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: MENU_PARSE_PROMPT },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${mimeType};base64,${base64Image}`,
-              detail: "high",
-            },
-          },
-        ],
-      },
-    ],
-    max_tokens: 8000,
-    temperature: 0.1,
-  });
+  let raw = "";
 
-  const raw = response.choices?.[0]?.message?.content || "";
+  if (config.provider === "gemini" && config.apiKey) {
+    // Use Gemini native vision API
+    const model = config.model || "gemini-2.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: MENU_PARSE_PROMPT },
+            { inlineData: { mimeType, data: base64Image } },
+          ],
+        }],
+        generationConfig: { maxOutputTokens: 8000, temperature: 0.1 },
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Gemini vision API error ${resp.status}: ${errText.slice(0, 300)}`);
+    }
+    const data = await resp.json();
+    raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } else {
+    // Use OpenAI-compatible API (admin key, Forge proxy, or direct OpenAI)
+    const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
+    const baseUrl = (config.apiKey && config.apiKey !== (process.env.BUILT_IN_FORGE_API_KEY || ""))
+      ? (config.baseUrl || "https://api.openai.com/v1")
+      : (process.env.BUILT_IN_FORGE_API_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1");
+
+    if (!apiKey) throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
+
+    const model = config.model || "gpt-4o";
+    const resp = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/chat/completions`.replace("/v1/v1/", "/v1/"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: MENU_PARSE_PROMPT },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: "high" } },
+          ],
+        }],
+        max_tokens: 8000,
+        temperature: 0.1,
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`OpenAI vision API error ${resp.status}: ${errText.slice(0, 300)}`);
+    }
+    const data = await resp.json();
+    raw = data.choices?.[0]?.message?.content || "";
+  }
+
   const latency = Date.now() - startTime;
-  console.log(`[MenuImport] GPT response received in ${latency}ms (${raw.length} chars)`);
+  console.log(`[MenuImport] AI response received in ${latency}ms (${raw.length} chars)`);
 
   // Parse JSON from response (may be wrapped in ```json ... ```)
   let jsonStr = raw.trim();

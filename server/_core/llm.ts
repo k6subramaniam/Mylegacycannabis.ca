@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import * as db from "../db";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -209,11 +210,61 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
+// ─── AI Config: reads from site_settings with env var fallback ───
+
+export type AiConfig = {
+  provider: "openai" | "gemini";
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+};
+
+// Cache config for 60s to avoid hammering DB on every LLM call
+let _configCache: AiConfig | null = null;
+let _configCacheTime = 0;
+const CONFIG_CACHE_TTL = 60_000;
+
+export async function getAiConfig(): Promise<AiConfig> {
+  const now = Date.now();
+  if (_configCache && now - _configCacheTime < CONFIG_CACHE_TTL) return _configCache;
+
+  const [provider, apiKey, model] = await Promise.all([
+    db.getSiteSetting("ai_provider"),
+    db.getSiteSetting("ai_api_key"),
+    db.getSiteSetting("ai_model"),
+  ]);
+
+  const config: AiConfig = {
+    provider: (provider === "gemini" ? "gemini" : "openai") as "openai" | "gemini",
+    apiKey: apiKey || ENV.forgeApiKey || "",
+    baseUrl: ENV.forgeApiUrl || undefined,
+    model: model || undefined,
+  };
+
+  // If admin set an API key, use it (and clear the forge base URL so it goes direct)
+  if (apiKey) {
+    config.apiKey = apiKey;
+    // When admin provides their own key, don't route through Forge proxy
+    if (config.provider === "openai") {
+      config.baseUrl = "https://api.openai.com/v1";
+    }
+  }
+
+  _configCache = config;
+  _configCacheTime = now;
+  return config;
+}
+
+/** Clear the config cache (call after admin updates AI settings) */
+export function clearAiConfigCache(): void {
+  _configCache = null;
+  _configCacheTime = 0;
+}
+
 const resolveApiUrl = () => {
   if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
     return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
   }
-  // Fallback to standard OpenAI-compatible endpoint
   return "https://api.openai.com/v1/chat/completions";
 };
 
@@ -268,8 +319,112 @@ const normalizeResponseFormat = ({
   };
 };
 
+// ─── Gemini native API adapter ───
+
+function messagesToGeminiContents(messages: Message[]): { systemInstruction?: any; contents: any[] } {
+  let systemInstruction: any = undefined;
+  const contents: any[] = [];
+
+  for (const msg of messages) {
+    const textContent = typeof msg.content === "string"
+      ? msg.content
+      : ensureArray(msg.content).map(p => typeof p === "string" ? p : (p as any).text || "").join("\n");
+
+    if (msg.role === "system") {
+      systemInstruction = { parts: [{ text: textContent }] };
+    } else {
+      contents.push({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: textContent }],
+      });
+    }
+  }
+
+  return { systemInstruction, contents };
+}
+
+async function invokeGeminiNative(params: InvokeParams, config: AiConfig): Promise<InvokeResult> {
+  const model = config.model || "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
+  const maxTokens = params.maxTokens || params.max_tokens || 32768;
+
+  const { systemInstruction, contents } = messagesToGeminiContents(params.messages);
+
+  const wantsJson = params.responseFormat?.type === "json_object" || params.response_format?.type === "json_object";
+
+  const body: Record<string, any> = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      ...(wantsJson ? { responseMimeType: "application/json" } : {}),
+    },
+  };
+  if (systemInstruction) body.systemInstruction = systemInstruction;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${errorText.slice(0, 500)}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  // Convert to OpenAI-compatible InvokeResult shape
+  return {
+    id: `gemini-${Date.now()}`,
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [{
+      index: 0,
+      message: { role: "assistant", content: text },
+      finish_reason: data.candidates?.[0]?.finishReason || "stop",
+    }],
+    usage: data.usageMetadata ? {
+      prompt_tokens: data.usageMetadata.promptTokenCount || 0,
+      completion_tokens: data.usageMetadata.candidatesTokenCount || 0,
+      total_tokens: data.usageMetadata.totalTokenCount || 0,
+    } : undefined,
+  };
+}
+
+// ─── Main invokeLLM function ───
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  // Check if admin has configured their own AI settings
+  const config = await getAiConfig();
+
+  // If admin set Gemini as provider with their own API key, use native Gemini API
+  if (config.provider === "gemini" && config.apiKey && !ENV.forgeApiUrl) {
+    return invokeGeminiNative(params, config);
+  }
+  if (config.provider === "gemini" && config.apiKey && config.apiKey !== ENV.forgeApiKey) {
+    return invokeGeminiNative(params, config);
+  }
+
+  // OpenAI-compatible path (Forge proxy, OpenAI direct, or admin's OpenAI key)
+  let apiUrl: string;
+  let apiKey: string;
+  let modelName: string;
+
+  if (config.apiKey && config.apiKey !== ENV.forgeApiKey) {
+    // Admin configured their own OpenAI key
+    apiUrl = `${config.baseUrl || "https://api.openai.com/v1"}/chat/completions`;
+    apiKey = config.apiKey;
+    modelName = config.model || "gpt-4o-mini";
+  } else if (ENV.forgeApiKey) {
+    // Fall back to Forge proxy (built-in)
+    apiUrl = resolveApiUrl();
+    apiKey = ENV.forgeApiKey;
+    modelName = "gemini-2.5-flash";
+  } else {
+    throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
+  }
 
   const {
     messages,
@@ -283,7 +438,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: modelName,
     messages: messages.map(normalizeMessage),
   };
 
@@ -301,8 +456,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const maxTokens = params.maxTokens || params.max_tokens || 32768;
   payload.max_tokens = maxTokens;
-  payload.thinking = {
-    "budget_tokens": 1024
+
+  // Only add thinking for Forge proxy / Gemini-through-OpenAI-compat
+  if (apiUrl.includes("forge") || modelName.startsWith("gemini")) {
+    payload.thinking = { budget_tokens: 1024 };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -316,11 +473,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });
@@ -328,7 +485,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`
     );
   }
 

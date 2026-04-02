@@ -28,7 +28,7 @@ import {
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
 
 export const appRouter = router({
@@ -1055,6 +1055,107 @@ Return ONLY the JSON object with the improved template.`;
           details: `Updated email logo URL`,
         });
         return { success: true, url: input.url };
+      }),
+    }),
+
+    // ─── AI CONFIGURATION ───
+    aiConfig: router({
+      get: adminProcedure.query(async () => {
+        const [provider, apiKey, model] = await Promise.all([
+          db.getSiteSetting("ai_provider"),
+          db.getSiteSetting("ai_api_key"),
+          db.getSiteSetting("ai_model"),
+        ]);
+        return {
+          provider: provider || "openai",
+          apiKeySet: !!apiKey,
+          apiKeyPreview: apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : null,
+          model: model || "",
+        };
+      }),
+      update: adminProcedure.input(z.object({
+        provider: z.enum(["openai", "gemini"]),
+        apiKey: z.string().optional(),
+        model: z.string().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        await db.setSiteSetting("ai_provider", input.provider);
+        if (input.apiKey !== undefined && input.apiKey !== "") {
+          await db.setSiteSetting("ai_api_key", input.apiKey);
+        }
+        if (input.model !== undefined) {
+          await db.setSiteSetting("ai_model", input.model);
+        }
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "update_ai_config",
+          entityType: "site_setting",
+          entityId: 0,
+          details: `Updated AI provider to ${input.provider}${input.model ? ` (model: ${input.model})` : ""}`,
+        });
+        clearAiConfigCache();
+        return { success: true };
+      }),
+      test: adminProcedure.mutation(async () => {
+        // Import getAiConfig dynamically to avoid circular deps
+        const { getAiConfig } = await import("./_core/llm");
+        const config = await getAiConfig();
+
+        if (!config.apiKey) {
+          return { success: false, error: "No API key configured. Please set an API key first." };
+        }
+
+        try {
+          const startTime = Date.now();
+
+          if (config.provider === "gemini") {
+            // Test Gemini API directly
+            const model = config.model || "gemini-2.5-flash";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
+            const resp = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: "Reply with exactly: OK" }] }],
+                generationConfig: { maxOutputTokens: 10 },
+              }),
+            });
+            const latency = Date.now() - startTime;
+            if (!resp.ok) {
+              const errText = await resp.text();
+              return { success: false, error: `Gemini API error ${resp.status}: ${errText.slice(0, 200)}` };
+            }
+            const data = await resp.json();
+            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            return { success: true, latency, model, reply: reply.trim() };
+          } else {
+            // Test OpenAI-compatible API
+            const baseUrl = config.baseUrl || "https://api.openai.com/v1";
+            const model = config.model || "gpt-4o-mini";
+            const resp = await fetch(`${baseUrl}/chat/completions`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${config.apiKey}`,
+              },
+              body: JSON.stringify({
+                model,
+                messages: [{ role: "user", content: "Reply with exactly: OK" }],
+                max_tokens: 10,
+              }),
+            });
+            const latency = Date.now() - startTime;
+            if (!resp.ok) {
+              const errText = await resp.text();
+              return { success: false, error: `OpenAI API error ${resp.status}: ${errText.slice(0, 200)}` };
+            }
+            const data = await resp.json();
+            const reply = data.choices?.[0]?.message?.content || "";
+            return { success: true, latency, model, reply: reply.trim() };
+          }
+        } catch (err: any) {
+          return { success: false, error: err.message || "Connection failed" };
+        }
       }),
     }),
   }),
