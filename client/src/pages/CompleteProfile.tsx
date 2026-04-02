@@ -3,8 +3,7 @@ import { Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Phone, Calendar, Loader2, AlertCircle, Gift, Check } from 'lucide-react';
 import { toast } from 'sonner';
-
-const LOGO_URL = '/logo.png';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 function isAtLeast19(dob: string): boolean {
   if (!dob) return true; // optional field
@@ -27,6 +26,7 @@ function maxBirthdayDate(): string {
 }
 
 export default function CompleteProfile() {
+  const { logoUrl } = useSiteConfig();
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ export default function CompleteProfile() {
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <Link href="/">
-              <img src={LOGO_URL} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
+              <img src={logoUrl || '/logo.png'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
             </Link>
             <h1 className="font-display text-2xl text-white">
               {isWelcome ? 'ALMOST THERE!' : 'COMPLETE PROFILE'}

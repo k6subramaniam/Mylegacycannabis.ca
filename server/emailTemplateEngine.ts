@@ -105,7 +105,10 @@ async function sendToAdminAndCustomer(
 
 async function commonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
-  const logoUrl = await db.getSiteSetting("email_logo_url") || getDefaultLogoUrl();
+  // Check site_logo_url first (new unified key), then email_logo_url (legacy), then fallback
+  const logoUrl = await db.getSiteSetting("site_logo_url")
+    || await db.getSiteSetting("email_logo_url")
+    || getDefaultLogoUrl();
   return {
     logo_url: logoUrl,
     unsubscribe_url: `${base}/unsubscribe`,

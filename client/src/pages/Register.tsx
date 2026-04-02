@@ -3,12 +3,12 @@ import { Link, useSearch } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Mail, Phone, User, Calendar, ArrowRight, ArrowLeft, Loader2, Shield, AlertCircle, Gift, Check, Users } from 'lucide-react';
 import { toast } from 'sonner';
-
-const LOGO_URL = '/logo.png';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 type Step = 'info' | 'verify' | 'otp';
 
 export default function Register() {
+  const { logoUrl } = useSiteConfig();
   const [step, setStep] = useState<Step>('info');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -178,7 +178,7 @@ export default function Register() {
           {/* Logo */}
           <div className="text-center mb-6">
             <Link href="/">
-              <img src={LOGO_URL} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
+              <img src={logoUrl || '/logo.png'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
             </Link>
             <h1 className="font-display text-2xl text-white">CREATE ACCOUNT</h1>
             <p className="text-white/60 font-body text-sm mt-1">Join My Legacy Rewards — earn points on every purchase</p>

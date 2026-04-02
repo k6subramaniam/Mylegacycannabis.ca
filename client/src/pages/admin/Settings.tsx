@@ -4,7 +4,7 @@ import {
   Settings as SettingsIcon, Shield, ShieldOff, Save, Loader2,
   AlertTriangle, CheckCircle, Info, Wrench, WrenchIcon, Clock,
   Eye, EyeOff, Type, MessageSquare, Key, Smartphone,
-  Sparkles, Zap, Brain,
+  Sparkles, Zap, Brain, ImageIcon, Upload, Trash2, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
@@ -197,6 +197,11 @@ export default function AdminSettings() {
           </div>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 0: LOGO MANAGEMENT
+          ══════════════════════════════════════════════════════════════ */}
+      <LogoManagementSection />
 
       {/* ══════════════════════════════════════════════════════════════
           SECTION 1: MAINTENANCE MODE
@@ -1280,6 +1285,218 @@ function AiConfigSection() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGO MANAGEMENT SECTION
+// ═══════════════════════════════════════════════════════════════
+function LogoManagementSection() {
+  const utils = trpc.useUtils();
+  const { data: logoData, isLoading } = trpc.admin.emailLogo.get.useQuery();
+  const uploadMutation = trpc.admin.emailLogo.upload.useMutation({
+    onSuccess: (data) => {
+      utils.admin.emailLogo.get.invalidate();
+      utils.store.siteConfig.invalidate();
+      setPreview(data.url);
+      toast.success("Logo uploaded and applied globally! All pages, emails, and the admin panel will now use the new logo.");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to upload logo"),
+  });
+  const resetMutation = trpc.admin.emailLogo.update.useMutation({
+    onSuccess: () => {
+      utils.admin.emailLogo.get.invalidate();
+      utils.store.siteConfig.invalidate();
+      setPreview("/logo.png");
+      toast.success("Logo reset to default.");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to reset logo"),
+  });
+
+  const [preview, setPreview] = useState<string>("/logo.png");
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (logoData?.url) setPreview(logoData.url);
+  }, [logoData]);
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, SVG, WebP).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo file must be under 5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      setPreview(reader.result as string);
+      uploadMutation.mutate({
+        fileName: file.name,
+        base64,
+        contentType: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+    e.target.value = ""; // reset to allow re-selecting same file
+  };
+
+  const handleReset = () => {
+    if (window.confirm("Reset the logo to the default /logo.png? This will affect all pages and emails.")) {
+      resetMutation.mutate({ url: `${window.location.origin}/logo.png` });
+    }
+  };
+
+  const currentUrl = logoData?.url || "/logo.png";
+  const isDefault = !logoData?.url || logoData.url === "/logo.png" || logoData.url.endsWith("/logo.png");
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+        <ImageIcon size={20} className="text-[#4B2D8E]" />
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">Site Logo</h2>
+          <p className="text-sm text-gray-500">Upload a logo that updates globally across the website, admin panel, and all email templates.</p>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-gray-400">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Loading logo settings...</span>
+          </div>
+        ) : (
+          <>
+            {/* Current Logo Preview */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-3">Current Logo</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Dark background preview */}
+                <div className="rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-[#1a1a2e] p-6 flex items-center justify-center min-h-[100px]">
+                    <img
+                      src={preview}
+                      alt="Logo on dark background"
+                      className="max-h-16 w-auto"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }}
+                    />
+                  </div>
+                  <div className="bg-gray-50 px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Header / Email / Dark</span>
+                  </div>
+                </div>
+                {/* Light background preview */}
+                <div className="rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-white p-6 flex items-center justify-center min-h-[100px] border-b border-gray-100">
+                    <img
+                      src={preview}
+                      alt="Logo on light background"
+                      className="max-h-16 w-auto"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }}
+                    />
+                  </div>
+                  <div className="bg-gray-50 px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Admin / Login / Light</span>
+                  </div>
+                </div>
+              </div>
+              {!isDefault && (
+                <p className="text-xs text-gray-400 mt-2 truncate">
+                  URL: <code className="bg-gray-50 px-1.5 py-0.5 rounded text-[10px]">{currentUrl}</code>
+                </p>
+              )}
+            </div>
+
+            {/* Upload Drop Zone */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Upload New Logo</p>
+              <label
+                className={`relative flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  dragging
+                    ? "border-[#4B2D8E] bg-[#4B2D8E]/5"
+                    : "border-gray-300 hover:border-[#4B2D8E] hover:bg-gray-50"
+                } ${uploadMutation.isPending ? "opacity-50 pointer-events-none" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+              >
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  onChange={handleInputChange}
+                  className="sr-only"
+                />
+                {uploadMutation.isPending ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 size={28} className="animate-spin text-[#4B2D8E]" />
+                    <span className="text-sm text-gray-500">Uploading and applying...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload size={28} className="text-gray-400" />
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium text-[#4B2D8E]">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, SVG, or WebP (max 5 MB). Transparent PNG recommended.</p>
+                    </div>
+                  </div>
+                )}
+              </label>
+            </div>
+
+            {/* Where it's used */}
+            <div className="bg-[#4B2D8E]/5 rounded-xl p-4">
+              <div className="flex items-start gap-2">
+                <Info size={16} className="text-[#4B2D8E] shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium text-gray-700">This logo appears in:</p>
+                  <ul className="mt-1.5 space-y-1 text-xs">
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> Website header and footer</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> Age gate overlay</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> Maintenance mode page</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> Admin panel sidebar and mobile header</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> Login, Register, and Complete Profile pages</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> All email template headers and footers</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> OTP verification and admin notification emails</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-[#4B2D8E]" /> SEO Open Graph and social sharing images</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Reset to default */}
+            {!isDefault && (
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={handleReset}
+                  disabled={resetMutation.isPending}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  {resetMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                  Reset to Default Logo
+                </button>
               </div>
             )}
           </>

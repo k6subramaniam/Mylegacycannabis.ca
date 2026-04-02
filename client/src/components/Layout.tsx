@@ -9,7 +9,7 @@ import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
-const LOGO_URL = '/logo.png';
+const LOGO_URL_FALLBACK = '/logo.png';
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
@@ -21,7 +21,7 @@ export const HEADER_HEIGHT_DESKTOP = 112; // px
 // ============================================================
 // AGE GATE — no animation, instant render, fixed full-screen
 // ============================================================
-function AgeGate({ onConfirm }: { onConfirm: () => void }) {
+function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: string }) {
   const { t } = useT();
   useEffect(() => {
     // Lock scroll while gate is visible — prevents scrollbar CLS
@@ -42,7 +42,7 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
       <div className="bg-white rounded-2xl p-8 w-full max-w-[400px] text-center shadow-2xl">
         {/* New logo: 731×273, displayed at h-16 (64px) */}
         <img
-          src={LOGO_URL}
+          src={logoUrl}
           alt="My Legacy Cannabis"
           width="731"
           height="273"
@@ -133,7 +133,7 @@ function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
   );
 }
 
-function MaintenanceOverlay({ title, message }: { title: string; message: string }) {
+function MaintenanceOverlay({ title, message, logoUrl }: { title: string; message: string; logoUrl: string }) {
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -203,7 +203,7 @@ function MaintenanceOverlay({ title, message }: { title: string; message: string
       <div className="min-h-full flex flex-col items-center justify-start py-6 px-4">
         {/* ── Logo (large & prominent) ── */}
         <img
-          src={LOGO_URL}
+          src={logoUrl || LOGO_URL_FALLBACK}
           alt="My Legacy Cannabis"
           width="731"
           height="273"
@@ -365,6 +365,7 @@ function Header() {
   const { isAuthenticated } = useAuth();
   const [location] = useLocation();
   const { t, locale, setLocale } = useT();
+  const { logoUrl } = useSiteConfig();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -404,7 +405,7 @@ function Header() {
           <Link href="/" aria-label="My Legacy Cannabis Home">
             {/* Logo: 731×273. CSS clamps to h-10/md:h-14 */}
             <img
-              src={LOGO_URL}
+              src={logoUrl || LOGO_URL_FALLBACK}
               alt="My Legacy Cannabis"
               width="731"
               height="273"
@@ -505,7 +506,7 @@ function Header() {
             >
               <div className="flex items-center justify-between p-4 border-b h-16">
                 <img
-                  src={LOGO_URL}
+                  src={logoUrl || LOGO_URL_FALLBACK}
                   alt="My Legacy Cannabis"
                   width="731"
                   height="273"
@@ -567,6 +568,7 @@ function Header() {
 // ============================================================
 function Footer() {
   const { t } = useT();
+  const { logoUrl } = useSiteConfig();
   return (
     <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8">
       <div className="container py-12">
@@ -575,7 +577,7 @@ function Footer() {
           <div>
             {/* Explicit width/height prevents layout shift when image loads */}
             <img
-              src={LOGO_URL}
+              src={logoUrl || LOGO_URL_FALLBACK}
               alt="My Legacy Cannabis"
               width="731"
               height="273"
@@ -804,7 +806,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [ageVerified, setAgeVerified] = useState(() => {
     try { return localStorage.getItem('mlc-age-verified') === 'true'; } catch { return false; }
   });
-  const { maintenance } = useSiteConfig();
+  const { maintenance, logoUrl } = useSiteConfig();
 
   const handleAgeConfirm = () => {
     setAgeVerified(true);
@@ -814,11 +816,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* AgeGate is position:fixed — zero impact on document flow / CLS */}
-      {!ageVerified && <AgeGate onConfirm={handleAgeConfirm} />}
+      {!ageVerified && <AgeGate onConfirm={handleAgeConfirm} logoUrl={logoUrl} />}
 
       {/* Maintenance overlay — shown after age gate, blocks entire storefront */}
       {ageVerified && maintenance.enabled && (
-        <MaintenanceOverlay title={maintenance.title} message={maintenance.message} />
+        <MaintenanceOverlay title={maintenance.title} message={maintenance.message} logoUrl={logoUrl} />
       )}
 
       <div className="min-h-screen flex flex-col">

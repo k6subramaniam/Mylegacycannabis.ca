@@ -1047,26 +1047,49 @@ Return ONLY the JSON object with the improved template.`;
       }),
     }),
 
-    // ─── EMAIL LOGO ───
+    // ─── SITE LOGO (global — used in header, footer, admin, emails, etc.) ───
     emailLogo: router({
       get: adminProcedure.query(async () => {
-        const url = await db.getSiteSetting("email_logo_url");
-        const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
-        return { url: url || `${siteBase}/logo.png` };
+        const url = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url");
+        return { url: url || "/logo.png" };
       }),
       update: adminProcedure.input(z.object({
         url: z.string().url(),
       })).mutation(async ({ input, ctx }) => {
+        // Update both keys for backward compatibility
+        await db.setSiteSetting("site_logo_url", input.url);
         await db.setSiteSetting("email_logo_url", input.url);
         await db.logAdminActivity({
           adminId: ctx.user?.id || 0,
           adminName: ctx.user?.name || "Admin",
-          action: "update_email_logo",
+          action: "update_site_logo",
           entityType: "site_setting",
           entityId: 0,
-          details: `Updated email logo URL`,
+          details: `Updated site logo URL (global — website, admin, emails)`,
         });
         return { success: true, url: input.url };
+      }),
+      upload: adminProcedure.input(z.object({
+        fileName: z.string(),
+        base64: z.string(),
+        contentType: z.string(),
+      })).mutation(async ({ input, ctx }) => {
+        const ext = input.fileName.split('.').pop() || 'png';
+        const key = `branding/site-logo.${ext}`;
+        const buffer = Buffer.from(input.base64, 'base64');
+        const { url } = await storagePut(key, buffer, input.contentType);
+        // Update both keys for backward compatibility
+        await db.setSiteSetting("site_logo_url", url);
+        await db.setSiteSetting("email_logo_url", url);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "upload_site_logo",
+          entityType: "site_setting",
+          entityId: 0,
+          details: `Uploaded new site logo (${input.fileName})`,
+        });
+        return { success: true, url };
       }),
     }),
 
@@ -1280,21 +1303,24 @@ Return ONLY the JSON object with the improved template.`;
     }),
 
     siteConfig: publicProcedure.query(async () => {
-      const [idVerificationEnabled, idVerificationMode, maintenance, storeHoursConfig, paymentEmail, emailLogoUrl] = await Promise.all([
+      const [idVerificationEnabled, idVerificationMode, maintenance, storeHoursConfig, paymentEmail, siteLogoUrl, emailLogoUrl] = await Promise.all([
         db.isIdVerificationEnabled(),
         db.getIdVerificationMode(),
         db.getMaintenanceConfig(),
         db.getStoreHoursConfig(),
         db.getSiteSetting("payment_email"),
+        db.getSiteSetting("site_logo_url"),
         db.getSiteSetting("email_logo_url"),
       ]);
+      const logoUrl = siteLogoUrl || emailLogoUrl || "/logo.png";
       return {
         idVerificationEnabled,
         idVerificationMode,
         maintenance,
         storeHours: storeHoursConfig,
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
-        emailLogoUrl: emailLogoUrl || "/logo.png",
+        logoUrl,
+        emailLogoUrl: logoUrl,
       };
     }),
     products: publicProcedure.input(z.object({

@@ -25,9 +25,26 @@ import { recordEmailEvent, type EmailProvider } from "./emailHealthMonitor";
  */
 
 // ─── Logo URL helper ───
-function getLogoUrl(): string {
+// Returns the default logo URL (static fallback). For dynamic logos, use getLogoUrlDynamic().
+function getLogoUrlFallback(): string {
   if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
   return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
+}
+
+// Loads the admin-managed logo URL from DB, falling back to the static default.
+// This ensures OTP emails, admin notifications, and all other emails use the
+// same logo the admin uploaded in Settings > Site Logo.
+async function getLogoUrl(): Promise<string> {
+  try {
+    const { getSiteSetting } = await import("./db");
+    const siteLogoUrl = await getSiteSetting("site_logo_url");
+    if (siteLogoUrl) return siteLogoUrl;
+    const emailLogoUrl = await getSiteSetting("email_logo_url");
+    if (emailLogoUrl) return emailLogoUrl;
+  } catch {
+    // DB not ready yet (startup), fall back to static
+  }
+  return getLogoUrlFallback();
 }
 
 // ─── Resend client (lazy singleton) ───
@@ -319,10 +336,11 @@ export async function sendOTPEmail(
     purpose === "login" ? "sign in to" : purpose === "register" ? "create" : "verify";
 
   const subject = `My Legacy Cannabis — Your Verification Code: ${code}`;
+  const resolvedLogo = await getLogoUrl();
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${getLogoUrl()}"
+        <img src="${resolvedLogo}"
              alt="My Legacy Cannabis" style="height: 48px;" />
       </div>
       <h2 style="color: #4B2D8E; text-align: center; margin-bottom: 8px;">Verification Code</h2>
@@ -427,10 +445,11 @@ export async function sendAdminNotification(
     return false;
   }
 
+  const resolvedLogo = await getLogoUrl();
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${getLogoUrl()}"
+        <img src="${resolvedLogo}"
              alt="My Legacy Cannabis" style="height: 40px;" />
       </div>
       <div style="background: #4B2D8E; color: white; padding: 12px 20px; border-radius: 8px 8px 0 0;">
@@ -462,10 +481,11 @@ export async function sendCustomerEmail(
   }
 
   // Otherwise wrap in a simple layout (for inline content)
+  const resolvedLogo = await getLogoUrl();
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${getLogoUrl()}"
+        <img src="${resolvedLogo}"
              alt="My Legacy Cannabis" style="height: 40px;" />
       </div>
       ${bodyHtml}
