@@ -179,11 +179,13 @@ function normPrice(p: any): string | null {
 
 // ─── Map category to DB fields ───
 
-function mapCategory(menuCategory: string): { category: "flower"; strainType: "Indica" | "Sativa" | "Hybrid" } {
+function mapCategory(menuCategory: string): { category: string; strainType: "Indica" | "Sativa" | "Hybrid"; subcategory: string | null } {
   const cat = menuCategory.toLowerCase();
-  if (cat.includes("indica")) return { category: "flower", strainType: "Indica" };
-  if (cat.includes("sativa")) return { category: "flower", strainType: "Sativa" };
-  return { category: "flower", strainType: "Hybrid" };
+  if (cat.includes("ounce deal"))    return { category: "ounce-deals",   strainType: "Hybrid",  subcategory: null };
+  if (cat.includes("shake"))          return { category: "shake-n-bake",  strainType: "Hybrid",  subcategory: null };
+  if (cat.includes("indica"))         return { category: "flower",        strainType: "Indica",  subcategory: "Indica Flower" };
+  if (cat.includes("sativa"))         return { category: "flower",        strainType: "Sativa",  subcategory: "Sativa Flower" };
+  return { category: "flower", strainType: "Hybrid", subcategory: "Hybrid Flower" };
 }
 
 function makeSlug(strain: string, weight: string): string {
@@ -216,15 +218,16 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
   const included = items.filter(i => i.include);
   let created = 0, updated = 0, deactivated = 0, skipped = 0;
 
-  // Get all existing flower products for matching
+  // Get all existing menu-imported products for matching (flower, ounce-deals, shake-n-bake)
+  const menuCategories = new Set(["flower", "ounce-deals", "shake-n-bake"]);
   const existingProducts = await db.getAllProducts({ page: 1, limit: 1000, activeOnly: false });
-  const existingFlower = existingProducts.data.filter((p: any) => p.category === "flower");
+  const existingFlower = existingProducts.data.filter((p: any) => menuCategories.has(p.category));
 
   // Track which existing products were matched (to know which to deactivate)
   const matchedIds = new Set<number>();
 
   for (const item of included) {
-    const { category, strainType } = mapCategory(item.category);
+    const { category, strainType, subcategory } = mapCategory(item.category);
     const stock = item.stock ?? defaultStock ?? 10;
 
     // Get all weight tiers with prices
@@ -252,6 +255,7 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
         matchedIds.add(existing.id);
         await db.updateProduct(existing.id, {
           name,
+          category,
           price,
           thc: item.thc,
           weight,
@@ -261,7 +265,9 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
           stock,
           isNew: item.isNew,
           isActive: true,
-          flavor: item.grade, // Store grade in flavor field for display
+          flavor: item.grade, // Also stored in grade column below
+          subcategory: subcategory,
+          grade: item.grade,
         } as any);
         updated++;
       } else {
@@ -280,7 +286,9 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
           featured: item.grade === "AAAA" || item.grade === "AAA+",
           isNew: item.isNew,
           isActive: true,
-          flavor: item.grade, // Store grade in flavor field
+          flavor: item.grade, // Also stored in grade column below
+          subcategory: subcategory,
+          grade: item.grade,
         } as any);
         if (newId) matchedIds.add(newId);
         created++;

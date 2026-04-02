@@ -81,7 +81,7 @@ async function startServer() {
 
     // Category pages
     const categories = [
-      "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories",
+      "flower", "pre-rolls", "edibles", "vapes", "concentrates", "ounce-deals", "shake-n-bake", "accessories",
     ];
 
     let urls = staticPages.map(p =>

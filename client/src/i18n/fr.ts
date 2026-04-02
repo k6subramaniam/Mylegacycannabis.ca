@@ -88,6 +88,8 @@ const fr: Translations = {
     edibles: 'Comestibles',
     vapes: 'Vapoteuses',
     concentrates: 'Concentres',
+    ounceDeals: 'Offres Once',
+    shakeNBake: 'Shake n Bake',
     accessories: 'Accessoires',
     storeHours: 'HEURES D\'OUVERTURE',
     contactUs: 'CONTACTEZ-NOUS',
