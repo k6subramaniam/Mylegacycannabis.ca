@@ -4,7 +4,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { storeLocations } from '@/lib/data';
-import { Menu, X, ShoppingCart, Home, Search, User, MapPin, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe } from 'lucide-react';
+import { Menu, X, ShoppingCart, Home, Search, User, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe } from 'lucide-react';
 import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -639,14 +639,10 @@ function Footer() {
           {/* Store Hours (from admin settings) */}
           <StoreHoursWidget />
 
-          {/* Contact */}
+          {/* Get In Touch */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.contactUs}</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.getInTouch}</h3>
             <ul className="space-y-3 font-body text-sm">
-              <li className="flex items-start gap-2 text-white/70">
-                <MapPin size={16} className="mt-0.5 shrink-0 text-[#F15929]" />
-                <span>255 Dundas St W, Mississauga, ON</span>
-              </li>
               <li>
                 <a href="tel:4372154722" className="flex items-center gap-2 text-white/70 hover:text-[#F15929] transition-colors">
                   <Phone size={16} className="shrink-0 text-[#F15929]" /> (437) 215-4722

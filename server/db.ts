@@ -383,6 +383,28 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── Store Locations (admin-manageable) ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS store_locations (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      address VARCHAR(500) NOT NULL,
+      city VARCHAR(255) NOT NULL,
+      province VARCHAR(10) NOT NULL,
+      postal_code VARCHAR(10) NOT NULL,
+      phone VARCHAR(30) NOT NULL,
+      hours VARCHAR(100) NOT NULL DEFAULT 'Open 24/7',
+      map_url TEXT,
+      directions_url TEXT,
+      lat NUMERIC(10,6),
+      lng NUMERIC(10,6),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -399,6 +421,9 @@ export async function initializeDatabase(): Promise<void> {
 
   // Seed default site settings if they don't exist
   await seedDefaultSettings(db);
+
+  // Seed default store locations if empty
+  await seedDefaultLocations(db);
 }
 
 async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
@@ -425,6 +450,70 @@ async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
       await db.insert(schema.siteSettings).values(d);
     }
   }
+}
+
+// ─── STORE LOCATIONS — default seeds ───
+const DEFAULT_LOCATIONS = [
+  { name: 'Mississauga', address: '255 Dundas St W', city: 'Mississauga', province: 'ON', postalCode: 'L5B 1H4', phone: '(437) 215-4722', hours: 'Open 24/7', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2889.5!2d-79.6!3d43.59!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDPCsDM1JzI0LjAiTiA3OcKwMzYnMDAuMCJX!5e0!3m2!1sen!2sca!4v1', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=255+Dundas+St+W+Mississauga+ON', lat: '43.590000', lng: '-79.600000', sortOrder: 0 },
+  { name: 'Hamilton', address: '123 King St E', city: 'Hamilton', province: 'ON', postalCode: 'L8N 1A9', phone: '(905) 555-0123', hours: 'Open 24/7', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2906.5!2d-79.87!3d43.25!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sca!4v1', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=123+King+St+E+Hamilton+ON', lat: '43.250000', lng: '-79.870000', sortOrder: 1 },
+  { name: 'Queen St Toronto', address: '456 Queen St W', city: 'Toronto', province: 'ON', postalCode: 'M5V 2A8', phone: '(416) 555-0456', hours: 'Open 24/7', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2887.5!2d-79.4!3d43.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sca!4v1', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=456+Queen+St+W+Toronto+ON', lat: '43.650000', lng: '-79.400000', sortOrder: 2 },
+  { name: 'Dundas Toronto', address: '789 Dundas St W', city: 'Toronto', province: 'ON', postalCode: 'M6J 1V1', phone: '(416) 555-0789', hours: 'Open 24/7', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2887.5!2d-79.41!3d43.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sca!4v1', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=789+Dundas+St+W+Toronto+ON', lat: '43.650000', lng: '-79.410000', sortOrder: 3 },
+  { name: 'Merivale Ottawa', address: '1642 Merivale Rd', city: 'Ottawa', province: 'ON', postalCode: 'K2G 4A1', phone: '(613) 555-0164', hours: 'Open 24/7', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2800.5!2d-75.73!3d45.35!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sca!4v1', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=1642+Merivale+Rd+Ottawa+ON', lat: '45.350000', lng: '-75.730000', sortOrder: 4 },
+];
+
+async function seedDefaultLocations(db: PostgresJsDatabase<typeof schema>) {
+  const existing = await db.select({ cnt: count() }).from(schema.storeLocations);
+  if (existing[0].cnt > 0) return;
+  console.log("[DB] Seeding default store locations...");
+  for (const loc of DEFAULT_LOCATIONS) {
+    await db.insert(schema.storeLocations).values(loc);
+  }
+  console.log(`[DB] Seeded ${DEFAULT_LOCATIONS.length} default locations`);
+}
+
+// ─── STORE LOCATIONS CRUD ───
+export async function getActiveLocations() {
+  if (!USE_PERSISTENT_DB) return DEFAULT_LOCATIONS.map((loc, i) => ({ id: i + 1, ...loc, isActive: true, createdAt: new Date(), updatedAt: new Date() }));
+  return getDb().select().from(schema.storeLocations).where(eq(schema.storeLocations.isActive, true)).orderBy(schema.storeLocations.sortOrder);
+}
+
+export async function getAllLocations() {
+  if (!USE_PERSISTENT_DB) return DEFAULT_LOCATIONS.map((loc, i) => ({ id: i + 1, ...loc, isActive: true, createdAt: new Date(), updatedAt: new Date() }));
+  return getDb().select().from(schema.storeLocations).orderBy(schema.storeLocations.sortOrder);
+}
+
+export async function getLocationById(id: number) {
+  if (!USE_PERSISTENT_DB) {
+    const idx = id - 1;
+    if (idx >= 0 && idx < DEFAULT_LOCATIONS.length) return { id, ...DEFAULT_LOCATIONS[idx], isActive: true, createdAt: new Date(), updatedAt: new Date() };
+    return null;
+  }
+  const rows = await getDb().select().from(schema.storeLocations).where(eq(schema.storeLocations.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createLocation(data: {
+  name: string; address: string; city: string; province: string; postalCode: string;
+  phone: string; hours?: string; mapUrl?: string; directionsUrl?: string;
+  lat?: string; lng?: string; sortOrder?: number; isActive?: boolean;
+}) {
+  const db = getDb();
+  const result = await db.insert(schema.storeLocations).values(data).returning({ id: schema.storeLocations.id });
+  return result[0].id;
+}
+
+export async function updateLocation(id: number, data: Partial<{
+  name: string; address: string; city: string; province: string; postalCode: string;
+  phone: string; hours: string; mapUrl: string; directionsUrl: string;
+  lat: string; lng: string; sortOrder: number; isActive: boolean;
+}>) {
+  const db = getDb();
+  await db.update(schema.storeLocations).set({ ...data, updatedAt: new Date() }).where(eq(schema.storeLocations.id, id));
+}
+
+export async function deleteLocation(id: number) {
+  const db = getDb();
+  await db.delete(schema.storeLocations).where(eq(schema.storeLocations.id, id));
 }
 
 /**

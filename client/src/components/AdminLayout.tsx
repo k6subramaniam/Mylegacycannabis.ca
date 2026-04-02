@@ -2,7 +2,7 @@ import { useLocation, Link, Redirect } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
-  Menu, X, Settings, ShieldAlert, ImageUp, MessageSquare, DollarSign,
+  Menu, X, Settings, ShieldAlert, ImageUp, MessageSquare, DollarSign, MapPin,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,7 @@ const menuItems = [
   { icon: Users, label: "Customers", path: "/admin/customers" },
   { icon: MessageSquare, label: "Reviews", path: "/admin/reviews" },
   { icon: DollarSign, label: "Payments", path: "/admin/payments" },
+  { icon: MapPin, label: "Locations", path: "/admin/locations" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
 
