@@ -28,6 +28,7 @@ import {
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
+import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
 import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
 
@@ -330,6 +331,15 @@ export const appRouter = router({
         await db.updateOrder(input.id, { adminNotes: existingNotes ? `${existingNotes}\n${newNote}` : newNote });
         return { success: true };
       }),
+    }),
+
+    // ─── TRACKING: poll for delivery updates ───
+    trackingPoll: adminProcedure.mutation(async () => {
+      if (!isTrackingServiceConfigured()) {
+        throw new Error("Gmail API is not configured. Tracking service requires GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN.");
+      }
+      const stats = await pollTrackingEmails();
+      return stats;
     }),
 
     // ─── ID VERIFICATIONS ───
@@ -1269,8 +1279,9 @@ Return ONLY the JSON object with the improved template.`;
     }),
 
     siteConfig: publicProcedure.query(async () => {
-      const [idVerificationEnabled, maintenance, storeHoursConfig, paymentEmail, emailLogoUrl] = await Promise.all([
+      const [idVerificationEnabled, idVerificationMode, maintenance, storeHoursConfig, paymentEmail, emailLogoUrl] = await Promise.all([
         db.isIdVerificationEnabled(),
+        db.getIdVerificationMode(),
         db.getMaintenanceConfig(),
         db.getStoreHoursConfig(),
         db.getSiteSetting("payment_email"),
@@ -1278,6 +1289,7 @@ Return ONLY the JSON object with the improved template.`;
       ]);
       return {
         idVerificationEnabled,
+        idVerificationMode,
         maintenance,
         storeHours: storeHoursConfig,
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
@@ -1566,6 +1578,179 @@ Return ONLY the JSON object with the improved template.`;
         selfieImageUrl: selfieUrl,
         idType: input.idType,
       });
+
+      // Check if AI verification mode is enabled
+      const verificationMode = await db.getIdVerificationMode();
+
+      if (verificationMode === "ai") {
+        // ─── AI-POWERED AUTO-VERIFICATION ───
+        // Use the configured LLM with vision to verify the ID
+        (async () => {
+          try {
+            const aiResult = await invokeLLM({
+              messages: [
+                {
+                  role: "system",
+                  content: `You are an ID verification specialist for MyLegacy Cannabis, a Canadian cannabis delivery service.
+Your job is to verify that submitted ID documents are valid Canadian government-issued photo IDs showing the holder is 19 years of age or older.
+
+ACCEPTABLE IDs:
+- Canadian Driver's License (any province)
+- Canadian Passport
+- Provincial Health Card (with photo)
+- Canadian Citizenship Card
+- NEXUS card
+- Permanent Resident Card
+
+VERIFICATION CRITERIA:
+1. The image must show a recognizable government-issued ID document
+2. The ID must appear to be from Canada
+3. The birth date on the ID must show the person is 19+ years old (current date: ${new Date().toISOString().split("T")[0]})
+4. The ID should not appear obviously fake, damaged beyond recognition, or expired (if expiry is visible)
+
+RESPONSE FORMAT (JSON):
+{
+  "approved": true/false,
+  "confidence": "high" | "medium" | "low",
+  "reason": "Brief explanation of the decision",
+  "name_on_id": "Name visible on the ID or null",
+  "dob_visible": "YYYY-MM-DD or null if not readable",
+  "id_type_detected": "drivers_license | passport | health_card | other",
+  "age_verified": true/false
+}
+
+Be strict but fair. If the image is too blurry to read, reject it. If you can clearly see a valid Canadian ID with a birth date showing 19+, approve it.`,
+                },
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: `Please verify this ID submission. ID type claimed: ${input.idType || "not specified"}. Customer name: ${input.guestName || "not provided"}.` },
+                    { type: "image_url", image_url: { url: frontUrl, detail: "high" } },
+                  ],
+                },
+              ],
+              responseFormat: { type: "json_object" },
+              maxTokens: 1024,
+            });
+
+            const content = typeof aiResult.choices[0]?.message?.content === "string"
+              ? aiResult.choices[0].message.content
+              : "";
+
+            if (!content) {
+              console.warn("[AI Verify] Empty AI response — falling back to manual review");
+              return;
+            }
+
+            const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            let parsed: any;
+            try {
+              parsed = JSON.parse(cleaned);
+            } catch {
+              console.warn("[AI Verify] Failed to parse AI response — falling back to manual review");
+              return;
+            }
+
+            const aiApproved = parsed.approved === true && (parsed.confidence === "high" || parsed.confidence === "medium");
+            const aiNotes = `[AI Verification] ${parsed.approved ? "APPROVED" : "NEEDS REVIEW"} (confidence: ${parsed.confidence})\nReason: ${parsed.reason || "N/A"}${parsed.name_on_id ? `\nName on ID: ${parsed.name_on_id}` : ""}${parsed.dob_visible ? `\nDOB: ${parsed.dob_visible}` : ""}${parsed.id_type_detected ? `\nID type detected: ${parsed.id_type_detected}` : ""}`;
+
+            if (aiApproved) {
+              // Auto-approve
+              await db.updateVerification(id, {
+                status: "approved",
+                reviewedBy: 0,
+                reviewedAt: new Date(),
+                reviewNotes: aiNotes,
+              });
+
+              // Mark user as verified
+              const verification = await db.getVerificationById(id);
+              if (verification) {
+                if (verification.userId) {
+                  await db.updateUser(verification.userId, { idVerified: true });
+                } else if (verification.guestEmail) {
+                  const linkedUser = await db.getUserByEmail(verification.guestEmail);
+                  if (linkedUser) {
+                    await db.updateUser(linkedUser.id, { idVerified: true });
+                  }
+                }
+
+                // Clear [ID VERIFICATION PENDING] from orders
+                if (verification.guestEmail) {
+                  const allOrders = await db.getAllOrders({ limit: 1000 });
+                  for (const order of allOrders.data) {
+                    if (order.notes && typeof order.notes === "string" && order.notes.includes("[ID VERIFICATION PENDING]") && order.guestEmail?.toLowerCase() === verification.guestEmail.toLowerCase()) {
+                      const cleanedNotes = order.notes.split("\n").filter((line: string) => !line.includes("[ID VERIFICATION PENDING]")).join("\n").trim() || null;
+                      await db.updateOrder(order.id, { notes: cleanedNotes } as any);
+                    }
+                  }
+                }
+              }
+
+              // Send approval email
+              const cEmail = input.guestEmail || "";
+              const cName = input.guestName || "Customer";
+              if (cEmail) {
+                triggerIdApproved({ customerName: cName, customerEmail: cEmail, isGuest: !ctx.user }).catch(err => console.warn("[AI Verify] Approved email failed:", err.message));
+              }
+
+              await db.logAdminActivity({
+                adminId: 0,
+                adminName: "AI System",
+                action: "ai_approved",
+                entityType: "verification",
+                entityId: id,
+                details: `AI auto-approved verification #${id}: ${parsed.reason}`,
+              });
+
+              console.log(`[AI Verify] Auto-approved verification #${id} (confidence: ${parsed.confidence})`);
+            } else {
+              // Low confidence or rejected — add AI notes but leave as pending for manual review
+              await db.updateVerification(id, {
+                reviewNotes: aiNotes,
+              });
+
+              await db.logAdminActivity({
+                adminId: 0,
+                adminName: "AI System",
+                action: "ai_flagged",
+                entityType: "verification",
+                entityId: id,
+                details: `AI flagged verification #${id} for manual review: ${parsed.reason}`,
+              });
+
+              console.log(`[AI Verify] Flagged verification #${id} for manual review (confidence: ${parsed.confidence})`);
+
+              // Still notify admin for manual review
+              notifyOwnerAsync({ title: "ID Verification Needs Manual Review", content: `AI flagged verification #${id} from ${input.guestName || input.guestEmail || "Guest"}: ${parsed.reason}` });
+              triggerIdSubmitted({
+                customerName: input.guestName || "Guest",
+                customerEmail: input.guestEmail || "",
+                userId: ctx.user?.id,
+                verificationId: id,
+                idType: input.idType,
+                isGuest: !ctx.user,
+              }).catch(err => console.warn("[AI Verify] Admin email failed:", err.message));
+            }
+          } catch (aiErr: any) {
+            console.error("[AI Verify] AI verification failed — falling back to manual review:", aiErr.message);
+            // On AI failure, notify admin for manual review
+            notifyOwnerAsync({ title: "New ID Verification Submitted", content: `Verification #${id} from ${input.guestName || input.guestEmail || "Guest"} needs review (AI unavailable).` });
+            triggerIdSubmitted({
+              customerName: input.guestName || "Guest",
+              customerEmail: input.guestEmail || "",
+              userId: ctx.user?.id,
+              verificationId: id,
+              idType: input.idType,
+              isGuest: !ctx.user,
+            }).catch(err => console.warn("[Verification] Admin email failed:", err.message));
+          }
+        })();
+
+        return { id, status: "pending", message: "Your ID is being reviewed automatically." };
+      }
+
+      // ─── MANUAL MODE: standard flow ───
       // Fire-and-forget — never block the customer's verification submission
       notifyOwnerAsync({ title: "New ID Verification Submitted", content: `Verification #${id} from ${input.guestName || input.guestEmail || "Guest"} needs review.` });
 

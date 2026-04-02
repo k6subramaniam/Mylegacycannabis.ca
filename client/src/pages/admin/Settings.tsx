@@ -45,6 +45,7 @@ export default function AdminSettings() {
 
   // ─── ID VERIFICATION STATE ───
   const [idVerificationEnabled, setIdVerificationEnabled] = useState(true);
+  const [idVerificationMode, setIdVerificationMode] = useState<"manual" | "ai">("manual");
   const [idHasChanges, setIdHasChanges] = useState(false);
 
   // ─── MAINTENANCE MODE STATE ───
@@ -83,6 +84,7 @@ export default function AdminSettings() {
     if (settings) {
       // ID Verification
       setIdVerificationEnabled(settings.id_verification_enabled !== "false");
+      setIdVerificationMode((settings.id_verification_mode === "ai" ? "ai" : "manual") as "manual" | "ai");
       setIdHasChanges(false);
 
       // Maintenance Mode
@@ -105,14 +107,21 @@ export default function AdminSettings() {
 
   const handleSaveIdVerification = async () => {
     try {
-      await updateSetting.mutateAsync({
-        key: "id_verification_enabled",
-        value: idVerificationEnabled ? "true" : "false",
-      });
+      await Promise.all([
+        updateSetting.mutateAsync({
+          key: "id_verification_enabled",
+          value: idVerificationEnabled ? "true" : "false",
+        }),
+        updateSetting.mutateAsync({
+          key: "id_verification_mode",
+          value: idVerificationMode,
+        }),
+      ]);
       setIdHasChanges(false);
+      const modeLabel = idVerificationMode === "ai" ? "AI auto-verification" : "manual admin review";
       toast.success(
         idVerificationEnabled
-          ? "ID Verification enabled — customers must verify their ID to place orders."
+          ? `ID Verification enabled with ${modeLabel}.`
           : "ID Verification disabled — all customers can place orders without ID checks."
       );
     } catch (err: any) {
@@ -560,6 +569,87 @@ export default function AdminSettings() {
               />
             </button>
           </div>
+
+          {/* Verification Mode Toggle — only visible when ID verification is enabled */}
+          {idVerificationEnabled && (
+            <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Verification Method</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIdVerificationMode("manual"); setIdHasChanges(true); }}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    idVerificationMode === "manual"
+                      ? "border-[#4B2D8E] bg-[#4B2D8E]/5 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  {idVerificationMode === "manual" && (
+                    <div className="absolute top-3 right-3">
+                      <CheckCircle size={18} className="text-[#4B2D8E]" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      idVerificationMode === "manual" ? "bg-[#4B2D8E]/10" : "bg-gray-100"
+                    }`}>
+                      <Shield size={20} className={idVerificationMode === "manual" ? "text-[#4B2D8E]" : "text-gray-400"} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Manual Review</h3>
+                      <p className="text-xs text-gray-500">Admin reviews IDs</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    All submitted IDs are queued for admin review. You approve or reject each submission manually.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setIdVerificationMode("ai"); setIdHasChanges(true); }}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    idVerificationMode === "ai"
+                      ? "border-violet-400 bg-violet-50/50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  {idVerificationMode === "ai" && (
+                    <div className="absolute top-3 right-3">
+                      <CheckCircle size={18} className="text-violet-500" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      idVerificationMode === "ai" ? "bg-violet-100" : "bg-gray-100"
+                    }`}>
+                      <Sparkles size={20} className={idVerificationMode === "ai" ? "text-violet-600" : "text-gray-400"} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">AI Auto-Verify</h3>
+                      <p className="text-xs text-gray-500">AI reviews IDs instantly</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    AI automatically verifies IDs using vision. High-confidence approvals are instant; low-confidence submissions are flagged for manual review.
+                  </p>
+                </button>
+              </div>
+
+              {idVerificationMode === "ai" && (
+                <div className="mt-3 rounded-lg p-3 bg-violet-50 border border-violet-200">
+                  <div className="flex items-start gap-2">
+                    <Sparkles size={14} className="text-violet-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-violet-700">
+                      AI verification uses the configured AI provider (Settings &rarr; AI Configuration). Ensure an API key is set.
+                      The AI checks for valid Canadian government-issued photo ID and verifies the holder is 19+.
+                      If confidence is low, the submission is flagged for your manual review.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Impact explanation */}
           <div className={`rounded-xl p-4 border transition-colors ${

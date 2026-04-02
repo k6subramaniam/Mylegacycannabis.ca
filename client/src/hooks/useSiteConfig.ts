@@ -16,6 +16,8 @@ export function useSiteConfig() {
   return {
     /** Whether ID verification is required for orders. Default: true while loading. */
     idVerificationEnabled: data?.idVerificationEnabled ?? true,
+    /** 'manual' | 'ai' — whether admin reviews IDs manually or AI auto-verifies. Default: 'manual'. */
+    idVerificationMode: (data as any)?.idVerificationMode ?? "manual",
     /** Maintenance mode configuration */
     maintenance: {
       enabled: data?.maintenance?.enabled ?? false,

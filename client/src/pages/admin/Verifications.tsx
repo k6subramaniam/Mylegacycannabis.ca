@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { ShieldCheck, ShieldOff, Search, Eye, Check, X, ArrowLeft, Clock, AlertTriangle, User, Info } from "lucide-react";
+import { ShieldCheck, ShieldOff, Search, Eye, Check, X, ArrowLeft, Clock, AlertTriangle, User, Info, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
@@ -35,7 +35,7 @@ export default function AdminVerifications() {
     },
   });
 
-  const { idVerificationEnabled } = useSiteConfig();
+  const { idVerificationEnabled, idVerificationMode } = useSiteConfig();
   const totalPages = Math.ceil((data?.total ?? 0) / 20);
 
   // Treat missing/undefined status as "pending" (records created before status fix)
@@ -67,6 +67,20 @@ export default function AdminVerifications() {
             <p className="text-xs text-amber-600 mt-0.5">New customers are not required to verify their ID. You can still review existing submissions below.</p>
           </div>
           <Link href="/admin/settings" className="text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors shrink-0">
+            Settings
+          </Link>
+        </div>
+      )}
+
+      {/* Banner showing AI mode is active */}
+      {idVerificationEnabled && idVerificationMode === "ai" && (
+        <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-start gap-3">
+          <Sparkles size={20} className="text-violet-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-violet-800">AI Auto-Verification is enabled</p>
+            <p className="text-xs text-violet-600 mt-0.5">New ID submissions are automatically reviewed by AI. High-confidence approvals happen instantly. Low-confidence submissions are flagged for manual review below.</p>
+          </div>
+          <Link href="/admin/settings" className="text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-300 hover:bg-violet-100 transition-colors shrink-0">
             Settings
           </Link>
         </div>

@@ -16,6 +16,7 @@ import { createContext } from "./context";
 import { serveStatic } from "./static";
 import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
+import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
@@ -232,6 +233,19 @@ async function startServer() {
     console.log("[ETransfer] Gmail API not configured — e-Transfer auto-matching disabled");
   }
 
+  // Poll Gmail for delivery/tracking notifications every 10 minutes
+  const TRACKING_POLL_INTERVAL = parseInt(process.env.TRACKING_POLL_INTERVAL || "600000", 10);
+  if (isTrackingServiceConfigured()) {
+    console.log(`[Tracking] Service configured — polling every ${TRACKING_POLL_INTERVAL / 1000}s`);
+    setInterval(async () => {
+      try {
+        await pollTrackingEmails();
+      } catch (err) {
+        console.error("[Cron] Tracking poll error:", err);
+      }
+    }, TRACKING_POLL_INTERVAL);
+  }
+
   // Run all jobs immediately on startup (after a short delay to let DB settle)
   setTimeout(async () => {
     try {
@@ -243,6 +257,13 @@ async function startServer() {
       if (isETransferServiceConfigured()) {
         const etStats = await pollETransferEmails();
         console.log(`[Startup] E-Transfer poll: ${etStats.processed} processed, ${etStats.matched} matched`);
+      }
+      // Initial tracking delivery poll
+      if (isTrackingServiceConfigured()) {
+        const trackStats = await pollTrackingEmails();
+        if (trackStats.deliveredOrders > 0) {
+          console.log(`[Startup] Tracking poll: ${trackStats.deliveredOrders} orders auto-delivered`);
+        }
       }
     } catch (err) {
       console.error("[Startup] Background job error:", err);

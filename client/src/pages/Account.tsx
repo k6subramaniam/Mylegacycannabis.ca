@@ -203,7 +203,7 @@ function OrdersTab({ user }: { user: any }) {
               <div key={i} className="flex items-center justify-between text-sm font-body gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   {item.productSlug ? (
-                    <Link href={`/product/${item.productSlug}`} className="text-gray-600 hover:text-[#4B2D8E] transition-colors truncate">
+                    <Link href={`/product/${item.productSlug}`} className="text-[#4B2D8E] hover:text-[#F15929] underline underline-offset-2 decoration-[#4B2D8E]/30 hover:decoration-[#F15929]/50 transition-colors truncate font-medium">
                       {item.quantity}x {item.name}
                     </Link>
                   ) : (

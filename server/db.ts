@@ -429,6 +429,7 @@ export async function initializeDatabase(): Promise<void> {
 async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
   const defaults: { key: string; value: string }[] = [
     { key: 'id_verification_enabled', value: 'true' },
+    { key: 'id_verification_mode', value: 'manual' },  // 'manual' | 'ai'
     { key: 'maintenance_mode_enabled', value: 'false' },
     { key: 'maintenance_title', value: 'We\'ll Be Right Back' },
     { key: 'maintenance_message', value: 'Our store is currently undergoing scheduled maintenance. We appreciate your patience and will be back online shortly. Please check back soon!' },
@@ -932,6 +933,11 @@ export async function getAllSiteSettings(): Promise<Record<string, string>> {
 export async function isIdVerificationEnabled(): Promise<boolean> {
   const val = await getSiteSetting('id_verification_enabled');
   return val !== 'false'; // default true if not set
+}
+
+export async function getIdVerificationMode(): Promise<"manual" | "ai"> {
+  const val = await getSiteSetting('id_verification_mode');
+  return val === 'ai' ? 'ai' : 'manual';
 }
 
 export async function isMaintenanceModeEnabled(): Promise<boolean> {
@@ -1574,6 +1580,7 @@ const _referralTracking: any[] = [];
 const _productReviews: any[] = [];
 const _siteSettings: any[] = [
   { id: 1, key: 'id_verification_enabled', value: 'true', updatedAt: new Date() },
+  { id: 99, key: 'id_verification_mode', value: 'manual', updatedAt: new Date() },
   { id: 2, key: 'maintenance_mode_enabled', value: 'false', updatedAt: new Date() },
   { id: 3, key: 'maintenance_title', value: "We'll Be Right Back", updatedAt: new Date() },
   { id: 4, key: 'maintenance_message', value: 'Our store is currently undergoing scheduled maintenance. We appreciate your patience and will be back online shortly. Please check back soon!', updatedAt: new Date() },
