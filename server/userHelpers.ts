@@ -20,6 +20,14 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
           if (product) productSlug = product.slug;
         } catch { /* product may have been deleted */ }
       }
+      // Fallback: if no productId or product not found, try matching by name → slug
+      if (!productSlug && (i as any).productName) {
+        try {
+          const slugGuess = (i as any).productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const product = await db.getProductBySlug(slugGuess);
+          if (product) productSlug = product.slug;
+        } catch { /* best-effort lookup */ }
+      }
       formattedItems.push({
         name: (i as any).productName || 'Item',
         quantity: (i as any).quantity || 1,
