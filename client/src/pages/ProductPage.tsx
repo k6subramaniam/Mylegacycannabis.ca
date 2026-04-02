@@ -8,12 +8,16 @@ import { ShoppingCart, Minus, Plus, Truck, Star, Shield, Clock, Gift, ArrowRight
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { useT, interpolate } from '@/i18n';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = trpc.store.product.useQuery({ slug: slug || '' });
+  const { idVerificationEnabled } = useSiteConfig();
   const { data: authUser } = trpc.auth.me.useQuery();
   const { addItem } = useCart();
+  const { t } = useT();
   const [quantity, setQuantity] = useState(1);
 
   // All hooks must be called before any early return to satisfy React's rules of hooks
@@ -33,8 +37,8 @@ export default function ProductPage() {
   if (!product) {
     return (
       <div className="container py-20 text-center">
-        <h1 className="font-display text-2xl text-[#4B2D8E] mb-4">PRODUCT NOT FOUND</h1>
-        <Link href="/shop" className="text-[#F15929] font-display hover:underline">Back to Shop</Link>
+        <h1 className="font-display text-2xl text-[#4B2D8E] mb-4">{t.productPage.notFound}</h1>
+        <Link href="/shop" className="text-[#F15929] font-display hover:underline">{t.productPage.backToShop}</Link>
       </div>
     );
   }
@@ -130,7 +134,7 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     addItem(product as any, quantity);
-    toast.success(`${quantity}x ${product.name} added to cart`);
+    toast.success(interpolate(t.productPage.addedToCartToast, { quantity, name: product.name }));
     setQuantity(1);
   };
 
@@ -152,7 +156,7 @@ export default function ProductPage() {
 
       <section className="bg-white py-6 md:py-10">
         <div className="container">
-          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: product.category, href: `/shop/${(product as any).categorySlug || product.category.toLowerCase().replace(/\s+/g, '-')}` }, { label: product.name }]} />
+          <Breadcrumbs items={[{ label: t.common.home, href: '/' }, { label: t.common.shop, href: '/shop' }, { label: product.category, href: `/shop/${(product as any).categorySlug || product.category.toLowerCase().replace(/\s+/g, '-')}` }, { label: product.name }]} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             {/* Product Image — no initial opacity:0 to prevent CLS */}
@@ -163,7 +167,12 @@ export default function ProductPage() {
             {/* Product Details */}
             <div>
               <div className="mb-4">
-                <span className="inline-block bg-[#F15929] text-white font-display text-xs px-3 py-1 rounded-full mb-3">{product.strainType}</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-block bg-[#F15929] text-white font-display text-xs px-3 py-1 rounded-full">{product.strainType}</span>
+                  {(product as any).grade && (
+                    <span className="inline-block bg-[#4B2D8E] text-white font-display text-xs px-3 py-1 rounded-full">{(product as any).grade}</span>
+                  )}
+                </div>
                 <h1 className="font-display text-4xl md:text-5xl text-[#4B2D8E] mb-2">{product.name.toUpperCase()}</h1>
                 <p className="text-gray-600 font-body">{product.flavor} • {product.weight}</p>
               </div>
@@ -173,18 +182,18 @@ export default function ProductPage() {
                   <span className="font-display text-4xl text-[#4B2D8E]">${priceNum}</span>
                   <span className="text-sm text-gray-500 font-body">THC: {product.thc}</span>
                 </div>
-                <p className="text-[#F15929] font-display text-sm">Earn {points} points with this purchase</p>
+                <p className="text-[#F15929] font-display text-sm">{interpolate(t.productPage.earnPointsWithPurchase, { points })}</p>
               </div>
 
               {/* Description */}
               <div className="mb-6 pb-6 border-b border-gray-200">
-                <h3 className="font-display text-sm text-[#4B2D8E] mb-2">ABOUT THIS PRODUCT</h3>
+                <h3 className="font-display text-sm text-[#4B2D8E] mb-2">{t.productPage.aboutThisProduct}</h3>
                 <p className="text-gray-600 font-body text-sm leading-relaxed">{product.description}</p>
               </div>
 
               {/* Quantity & Add to Cart */}
               <div className="mb-6">
-                <label className="block font-display text-sm text-[#4B2D8E] mb-3">QUANTITY</label>
+                <label className="block font-display text-sm text-[#4B2D8E] mb-3">{t.productPage.quantity}</label>
                 <div className="flex items-center gap-3 mb-6">
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-full border-2 border-[#4B2D8E] text-[#4B2D8E] hover:bg-[#4B2D8E] hover:text-white transition-colors flex items-center justify-center">
                     <Minus size={16} />
@@ -196,7 +205,7 @@ export default function ProductPage() {
                 </div>
                 <button onClick={handleAddToCart} className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-4 rounded-full transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
                   <ShoppingCart size={20} />
-                  ADD TO CART
+                  {t.productPage.addToCart}
                 </button>
               </div>
 
@@ -207,26 +216,28 @@ export default function ProductPage() {
                     <Truck size={16} className="text-white" />
                   </div>
                   <div>
-                    <p className="font-display text-xs text-[#4B2D8E]">FREE SHIPPING</p>
-                    <p className="text-xs text-gray-500 font-body">On orders over ${FREE_SHIPPING_THRESHOLD}</p>
+                    <p className="font-display text-xs text-[#4B2D8E]">{t.productPage.freeShipping}</p>
+                    <p className="text-xs text-gray-500 font-body">{interpolate(t.productPage.freeShippingDesc, { threshold: String(FREE_SHIPPING_THRESHOLD) })}</p>
                   </div>
                 </div>
+                {idVerificationEnabled && (
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
                     <Shield size={16} className="text-white" />
                   </div>
                   <div>
-                    <p className="font-display text-xs text-[#4B2D8E]">AGE VERIFIED</p>
-                    <p className="text-xs text-gray-500 font-body">Secure checkout with ID verification</p>
+                    <p className="font-display text-xs text-[#4B2D8E]">{t.productPage.ageVerified}</p>
+                    <p className="text-xs text-gray-500 font-body">{t.productPage.ageVerifiedDesc}</p>
                   </div>
                 </div>
+                )}
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
                     <Clock size={16} className="text-white" />
                   </div>
                   <div>
-                    <p className="font-display text-xs text-[#4B2D8E]">FAST DELIVERY</p>
-                    <p className="text-xs text-gray-500 font-body">Nationwide shipping across Canada</p>
+                    <p className="font-display text-xs text-[#4B2D8E]">{t.productPage.fastDelivery}</p>
+                    <p className="text-xs text-gray-500 font-body">{t.productPage.fastDeliveryDesc}</p>
                   </div>
                 </div>
               </div>

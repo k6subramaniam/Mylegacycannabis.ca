@@ -144,6 +144,12 @@ const en = {
     nameAZ: 'Name: A to Z',
     noProducts: 'No products found. Try adjusting your filters.',
     earnPoints: 'Earn {points} points',
+    gradeBestFirst: 'Grade: Best First',
+    mixAndMatch: '*Mix and match available within same category/pricing',
+    allFlower: 'ALL FLOWER',
+    indicaFlower: 'INDICA',
+    sativaFlower: 'SATIVA',
+    hybridFlower: 'HYBRID',
   },
 
   // ── Cart Page ────────────────────────────────────────────────
@@ -686,6 +692,23 @@ const en = {
     defaultMessage: 'Our store is currently undergoing maintenance. Please check back soon!',
     visitInPerson: 'VISIT US IN PERSON',
     locationsDesc: '5 locations across the GTA & Ottawa — open 24/7',
+  },
+
+  // ── Product Page ──────────────────────────────────────────────
+  productPage: {
+    notFound: 'PRODUCT NOT FOUND',
+    backToShop: 'Back to Shop',
+    aboutThisProduct: 'ABOUT THIS PRODUCT',
+    quantity: 'QUANTITY',
+    addToCart: 'ADD TO CART',
+    earnPointsWithPurchase: 'Earn {points} points with this purchase',
+    addedToCartToast: '{quantity}x {name} added to cart',
+    freeShipping: 'FREE SHIPPING',
+    freeShippingDesc: 'On orders over ${threshold}',
+    ageVerified: 'AGE VERIFIED',
+    ageVerifiedDesc: 'Secure checkout with ID verification',
+    fastDelivery: 'FAST DELIVERY',
+    fastDeliveryDesc: 'Nationwide shipping across Canada',
   },
 
   // ── Language Toggle ──────────────────────────────────────────
