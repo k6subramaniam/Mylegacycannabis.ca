@@ -501,7 +501,8 @@ export const appRouter = router({
         tone: z.enum(["professional", "friendly", "urgent", "celebratory", "minimal"]).default("professional"),
         audience: z.enum(["customer", "admin"]).default("customer"),
       })).mutation(async ({ input }) => {
-        const logoUrl = await db.getSiteSetting("email_logo_url") || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png";
+        const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
+        const logoUrl = await db.getSiteSetting("email_logo_url") || `${siteBase}/logo.png`;
 
         const systemPrompt = `You are an email template designer for MyLegacy Cannabis, a premium cannabis delivery service in the Greater Toronto Area (GTA), Canada.
 
@@ -1050,7 +1051,8 @@ Return ONLY the JSON object with the improved template.`;
     emailLogo: router({
       get: adminProcedure.query(async () => {
         const url = await db.getSiteSetting("email_logo_url");
-        return { url: url || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png" };
+        const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
+        return { url: url || `${siteBase}/logo.png` };
       }),
       update: adminProcedure.input(z.object({
         url: z.string().url(),
@@ -1292,7 +1294,7 @@ Return ONLY the JSON object with the improved template.`;
         maintenance,
         storeHours: storeHoursConfig,
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
-        emailLogoUrl: emailLogoUrl || "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png",
+        emailLogoUrl: emailLogoUrl || "/logo.png",
       };
     }),
     products: publicProcedure.input(z.object({

@@ -57,7 +57,7 @@ export default function ProductPage() {
     description: product.shortDescription || product.description || '',
     image: product.image
       ? [product.image]
-      : ['https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png'],
+      : ['/logo.png'],
     sku: `MLC-${product.id}`,
     mpn: `MLC-${product.slug}`,
     brand: {

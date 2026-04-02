@@ -9,7 +9,7 @@ import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
-const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png';
+const LOGO_URL = '/logo.png';
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
@@ -40,12 +40,12 @@ function AgeGate({ onConfirm }: { onConfirm: () => void }) {
     >
       {/* Card: fixed max-w so it never causes reflow */}
       <div className="bg-white rounded-2xl p-8 w-full max-w-[400px] text-center shadow-2xl">
-        {/* Explicit intrinsic size: logo is 240×64, displayed at h-16 (64px) */}
+        {/* New logo: 731×273, displayed at h-16 (64px) */}
         <img
           src={LOGO_URL}
           alt="My Legacy Cannabis"
-          width="240"
-          height="64"
+          width="731"
+          height="273"
           className="h-16 w-auto mx-auto mb-6"
           loading="eager"
           decoding="sync"
@@ -205,8 +205,8 @@ function MaintenanceOverlay({ title, message }: { title: string; message: string
         <img
           src={LOGO_URL}
           alt="My Legacy Cannabis"
-          width="300"
-          height="80"
+          width="731"
+          height="273"
           className="h-14 sm:h-16 md:h-20 w-auto mb-6"
           loading="eager"
           decoding="sync"
@@ -402,17 +402,12 @@ function Header() {
         {/* Nav row: explicit h prevents resize when logo loads */}
         <div className="container flex items-center justify-between h-16 md:h-20">
           <Link href="/" aria-label="My Legacy Cannabis Home">
-            {/*
-              Logo intrinsic: 240×64. On mobile we show h-10 (40px) → w=150px.
-              On desktop h-14 (56px) → w=210px.
-              We set width/height to the LARGEST display size to give browser
-              correct aspect ratio; CSS clamps it to h-10/h-14.
-            */}
+            {/* Logo: 731×273. CSS clamps to h-10/md:h-14 */}
             <img
               src={LOGO_URL}
               alt="My Legacy Cannabis"
-              width="210"
-              height="56"
+              width="731"
+              height="273"
               className="h-10 md:h-14 w-auto"
               loading="eager"
               decoding="sync"
@@ -512,8 +507,8 @@ function Header() {
                 <img
                   src={LOGO_URL}
                   alt="My Legacy Cannabis"
-                  width="150"
-                  height="40"
+                  width="731"
+                  height="273"
                   className="h-10 w-auto"
                   loading="eager"
                 />
@@ -582,8 +577,8 @@ function Footer() {
             <img
               src={LOGO_URL}
               alt="My Legacy Cannabis"
-              width="168"
-              height="56"
+              width="731"
+              height="273"
               className="h-14 w-auto mb-4"
               loading="lazy"
             />

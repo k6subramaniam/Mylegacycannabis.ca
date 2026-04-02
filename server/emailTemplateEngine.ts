@@ -11,7 +11,12 @@ import * as db from "./db";
 import { sendCustomerEmail, sendAdminTemplatedEmail } from "./emailService";
 import { ENV } from "./_core/env";
 
-const DEFAULT_LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png";
+// Default logo — uses the site's own /logo.png (static file) via absolute URL.
+// The admin can override this in Admin → Email Templates → Email Header Logo.
+function getDefaultLogoUrl(): string {
+  const base = getSiteUrl();
+  return `${base}/logo.png`;
+}
 
 // ─── Site URL helper ───
 function getSiteUrl(): string {
@@ -100,7 +105,7 @@ async function sendToAdminAndCustomer(
 
 async function commonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
-  const logoUrl = await db.getSiteSetting("email_logo_url") || DEFAULT_LOGO_URL;
+  const logoUrl = await db.getSiteSetting("email_logo_url") || getDefaultLogoUrl();
   return {
     logo_url: logoUrl,
     unsubscribe_url: `${base}/unsubscribe`,

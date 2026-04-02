@@ -24,6 +24,12 @@ import { recordEmailEvent, type EmailProvider } from "./emailHealthMonitor";
  *   ADMIN_EMAIL=k6subramaniam@gmail.com
  */
 
+// ─── Logo URL helper ───
+function getLogoUrl(): string {
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
+  return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
+}
+
 // ─── Resend client (lazy singleton) ───
 let _resend: Resend | null = null;
 
@@ -316,7 +322,7 @@ export async function sendOTPEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png"
+        <img src="${getLogoUrl()}"
              alt="My Legacy Cannabis" style="height: 48px;" />
       </div>
       <h2 style="color: #4B2D8E; text-align: center; margin-bottom: 8px;">Verification Code</h2>
@@ -424,7 +430,7 @@ export async function sendAdminNotification(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png"
+        <img src="${getLogoUrl()}"
              alt="My Legacy Cannabis" style="height: 40px;" />
       </div>
       <div style="background: #4B2D8E; color: white; padding: 12px 20px; border-radius: 8px 8px 0 0;">
@@ -459,7 +465,7 @@ export async function sendCustomerEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/myLegacy-logo_1c4faece.png"
+        <img src="${getLogoUrl()}"
              alt="My Legacy Cannabis" style="height: 40px;" />
       </div>
       ${bodyHtml}
