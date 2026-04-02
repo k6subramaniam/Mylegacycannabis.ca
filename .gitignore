@@ -6,3 +6,4 @@ dist/
 .manus-logs/
 extracted_source/
 *.pid
+core
