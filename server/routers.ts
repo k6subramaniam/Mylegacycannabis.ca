@@ -1168,7 +1168,6 @@ Return ONLY the JSON object with the improved template.`;
         }
       }),
     }),
-  }),
 
     // ─── ADMIN: LOCATIONS MANAGEMENT ───
     locations: router({
