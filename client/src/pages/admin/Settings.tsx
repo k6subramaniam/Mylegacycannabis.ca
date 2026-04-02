@@ -4,6 +4,7 @@ import {
   Settings as SettingsIcon, Shield, ShieldOff, Save, Loader2,
   AlertTriangle, CheckCircle, Info, Wrench, WrenchIcon, Clock,
   Eye, EyeOff, Type, MessageSquare, Key, Smartphone,
+  Sparkles, Zap, Brain,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
@@ -684,7 +685,12 @@ export default function AdminSettings() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
-          SECTION 4: EMAIL HEALTH MONITOR
+          SECTION 4: AI CONFIGURATION
+          ══════════════════════════════════════════════════════════════ */}
+      <AiConfigSection />
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 5: EMAIL HEALTH MONITOR
           ══════════════════════════════════════════════════════════════ */}
       <EmailHealthMonitor />
 
@@ -910,6 +916,284 @@ export default function AdminSettings() {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI CONFIGURATION SECTION
+// ═══════════════════════════════════════════════════════════════
+function AiConfigSection() {
+  const utils = trpc.useUtils();
+  const { data: aiConfig, isLoading } = trpc.admin.aiConfig.get.useQuery();
+  const updateMutation = trpc.admin.aiConfig.update.useMutation({
+    onSuccess: () => {
+      utils.admin.aiConfig.get.invalidate();
+      toast.success("AI configuration saved");
+      setHasChanges(false);
+      setApiKeyInput("");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to save"),
+  });
+  const testMutation = trpc.admin.aiConfig.test.useMutation();
+
+  const [provider, setProvider] = useState<"openai" | "gemini">("openai");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [model, setModel] = useState("");
+  const [hasChanges, setHasChanges] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; latency?: number; model?: string; reply?: string; error?: string } | null>(null);
+
+  // Sync from server data
+  useEffect(() => {
+    if (aiConfig) {
+      setProvider(aiConfig.provider as "openai" | "gemini");
+      setModel(aiConfig.model || "");
+      setHasChanges(false);
+    }
+  }, [aiConfig]);
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      provider,
+      apiKey: apiKeyInput || undefined,
+      model: model || undefined,
+    });
+  };
+
+  const handleTest = () => {
+    setTestResult(null);
+    testMutation.mutate(undefined, {
+      onSuccess: (data) => setTestResult(data),
+      onError: (err: any) => setTestResult({ success: false, error: err.message }),
+    });
+  };
+
+  const OPENAI_MODELS = [
+    { value: "", label: "Default (gpt-4o-mini)" },
+    { value: "gpt-4o-mini", label: "GPT-4o Mini — fast, affordable" },
+    { value: "gpt-4o", label: "GPT-4o — best quality" },
+    { value: "gpt-4.1-mini", label: "GPT-4.1 Mini — latest mini" },
+    { value: "gpt-4.1", label: "GPT-4.1 — latest flagship" },
+  ];
+
+  const GEMINI_MODELS = [
+    { value: "", label: "Default (gemini-2.5-flash)" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash — fast, affordable" },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro — best quality" },
+    { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash — stable" },
+  ];
+
+  const models = provider === "gemini" ? GEMINI_MODELS : OPENAI_MODELS;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+        <Brain size={20} className="text-violet-600" />
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">AI Configuration</h2>
+          <p className="text-sm text-gray-500">Configure the AI provider for email template generation, menu import, and other AI features.</p>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-gray-400">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Loading AI configuration...</span>
+          </div>
+        ) : (
+          <>
+            {/* Provider Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">AI Provider</label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* OpenAI Card */}
+                <button
+                  type="button"
+                  onClick={() => { setProvider("openai"); setModel(""); setHasChanges(true); }}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    provider === "openai"
+                      ? "border-emerald-400 bg-emerald-50/50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  {provider === "openai" && (
+                    <div className="absolute top-3 right-3">
+                      <CheckCircle size={18} className="text-emerald-500" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      provider === "openai" ? "bg-emerald-100" : "bg-gray-100"
+                    }`}>
+                      <Zap size={20} className={provider === "openai" ? "text-emerald-600" : "text-gray-400"} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">OpenAI</h3>
+                      <p className="text-xs text-gray-500">GPT-4o, GPT-4.1</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">Industry-standard AI models. Excellent for email generation and menu parsing.</p>
+                </button>
+
+                {/* Gemini Card */}
+                <button
+                  type="button"
+                  onClick={() => { setProvider("gemini"); setModel(""); setHasChanges(true); }}
+                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                    provider === "gemini"
+                      ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  {provider === "gemini" && (
+                    <div className="absolute top-3 right-3">
+                      <CheckCircle size={18} className="text-blue-500" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      provider === "gemini" ? "bg-blue-100" : "bg-gray-100"
+                    }`}>
+                      <Sparkles size={20} className={provider === "gemini" ? "text-blue-600" : "text-gray-400"} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Google Gemini</h3>
+                      <p className="text-xs text-gray-500">Gemini 2.5 Flash / Pro</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">Google's latest AI. Fast and cost-effective with excellent vision support.</p>
+                </button>
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Key size={14} />
+                API Key
+              </label>
+              {aiConfig?.apiKeySet && !apiKeyInput && (
+                <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle size={14} className="text-green-500" />
+                  <span className="text-sm text-green-700">Key configured: <code className="bg-green-100 px-1.5 py-0.5 rounded text-xs">{aiConfig.apiKeyPreview}</code></span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKeyInput}
+                    onChange={(e) => { setApiKeyInput(e.target.value); setHasChanges(true); }}
+                    placeholder={aiConfig?.apiKeySet ? "Enter new key to replace existing..." : provider === "gemini" ? "AIza..." : "sk-proj-..."}
+                    className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {provider === "openai" ? (
+                  <>Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">platform.openai.com/api-keys</a></>
+                ) : (
+                  <>Get your key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">aistudio.google.com/apikey</a></>
+                )}
+              </p>
+            </div>
+
+            {/* Model Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+              <select
+                value={model}
+                onChange={(e) => { setModel(e.target.value); setHasChanges(true); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              >
+                {models.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1.5">Controls which model is used for AI email templates and menu import.</p>
+            </div>
+
+            {/* What AI powers */}
+            <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+              <div className="flex items-start gap-2">
+                <Sparkles size={16} className="text-violet-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium text-gray-700">AI is used for:</p>
+                  <ul className="mt-1.5 space-y-1 text-xs">
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Email template generation (AI Generate)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Email template improvement (AI Improve)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Menu image import (AI Vision)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Test + Save buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleTest}
+                disabled={testMutation.isPending}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-violet-200 text-sm font-medium text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-50 transition-colors"
+              >
+                {testMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                Test Connection
+              </button>
+
+              {hasChanges && (
+                <button
+                  onClick={handleSave}
+                  disabled={updateMutation.isPending}
+                  className="bg-[#4B2D8E] hover:bg-[#3a2270] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-60"
+                >
+                  {updateMutation.isPending ? (
+                    <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save size={14} /> Save Configuration</>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Test result */}
+            {testResult && (
+              <div className={`rounded-xl p-4 border ${
+                testResult.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex items-start gap-3">
+                  {testResult.success ? (
+                    <CheckCircle size={18} className="text-green-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <p className={`text-sm font-medium ${testResult.success ? "text-green-800" : "text-red-800"}`}>
+                      {testResult.success ? "Connection successful!" : "Connection failed"}
+                    </p>
+                    {testResult.success ? (
+                      <p className="text-xs text-green-700 mt-1">
+                        Model: <code className="bg-green-100 px-1 py-0.5 rounded">{testResult.model}</code> &mdash;
+                        Latency: {testResult.latency}ms &mdash;
+                        Reply: "{testResult.reply}"
+                      </p>
+                    ) : (
+                      <p className="text-xs text-red-700 mt-1">{testResult.error}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
