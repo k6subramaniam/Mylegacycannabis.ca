@@ -1,8 +1,8 @@
 import { Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { WaveDivider } from '@/components/Layout';
-import { rewardTiers, POINTS_PER_DOLLAR, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFEREE, MIN_REDEMPTION_POINTS, MAX_DISCOUNT_PERCENT } from '@/lib/data';
-import { Gift, Star, Users, Calendar, MessageSquare, ShoppingCart, ArrowRight, CheckCircle, Zap } from 'lucide-react';
+import { POINTS_PER_DOLLAR, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFEREE, MIN_REDEMPTION_POINTS, MAX_DISCOUNT_PERCENT } from '@/lib/data';
+import { Gift, Star, Users, Calendar, MessageSquare, ShoppingCart, ArrowRight, Zap } from 'lucide-react';
 import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-rewards-3eSuXoWLdHAW3VzjYxZwXX.webp';
@@ -97,48 +97,21 @@ export default function Rewards() {
         </div>
       </section>
 
-      <WaveDivider color="#4B2D8E" />
-
-      {/* Redemption Tiers */}
-      <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
-        <div className="container">
-          <div className="text-center mb-10">
-            <h2 className="font-display text-3xl text-white mb-3">{t.rewardsPage.redemptionTiers}</h2>
-            <p className="text-white/70 font-body max-w-lg mx-auto">{t.rewardsPage.redemptionTiersDesc}</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {rewardTiers.map((tier, i) => (
-              <div key={tier.name} className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 text-center border border-white/10 hover:border-[#F15929]/50 transition-all">
-                <p className="font-display text-xs text-white/60 mb-1">{tier.target}</p>
-                <p className="font-display text-lg text-[#F15929]">{tier.name.toUpperCase()}</p>
-                <p className="font-display text-3xl text-white my-2">${tier.discount}</p>
-                <p className="text-sm text-white/70 font-body">OFF</p>
-                <div className="border-t border-white/10 mt-3 pt-3">
-                  <p className="font-mono-legacy text-sm text-white">{tier.pointsRequired} pts</p>
-                  <p className="text-xs text-white/50 font-body">{tier.effectiveValue} value</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <WaveDivider color="#ffffff" />
-
-      {/* Policies */}
-      <section className="bg-white py-12 md:py-16 -mt-1">
+      {/* Program Details */}
+      <section className="bg-white py-12 md:py-16">
         <div className="container max-w-3xl">
           <div>
             <h2 className="font-display text-3xl text-[#4B2D8E] mb-6 text-center">{t.rewardsPage.programDetails}</h2>
             <div className="space-y-4">
               {[
-                { q: 'When do I earn points?', a: 'Points are awarded when your order is marked as completed. Points are calculated on the pre-tax, pre-shipping order total.' },
-                { q: 'What is the minimum redemption?', a: `You need at least ${MIN_REDEMPTION_POINTS} points to redeem. The minimum redemption is ${MIN_REDEMPTION_POINTS} points = $5 OFF.` },
+                { q: 'How do I earn points?', a: `You earn ${POINTS_PER_DOLLAR} point for every $1 spent (pre-tax, pre-shipping). Points are awarded once your order is marked as completed.` },
+                { q: 'How do I redeem my points?', a: `You need at least ${MIN_REDEMPTION_POINTS} points to redeem. At checkout, choose how many points to apply — your discount is calculated automatically.` },
                 { q: 'Is there a maximum discount?', a: `Yes, rewards cannot exceed ${MAX_DISCOUNT_PERCENT}% of your order subtotal. For example, on a $50 order, the max discount is $25.` },
-                { q: 'Can I combine rewards with other offers?', a: 'Yes! Rewards can be combined with other promotions and discounts.' },
-                { q: 'Do points expire?', a: 'No, points never expire as long as your account remains active.' },
-                { q: 'What happens if I return an order?', a: 'Points earned from returned items will be deducted from your balance.' },
+                { q: 'Can I combine rewards with other offers?', a: 'Yes! Rewards can be stacked with other promotions and discount codes.' },
+                { q: 'Do points expire?', a: 'No, your points never expire as long as your account remains active.' },
+                { q: 'What happens if I return an order?', a: 'Points earned from returned or cancelled items will be deducted from your balance.' },
                 { q: 'How does the referral program work?', a: `Share your unique referral code with friends. When they make their first purchase, you earn ${REFERRAL_BONUS_REFERRER} points and they earn ${REFERRAL_BONUS_REFEREE} points.` },
+                { q: 'What bonuses can I earn?', a: `Sign-up bonus: ${WELCOME_BONUS} pts. Birthday bonus: ${BIRTHDAY_BONUS} pts. Product review: ${REVIEW_BONUS} pts. Plus seasonal and special promotions.` },
               ].map((item, i) => (
                 <div key={i} className="bg-[#F5F5F5] rounded-xl p-5">
                   <h3 className="font-display text-sm text-[#4B2D8E] mb-2">{item.q}</h3>
