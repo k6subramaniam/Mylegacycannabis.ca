@@ -325,6 +325,29 @@ export const productReviews = pgTable("product_reviews", {
 export type ProductReview = typeof productReviews.$inferSelect;
 export type InsertProductReview = typeof productReviews.$inferInsert;
 
+// ─── STORE LOCATIONS (admin-manageable) ───
+export const storeLocations = pgTable("store_locations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  address: varchar("address", { length: 500 }).notNull(),
+  city: varchar("city", { length: 255 }).notNull(),
+  province: varchar("province", { length: 10 }).notNull(),
+  postalCode: varchar("postal_code", { length: 10 }).notNull(),
+  phone: varchar("phone", { length: 30 }).notNull(),
+  hours: varchar("hours", { length: 100 }).default("Open 24/7").notNull(),
+  mapUrl: text("map_url"),
+  directionsUrl: text("directions_url"),
+  lat: numeric("lat", { precision: 10, scale: 6 }),
+  lng: numeric("lng", { precision: 10, scale: 6 }),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type StoreLocation = typeof storeLocations.$inferSelect;
+export type InsertStoreLocation = typeof storeLocations.$inferInsert;
+
 // ─── SITE SETTINGS ───
 export const siteSettings = pgTable("site_settings", {
   id: serial("id").primaryKey(),

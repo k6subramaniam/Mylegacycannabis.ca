@@ -36,7 +36,7 @@ export default function Terms() {
               },
               {
                 title: '4. SHIPPING & DELIVERY',
-                content: 'We ship nationwide across Canada via Canada Post Xpresspost. Shipping rates vary by region. Free shipping is available on orders over $150. A signature from an adult (19+) is required upon delivery. We are not responsible for delays caused by Canada Post or other circumstances beyond our control.'
+                content: 'We ship nationwide across Canada with tracked Xpresspost shipping. Shipping rates vary by region. Free shipping is available on orders over $150. A signature from an adult (19+) is required upon delivery. We are not responsible for shipping delays or other circumstances beyond our control.'
               },
               {
                 title: '5. RETURNS & REFUNDS',

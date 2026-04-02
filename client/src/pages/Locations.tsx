@@ -1,13 +1,30 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs, WaveDivider } from '@/components/Layout';
-import { storeLocations } from '@/lib/data';
+import { trpc } from '@/lib/trpc';
+import { storeLocations as fallbackLocations } from '@/lib/data';
 import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp';
-function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
+
+type LocationData = {
+  id: number | string;
+  name: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string;
+  hours: string;
+  mapUrl?: string | null;
+  directionsUrl?: string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
+};
+
+function LocationCard({ loc }: { loc: LocationData }) {
   return (
     <article
       className="bg-[#F5F5F5] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all h-full"
@@ -15,18 +32,20 @@ function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
       itemType="https://schema.org/LocalBusiness"
     >
       {/* Map embed */}
-      <div className="aspect-video bg-gray-200">
-        <iframe
-          src={loc.mapUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          title={`Map of My Legacy Cannabis ${loc.name}`}
-        />
-      </div>
+      {loc.mapUrl && (
+        <div className="aspect-video bg-gray-200">
+          <iframe
+            src={loc.mapUrl}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title={`Map of My Legacy Cannabis ${loc.name}`}
+          />
+        </div>
+      )}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
@@ -46,7 +65,7 @@ function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
             </p>
           </div>
           <div className="bg-[#F15929] text-white font-display text-xs px-3 py-1.5 rounded-full shrink-0 flex items-center gap-1">
-            <Clock size={12} /> 24/7
+            <Clock size={12} /> {loc.hours === 'Open 24/7' ? '24/7' : loc.hours}
           </div>
         </div>
 
@@ -67,14 +86,16 @@ function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
           >
             <Phone size={16} /> CALL NOW
           </a>
-          <a
-            href={loc.directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 bg-[#F15929] hover:bg-[#d94d22] text-white text-center font-display text-sm py-3 rounded-full transition-colors flex items-center justify-center gap-2"
-          >
-            <Navigation size={16} /> DIRECTIONS
-          </a>
+          {loc.directionsUrl && (
+            <a
+              href={loc.directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 bg-[#F15929] hover:bg-[#d94d22] text-white text-center font-display text-sm py-3 rounded-full transition-colors flex items-center justify-center gap-2"
+            >
+              <Navigation size={16} /> DIRECTIONS
+            </a>
+          )}
         </div>
 
         <meta itemProp="openingHours" content="Mo-Su 00:00-23:59" />
@@ -85,6 +106,30 @@ function LocationCard({ loc }: { loc: typeof storeLocations[0] }) {
 
 export default function Locations() {
   const { t } = useT();
+
+  // Fetch locations from API, fallback to static data
+  const { data: apiLocations } = trpc.store.locations.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const locations: LocationData[] = apiLocations && apiLocations.length > 0
+    ? apiLocations.map((loc: any) => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        city: loc.city,
+        province: loc.province,
+        postalCode: loc.postalCode,
+        phone: loc.phone,
+        hours: loc.hours || 'Open 24/7',
+        mapUrl: loc.mapUrl,
+        directionsUrl: loc.directionsUrl,
+        lat: loc.lat,
+        lng: loc.lng,
+      }))
+    : fallbackLocations;
+
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     loop: false,
@@ -125,7 +170,7 @@ export default function Locations() {
     <>
       <SEOHead
         title="Store Locations — 24/7 Cannabis Dispensary"
-        description="Visit any of our 5 My Legacy Cannabis locations across the GTA and Ottawa. Open 24/7. Mississauga, Hamilton, Queen St Toronto, Dundas Toronto, and Merivale Ottawa."
+        description={`Visit any of our ${locations.length} My Legacy Cannabis locations across the GTA and Ottawa. Open 24/7.`}
         canonical="https://mylegacycannabisca-production.up.railway.app/locations"
         ogImage={HERO_IMG}
       />
@@ -188,7 +233,7 @@ export default function Locations() {
           {/* Embla Carousel */}
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex gap-4 md:gap-6">
-              {storeLocations.map((loc, i) => (
+              {locations.map((loc) => (
                 <div
                   key={loc.id}
                   className="flex-[0_0_85%] sm:flex-[0_0_70%] md:flex-[0_0_48%] lg:flex-[0_0_48%]"
@@ -201,7 +246,7 @@ export default function Locations() {
 
           {/* Dot indicators */}
           <div className="flex items-center justify-center gap-2 mt-6">
-            {storeLocations.map((_, i) => (
+            {locations.map((_, i) => (
               <button
                 key={i}
                 onClick={() => scrollTo(i)}
@@ -217,13 +262,13 @@ export default function Locations() {
 
           {/* Counter text */}
           <p className="text-center text-sm text-gray-400 font-body mt-3">
-            {selectedIndex + 1} of {storeLocations.length} locations
+            {selectedIndex + 1} of {locations.length} locations
           </p>
         </div>
       </section>
 
       {/* JSON-LD: one LocalBusiness per location — rich schema for Google Knowledge Panel */}
-      {storeLocations.map((loc) => (
+      {locations.map((loc) => (
         <script
           key={loc.id}
           type="application/ld+json"
@@ -251,12 +296,14 @@ export default function Locations() {
                 postalCode: loc.postalCode,
                 addressCountry: 'CA',
               },
-              geo: {
-                '@type': 'GeoCoordinates',
-                latitude: loc.lat,
-                longitude: loc.lng,
-              },
-              hasMap: loc.directionsUrl,
+              ...(loc.lat && loc.lng ? {
+                geo: {
+                  '@type': 'GeoCoordinates',
+                  latitude: Number(loc.lat),
+                  longitude: Number(loc.lng),
+                },
+              } : {}),
+              ...(loc.directionsUrl ? { hasMap: loc.directionsUrl } : {}),
               openingHoursSpecification: [
                 {
                   '@type': 'OpeningHoursSpecification',
@@ -268,7 +315,6 @@ export default function Locations() {
                   closes: '23:59',
                 },
               ],
-              servesCuisine: undefined,
               areaServed: {
                 '@type': 'City',
                 name: loc.city,

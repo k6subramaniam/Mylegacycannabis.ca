@@ -1,12 +1,13 @@
 import SEOHead from '@/components/SEOHead';
 import { Link } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
-import { products, categories, storeLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
+import { products, categories, storeLocations as fallbackLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
 import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { useT } from '@/i18n';
+import { trpc } from '@/lib/trpc';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp';
 
@@ -14,6 +15,8 @@ export default function Home() {
   const { addItem } = useCart();
   const { t } = useT();
   const featured = products.filter(p => p.featured).slice(0, 4);
+  const { data: dbLocations } = trpc.store.locations.useQuery();
+  const storeLocations = dbLocations && dbLocations.length > 0 ? dbLocations : fallbackLocations;
 
   return (
     <>
@@ -25,7 +28,7 @@ export default function Home() {
       />
 
       {/* HERO SECTION — no animations, content immediately visible for LCP */}
-      <section className="relative bg-[#4B2D8E] overflow-hidden" style={{ minHeight: '400px' }}>
+      <section className="relative bg-[#4B2D8E] overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={HERO_IMG}
@@ -40,7 +43,7 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#4B2D8E] via-[#4B2D8E]/80 to-transparent" />
         </div>
-        <div className="container relative z-10 py-16 md:py-24 lg:py-32">
+        <div className="container relative z-10 py-8 md:py-12 lg:py-16">
           <div className="max-w-2xl">
             <span className="inline-block bg-[#F15929] text-white font-display text-xs px-4 py-1.5 rounded-full mb-4">{t.home.heroTag}</span>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-4">
@@ -259,7 +262,7 @@ export default function Home() {
                 </div>
                 <div className="flex gap-2">
                   <a href={`tel:${loc.phone.replace(/\D/g, '')}`} aria-label={`Call My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#4B2D8E] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#3a2270] transition-colors">CALL NOW</a>
-                  <a href={loc.directionsUrl} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#F15929] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#d94d22] transition-colors">DIRECTIONS</a>
+                  {loc.directionsUrl && <a href={loc.directionsUrl} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to My Legacy Cannabis ${loc.name}`} className="flex-1 bg-[#F15929] text-white text-center font-display text-xs py-2.5 rounded-full hover:bg-[#d94d22] transition-colors">DIRECTIONS</a>}
                 </div>
               </div>
             ))}

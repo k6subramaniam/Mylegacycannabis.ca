@@ -28,10 +28,10 @@ const faqCategories = [
   {
     name: 'Shipping & Delivery',
     items: [
-      { q: 'Where do you ship?', a: 'We ship nationwide across Canada via Canada Post Xpresspost.' },
+      { q: 'Where do you ship?', a: 'We ship nationwide across Canada with tracked Xpresspost shipping.' },
       { q: 'How much does shipping cost?', a: 'Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $150!' },
       { q: 'How long does delivery take?', a: 'Ontario: 1-2 business days, Quebec: 2-3 days, Western Canada: 3-5 days, Atlantic Canada: 3-5 days, Territories: 5-10 days.' },
-      { q: 'Do I get a tracking number?', a: 'Yes! A Canada Post tracking number is emailed to you once your order ships.' },
+      { q: 'Do I get a tracking number?', a: 'Yes! A tracking number is emailed to you once your order ships.' },
       { q: 'Is the packaging discreet?', a: 'Absolutely. All orders are shipped in plain, unmarked packaging with no indication of the contents.' },
     ]
   },

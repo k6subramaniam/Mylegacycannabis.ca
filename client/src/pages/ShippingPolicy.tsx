@@ -10,7 +10,7 @@ export default function ShippingPolicy() {
     <>
       <SEOHead
         title="Shipping Policy — Nationwide Cannabis Delivery"
-        description="My Legacy Cannabis ships nationwide across Canada via Canada Post. Free shipping on orders over $150. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25."
+        description="My Legacy Cannabis ships nationwide across Canada. Free shipping on orders over $150. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25."
         canonical="https://mylegacycannabisca-production.up.railway.app/shipping"
       />
 
@@ -85,7 +85,7 @@ export default function ShippingPolicy() {
                   'Tracking number provided via email once shipped',
                   'E-Transfer payment must be received before order is shipped',
                   'Orders placed on weekends/holidays are processed the next business day',
-                  'My Legacy Cannabis is not responsible for delays caused by Canada Post',
+                  'My Legacy Cannabis is not responsible for shipping delays beyond our control',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm font-body text-gray-600">
                     <CheckCircle size={16} className="text-[#F15929] shrink-0 mt-0.5" /> {item}

@@ -1160,8 +1160,91 @@ Return ONLY the JSON object with the improved template.`;
     }),
   }),
 
+    // ─── ADMIN: LOCATIONS MANAGEMENT ───
+    locations: router({
+      list: adminProcedure.query(async () => {
+        return db.getAllLocations();
+      }),
+
+      create: adminProcedure.input(z.object({
+        name: z.string().min(1),
+        address: z.string().min(1),
+        city: z.string().min(1),
+        province: z.string().min(1).max(10),
+        postalCode: z.string().min(1).max(10),
+        phone: z.string().min(1),
+        hours: z.string().optional().default("Open 24/7"),
+        mapUrl: z.string().optional(),
+        directionsUrl: z.string().optional(),
+        lat: z.string().optional(),
+        lng: z.string().optional(),
+        sortOrder: z.number().optional().default(0),
+        isActive: z.boolean().optional().default(true),
+      })).mutation(async ({ input, ctx }) => {
+        const id = await db.createLocation(input);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "create_location",
+          entityType: "location",
+          entityId: id,
+          details: `Created location: ${input.name}`,
+        });
+        return { id };
+      }),
+
+      update: adminProcedure.input(z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        address: z.string().min(1).optional(),
+        city: z.string().min(1).optional(),
+        province: z.string().min(1).max(10).optional(),
+        postalCode: z.string().min(1).max(10).optional(),
+        phone: z.string().min(1).optional(),
+        hours: z.string().optional(),
+        mapUrl: z.string().optional(),
+        directionsUrl: z.string().optional(),
+        lat: z.string().optional(),
+        lng: z.string().optional(),
+        sortOrder: z.number().optional(),
+        isActive: z.boolean().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        await db.updateLocation(id, data);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "update_location",
+          entityType: "location",
+          entityId: id,
+          details: `Updated location: ${input.name || id}`,
+        });
+        return { success: true };
+      }),
+
+      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        await db.deleteLocation(input.id);
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "delete_location",
+          entityType: "location",
+          entityId: input.id,
+          details: `Deleted location #${input.id}`,
+        });
+        return { success: true };
+      }),
+    }),
+
+  }),
+
   // ─── PUBLIC: STOREFRONT API ───
   store: router({
+    // ─── PUBLIC: LOCATIONS LIST ───
+    locations: publicProcedure.query(async () => {
+      return db.getActiveLocations();
+    }),
+
     // ─── UPDATE PROFILE (authenticated users) ───
     updateProfile: protectedProcedure.input(z.object({
       name: z.string().optional(),
