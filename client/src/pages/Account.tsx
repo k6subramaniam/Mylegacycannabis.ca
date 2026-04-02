@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { rewardTiers, getEligibleRewardTiers, REFERRAL_BONUS_REFERRER } from '@/lib/data';
+import { POINTS_PER_DOLLAR, REFERRAL_BONUS_REFERRER } from '@/lib/data';
 import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
@@ -236,9 +236,6 @@ function OrdersTab({ user }: { user: any }) {
 }
 
 function RewardsTab({ user }: { user: any }) {
-  const eligible = getEligibleRewardTiers(user.rewardsPoints);
-  const nextTier = rewardTiers.find(t => t.pointsRequired > user.rewardsPoints);
-
   return (
     <div className="space-y-6">
       {/* Points balance */}
@@ -247,31 +244,8 @@ function RewardsTab({ user }: { user: any }) {
         <Gift size={32} className="text-[#F15929] mx-auto mb-2" />
         <p className="font-display text-4xl mb-1">{user.rewardsPoints}</p>
         <p className="text-white/70 font-body text-sm">Available Points</p>
-        {nextTier && (
-          <div className="mt-4">
-            <p className="text-xs text-white/60 font-body">{nextTier.pointsRequired - user.rewardsPoints} points to {nextTier.name} ({nextTier.pointsRequired} pts = ${nextTier.discount} OFF)</p>
-            <div className="w-full bg-white/20 rounded-full h-2 mt-2">
-              <div className="bg-[#F15929] h-2 rounded-full" style={{ width: `${(user.rewardsPoints / nextTier.pointsRequired) * 100}%` }} />
-            </div>
-          </div>
-        )}
+        <p className="text-xs text-white/50 font-body mt-2">Earn {POINTS_PER_DOLLAR} point for every $1 spent. Redeem at checkout.</p>
       </div>
-
-      {/* Available rewards */}
-      {eligible.length > 0 && (
-        <div className="bg-[#F5F5F5] rounded-2xl p-6">
-          <h3 className="font-display text-lg text-[#4B2D8E] mb-4">AVAILABLE REWARDS</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {eligible.map(tier => (
-              <div key={tier.name} className="bg-white rounded-xl p-4 border-2 border-[#F15929]/20 hover:border-[#F15929] transition-all">
-                <p className="font-display text-sm text-[#4B2D8E]">{tier.name.toUpperCase()}</p>
-                <p className="font-display text-2xl text-[#F15929]">${tier.discount} OFF</p>
-                <p className="text-xs text-gray-500 font-body">{tier.pointsRequired} points required</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Referral */}
       <div className="bg-[#F5F5F5] rounded-2xl p-6">

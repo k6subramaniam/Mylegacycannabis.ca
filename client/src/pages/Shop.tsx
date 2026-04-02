@@ -40,14 +40,16 @@ export default function Shop() {
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [selectedStrain, setSelectedStrain] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
   const { addItem } = useCart();
 
-  // Reset subcategory + strain when category changes
+  // Reset subcategory + strain + grade when category changes
   useEffect(() => {
     setSelectedSubcategory('');
     setSelectedStrain('');
+    setSelectedGrade('');
   }, [selectedCategory]);
 
   // Fetch products from backend
@@ -65,6 +67,7 @@ export default function Shop() {
       result = result.filter((p: any) => p.subcategory === selectedSubcategory);
     }
     if (selectedStrain) result = result.filter(p => p.strainType === selectedStrain);
+    if (selectedGrade) result = result.filter((p: any) => p.grade === selectedGrade);
     switch (sortBy) {
       case 'price-low': result.sort((a, b) => parseFloat(a.price.toString()) - parseFloat(b.price.toString())); break;
       case 'price-high': result.sort((a, b) => parseFloat(b.price.toString()) - parseFloat(a.price.toString())); break;
@@ -78,12 +81,13 @@ export default function Shop() {
       default: result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
     return result;
-  }, [products, selectedSubcategory, selectedStrain, sortBy]);
+  }, [products, selectedSubcategory, selectedStrain, selectedGrade, sortBy]);
 
   const activeCat = categories.find(c => c.slug === selectedCategory);
   const pageTitle = activeCat ? `${activeCat.name} — Shop` : 'Shop All Products';
   const showSubcategories = selectedCategory === 'flower';
-  const showGradeSort = selectedCategory === 'flower' || selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake';
+  const showGrades = selectedCategory === 'flower' || selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake' || selectedCategory === '';
+  const showGradeSort = showGrades;
 
   const breadcrumbs = [{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }];
   if (activeCat) breadcrumbs.push({ label: activeCat.name, href: '' });
@@ -167,6 +171,42 @@ export default function Shop() {
         </section>
       )}
 
+      {/* ═══════════════════════════════════════════════════════════
+          GRADE FILTER BAR — prominent row for grade selection
+         ═══════════════════════════════════════════════════════════ */}
+      {showGrades && (
+        <section className="bg-white border-b border-gray-200">
+          <div className="container">
+            <div className="flex items-center gap-2 overflow-x-auto py-2.5 scrollbar-hide -mx-1 px-1">
+              <span className="shrink-0 text-[11px] font-display text-gray-400 mr-1">GRADE:</span>
+              <button
+                onClick={() => setSelectedGrade('')}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full font-display text-[11px] transition-all whitespace-nowrap ${
+                  !selectedGrade
+                    ? 'bg-[#4B2D8E] text-white shadow-sm'
+                    : 'bg-[#F5F5F5] text-gray-500 hover:bg-[#4B2D8E]/10 hover:text-[#4B2D8E] border border-gray-200'
+                }`}
+              >
+                ALL GRADES
+              </button>
+              {['AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'SHAKE'].map(grade => (
+                <button
+                  key={grade}
+                  onClick={() => setSelectedGrade(selectedGrade === grade ? '' : grade)}
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full font-display text-[11px] transition-all whitespace-nowrap ${
+                    selectedGrade === grade
+                      ? (GRADE_COLORS[grade] || 'bg-[#4B2D8E] text-white') + ' shadow-sm'
+                      : 'bg-[#F5F5F5] text-gray-500 hover:bg-[#4B2D8E]/10 border border-gray-200'
+                  }`}
+                >
+                  {grade}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Main Content */}
       <section className="bg-white py-6 md:py-10">
         <div className="container">
@@ -190,7 +230,7 @@ export default function Shop() {
             </div>
 
             {/* Strain quick-filters — inline pill buttons */}
-            {selectedCategory !== 'accessories' && (
+            {selectedCategory !== 'accessories' && selectedCategory !== 'ounce-deals' && selectedCategory !== 'shake-n-bake' && (
               <div className="flex items-center gap-1.5">
                 {['Indica', 'Sativa', 'Hybrid'].map(strain => (
                   <button
