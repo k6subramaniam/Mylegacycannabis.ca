@@ -6,8 +6,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
-const LOGO_URL = "/logo.png";
+const LOGO_URL_FALLBACK = "/logo.png";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -28,6 +29,8 @@ const menuItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { logoUrl } = useSiteConfig();
+  const resolvedLogo = logoUrl || LOGO_URL_FALLBACK;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin } = useAuth();
 
@@ -66,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          {sidebarOpen && <img src={LOGO_URL} alt="My Legacy" className="h-9" />}
+          {sidebarOpen && <img src={resolvedLogo} alt="My Legacy" className="h-9" />}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
             {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
@@ -113,7 +116,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-lg hover:bg-gray-100">
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <img src={LOGO_URL} alt="My Legacy" className="h-8" />
+            <img src={resolvedLogo} alt="My Legacy" className="h-8" />
           </div>
           <span className="text-xs font-semibold text-[#4B2D8E] bg-[#4B2D8E]/10 px-3 py-1 rounded-full">ADMIN</span>
         </header>

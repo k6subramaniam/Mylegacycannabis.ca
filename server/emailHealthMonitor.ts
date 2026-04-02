@@ -16,9 +16,20 @@ import dns from "node:dns/promises";
 import { ENV } from "./_core/env";
 
 // ─── Logo URL helper ───
-function getLogoUrl(): string {
+function getLogoUrlFallback(): string {
   if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
   return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
+}
+
+async function getLogoUrl(): Promise<string> {
+  try {
+    const { getSiteSetting } = await import("./db");
+    const siteLogoUrl = await getSiteSetting("site_logo_url");
+    if (siteLogoUrl) return siteLogoUrl;
+    const emailLogoUrl = await getSiteSetting("email_logo_url");
+    if (emailLogoUrl) return emailLogoUrl;
+  } catch {}
+  return getLogoUrlFallback();
 }
 
 // ─── Types ───
@@ -341,10 +352,11 @@ export async function sendTestEmail(to: string): Promise<{
 }> {
   const start = Date.now();
   const subject = `[Test] My Legacy Cannabis — Email Health Check (${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })})`;
+  const resolvedLogo = await getLogoUrl();
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${getLogoUrl()}"
+        <img src="${resolvedLogo}"
              alt="My Legacy Cannabis" style="height: 48px;" />
       </div>
       <div style="background: #10B981; color: white; padding: 16px 20px; border-radius: 12px; text-align: center; margin-bottom: 16px;">
