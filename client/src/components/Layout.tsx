@@ -625,6 +625,8 @@ function Footer() {
                 { label: t.footer.edibles,      slug: 'edibles' },
                 { label: t.footer.vapes,        slug: 'vapes' },
                 { label: t.footer.concentrates, slug: 'concentrates' },
+                { label: t.footer.ounceDeals,   slug: 'ounce-deals' },
+                { label: t.footer.shakeNBake,   slug: 'shake-n-bake' },
                 { label: t.footer.accessories,  slug: 'accessories' },
               ].map(cat => (
                 <li key={cat.slug}>

@@ -86,6 +86,8 @@ const en = {
     edibles: 'Edibles',
     vapes: 'Vapes',
     concentrates: 'Concentrates',
+    ounceDeals: 'Ounce Deals',
+    shakeNBake: 'Shake n Bake',
     accessories: 'Accessories',
     storeHours: 'STORE HOURS',
     contactUs: 'CONTACT US',

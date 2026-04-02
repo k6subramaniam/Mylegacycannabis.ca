@@ -435,6 +435,9 @@ export async function initializeDatabase(): Promise<void> {
 
   // Seed default store locations if empty
   await seedDefaultLocations(db);
+
+  // Auto-fix products: populate subcategory + grade from existing data, re-categorize ounce/shake
+  await fixProductCategoriesAndGrades(db);
 }
 
 async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
@@ -481,6 +484,89 @@ async function seedDefaultLocations(db: PostgresJsDatabase<typeof schema>) {
     await db.insert(schema.storeLocations).values(loc);
   }
   console.log(`[DB] Seeded ${DEFAULT_LOCATIONS.length} default locations`);
+}
+
+/**
+ * One-time data fix: populate subcategory + grade columns for products that were
+ * imported via menu-image before those columns existed, and re-categorize
+ * Ounce Deals / Shake n Bake products that were incorrectly stored as "flower".
+ */
+async function fixProductCategoriesAndGrades(db: PostgresJsDatabase<typeof schema>) {
+  const sql = _sql!;
+  let fixed = 0;
+
+  // 1. Re-categorize Ounce Deals & Shake n Bake products (currently flower, name contains "28g" or "oz")
+  //    Match by name patterns — menu import creates names like "Shake And Bake Premium — 28g"
+  const shakeProducts = await sql.unsafe(
+    `UPDATE products SET category = 'shake-n-bake'
+     WHERE category = 'flower' AND is_active = TRUE
+     AND (LOWER(name) LIKE '%shake%bake%' OR LOWER(name) LIKE '%shake n bake%' OR LOWER(name) LIKE '%shake and bake%')
+     RETURNING id`
+  );
+  if (shakeProducts.length > 0) {
+    fixed += shakeProducts.length;
+    console.log(`[DB Fix] Re-categorized ${shakeProducts.length} Shake n Bake products`);
+  }
+
+  const ounceProducts = await sql.unsafe(
+    `UPDATE products SET category = 'ounce-deals'
+     WHERE category = 'flower' AND is_active = TRUE
+     AND (LOWER(name) LIKE '%ounce deal%' OR LOWER(name) LIKE '%oz deal%')
+     AND LOWER(name) NOT LIKE '%shake%'
+     RETURNING id`
+  );
+  if (ounceProducts.length > 0) {
+    fixed += ounceProducts.length;
+    console.log(`[DB Fix] Re-categorized ${ounceProducts.length} Ounce Deal products`);
+  }
+
+  // Also re-categorize products whose "flavor" field contains clues (the old import stored grade in flavor)
+  // Products with 28g weight under flower that match ounce-deal naming patterns from the seed data
+  const ounceBySlug = await sql.unsafe(
+    `UPDATE products SET category = 'ounce-deals'
+     WHERE category = 'flower' AND is_active = TRUE
+     AND weight = '28g'
+     AND slug IN ('sour-og-28g', 'granola-funk-28g', 'banana-sundae-28g')
+     RETURNING id`
+  );
+  if (ounceBySlug.length > 0) {
+    fixed += ounceBySlug.length;
+    console.log(`[DB Fix] Re-categorized ${ounceBySlug.length} Ounce Deal products by slug`);
+  }
+
+  // 2. Populate subcategory for flower products based on strain_type
+  const flowerNoSub = await sql.unsafe(
+    `UPDATE products SET subcategory = 
+       CASE 
+         WHEN strain_type = 'Indica' THEN 'Indica Flower'
+         WHEN strain_type = 'Sativa' THEN 'Sativa Flower'
+         WHEN strain_type = 'Hybrid' THEN 'Hybrid Flower'
+         ELSE NULL
+       END
+     WHERE category = 'flower' AND (subcategory IS NULL OR subcategory = '')
+     RETURNING id`
+  );
+  if (flowerNoSub.length > 0) {
+    fixed += flowerNoSub.length;
+    console.log(`[DB Fix] Set subcategory for ${flowerNoSub.length} flower products`);
+  }
+
+  // 3. Populate grade from flavor field (old import stored grade there)
+  //    Valid grades: AAAA, AAA+, AAA, AAA-, AA+, AA, SHAKE
+  const gradeFromFlavor = await sql.unsafe(
+    `UPDATE products SET grade = flavor
+     WHERE (grade IS NULL OR grade = '')
+     AND flavor IN ('AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'AA-', 'A+', 'A', 'SHAKE')
+     RETURNING id`
+  );
+  if (gradeFromFlavor.length > 0) {
+    fixed += gradeFromFlavor.length;
+    console.log(`[DB Fix] Populated grade from flavor for ${gradeFromFlavor.length} products`);
+  }
+
+  if (fixed > 0) {
+    console.log(`[DB Fix] Total products fixed: ${fixed}`);
+  }
 }
 
 // ─── STORE LOCATIONS CRUD ───

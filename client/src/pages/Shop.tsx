@@ -3,7 +3,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { categories } from '@/lib/data';
-import { ShoppingCart, SlidersHorizontal, X, ChevronDown, Star, Loader, ChevronRight } from 'lucide-react';
+import { ShoppingCart, SlidersHorizontal, X, Star, Loader, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
@@ -41,12 +41,13 @@ export default function Shop() {
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [selectedStrain, setSelectedStrain] = useState('');
   const [sortBy, setSortBy] = useState('featured');
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const { addItem } = useCart();
 
-  // Reset subcategory when category changes
+  // Reset subcategory + strain when category changes
   useEffect(() => {
     setSelectedSubcategory('');
+    setSelectedStrain('');
   }, [selectedCategory]);
 
   // Fetch products from backend
@@ -70,9 +71,9 @@ export default function Shop() {
       case 'name': result.sort((a, b) => a.name.localeCompare(b.name)); break;
       case 'grade': result.sort((a, b) => {
         const gradeOrder = ['AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'AA-', 'A+', 'A', 'SHAKE'];
-        const aIdx = gradeOrder.indexOf((a as any).grade || '') || 999;
-        const bIdx = gradeOrder.indexOf((b as any).grade || '') || 999;
-        return aIdx - bIdx;
+        const aIdx = gradeOrder.indexOf((a as any).grade || '');
+        const bIdx = gradeOrder.indexOf((b as any).grade || '');
+        return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
       }); break;
       default: result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
@@ -81,9 +82,8 @@ export default function Shop() {
 
   const activeCat = categories.find(c => c.slug === selectedCategory);
   const pageTitle = activeCat ? `${activeCat.name} — Shop` : 'Shop All Products';
-
-  // Show subcategory tabs when viewing flower
   const showSubcategories = selectedCategory === 'flower';
+  const showGradeSort = selectedCategory === 'flower' || selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake';
 
   const breadcrumbs = [{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }];
   if (activeCat) breadcrumbs.push({ label: activeCat.name, href: '' });
@@ -111,19 +111,52 @@ export default function Shop() {
         </div>
       </section>
 
-      {/* Subcategory Tabs — shown for Flower */}
+      {/* ═══════════════════════════════════════════════════════════
+          HORIZONTAL CATEGORY BAR — always visible, left to right
+         ═══════════════════════════════════════════════════════════ */}
+      <section className="bg-white border-b border-gray-200 sticky top-[96px] md:top-[112px] z-30">
+        <div className="container">
+          <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-hide -mx-1 px-1">
+            <button
+              onClick={() => setSelectedCategory('')}
+              className={`shrink-0 px-4 py-2 rounded-full font-display text-xs transition-all whitespace-nowrap ${
+                !selectedCategory
+                  ? 'bg-[#4B2D8E] text-white shadow-md'
+                  : 'bg-[#F5F5F5] text-gray-600 hover:bg-[#4B2D8E]/10 hover:text-[#4B2D8E]'
+              }`}
+            >
+              ALL
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.slug}
+                onClick={() => setSelectedCategory(cat.slug)}
+                className={`shrink-0 px-4 py-2 rounded-full font-display text-xs transition-all whitespace-nowrap ${
+                  selectedCategory === cat.slug
+                    ? 'bg-[#4B2D8E] text-white shadow-md'
+                    : 'bg-[#F5F5F5] text-gray-600 hover:bg-[#4B2D8E]/10 hover:text-[#4B2D8E]'
+                }`}
+              >
+                {cat.name.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Subcategory Tabs — shown for Flower (Indica / Sativa / Hybrid) */}
       {showSubcategories && (
         <section className="bg-[#F5F5F5] border-b border-gray-200">
           <div className="container">
-            <div className="flex items-center gap-1 overflow-x-auto py-3 -mx-2 px-2 scrollbar-hide">
+            <div className="flex items-center gap-2 overflow-x-auto py-2.5 scrollbar-hide -mx-1 px-1">
               {FLOWER_SUBCATEGORIES.map(sub => (
                 <button
                   key={sub.value}
                   onClick={() => setSelectedSubcategory(sub.value)}
-                  className={`shrink-0 px-4 py-2 rounded-full font-display text-xs transition-all ${
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full font-display text-[11px] transition-all whitespace-nowrap ${
                     selectedSubcategory === sub.value
-                      ? 'bg-[#4B2D8E] text-white shadow-md'
-                      : 'bg-white text-gray-600 hover:bg-[#4B2D8E]/10 hover:text-[#4B2D8E]'
+                      ? 'bg-[#F15929] text-white shadow-sm'
+                      : 'bg-white text-gray-500 hover:bg-[#F15929]/10 hover:text-[#F15929] border border-gray-200'
                   }`}
                 >
                   {sub.label.toUpperCase()}
@@ -135,147 +168,129 @@ export default function Shop() {
       )}
 
       {/* Main Content */}
-      <section className="bg-white py-8 md:py-12">
+      <section className="bg-white py-6 md:py-10">
         <div className="container">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Filters Sidebar */}
-            <div className={`${filtersOpen ? 'block' : 'hidden'} lg:block lg:w-64 shrink-0`}>
-              <div className="bg-[#F5F5F5] rounded-2xl p-6 sticky top-24">
-                <div className="flex items-center justify-between mb-6 lg:hidden">
-                  <h3 className="font-display text-lg text-[#4B2D8E]">{t.shop.filters}</h3>
-                  <button onClick={() => setFiltersOpen(false)} className="text-gray-500 hover:text-[#4B2D8E]">
-                    <X size={20} />
+
+          {/* ── Inline Filter Bar (Sort + Strain + Filter count) ── */}
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            {/* Sort dropdown */}
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="appearance-none bg-[#F5F5F5] border border-gray-200 rounded-full pl-4 pr-9 py-2 text-xs font-display text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4B2D8E]/30 cursor-pointer"
+              >
+                <option value="featured">FEATURED</option>
+                <option value="price-low">PRICE: LOW → HIGH</option>
+                <option value="price-high">PRICE: HIGH → LOW</option>
+                <option value="name">NAME: A → Z</option>
+                {showGradeSort && <option value="grade">GRADE: BEST FIRST</option>}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Strain quick-filters — inline pill buttons */}
+            {selectedCategory !== 'accessories' && (
+              <div className="flex items-center gap-1.5">
+                {['Indica', 'Sativa', 'Hybrid'].map(strain => (
+                  <button
+                    key={strain}
+                    onClick={() => setSelectedStrain(selectedStrain === strain ? '' : strain)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-display transition-all ${
+                      selectedStrain === strain
+                        ? 'bg-[#4B2D8E] text-white'
+                        : 'bg-[#F5F5F5] text-gray-500 hover:bg-[#4B2D8E]/10'
+                    }`}
+                  >
+                    {strain.toUpperCase()}
                   </button>
-                </div>
-
-                {/* Category Filter */}
-                <div className="mb-6">
-                  <h4 className="font-display text-sm text-[#4B2D8E] mb-3">CATEGORY</h4>
-                  <div className="space-y-1">
-                    <button onClick={() => setSelectedCategory('')} className={`block w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${!selectedCategory ? 'bg-[#4B2D8E] text-white' : 'text-gray-600 hover:bg-white'}`}>
-                      All Products
-                    </button>
-                    {categories.map(cat => (
-                      <button key={cat.slug} onClick={() => setSelectedCategory(cat.slug)} className={`block w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${selectedCategory === cat.slug ? 'bg-[#4B2D8E] text-white' : 'text-gray-600 hover:bg-white'}`}>
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Strain Filter — hide for categories where strain doesn't apply */}
-                {selectedCategory !== 'accessories' && (
-                <div className="mb-6">
-                  <h4 className="font-display text-sm text-[#4B2D8E] mb-3">STRAIN TYPE</h4>
-                  <div className="space-y-2">
-                    {['Sativa', 'Indica', 'Hybrid', 'CBD'].map(strain => (
-                      <label key={strain} className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="strain" value={strain} checked={selectedStrain === strain} onChange={() => setSelectedStrain(strain)} className="w-4 h-4 accent-[#4B2D8E]" />
-                        <span className="text-sm text-gray-600">{strain}</span>
-                      </label>
-                    ))}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="strain" value="" checked={selectedStrain === ''} onChange={() => setSelectedStrain('')} className="w-4 h-4 accent-[#4B2D8E]" />
-                      <span className="text-sm text-gray-600">All Strains</span>
-                    </label>
-                  </div>
-                </div>
+                ))}
+                {selectedStrain && (
+                  <button
+                    onClick={() => setSelectedStrain('')}
+                    className="text-[10px] text-[#F15929] font-display hover:underline ml-1"
+                  >
+                    CLEAR
+                  </button>
                 )}
-
-                {/* Sort */}
-                <div>
-                  <h4 className="font-display text-sm text-[#4B2D8E] mb-3">SORT BY</h4>
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F15929]">
-                    <option value="featured">Featured</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="name">Name: A to Z</option>
-                    {(selectedCategory === 'flower' || selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake') && (
-                      <option value="grade">Grade: Best First</option>
-                    )}
-                  </select>
-                </div>
               </div>
+            )}
+
+            {/* Product count */}
+            <span className="text-xs text-gray-400 font-body ml-auto">
+              {filtered.length} product{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Mix-and-match note for ounce deals / shake */}
+          {(selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake') && (
+            <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-3 mb-5 text-center">
+              <p className="text-sm font-body text-[#4B2D8E]">*Mix and match available within same category/pricing</p>
             </div>
+          )}
 
-            {/* Products Grid */}
-            <div className="flex-1">
-              {/* Mobile Filter Toggle */}
-              <button onClick={() => setFiltersOpen(!filtersOpen)} className="lg:hidden mb-6 flex items-center gap-2 bg-[#F5F5F5] px-4 py-2.5 rounded-full text-[#4B2D8E] font-display text-sm hover:bg-gray-200 transition-colors">
-                <SlidersHorizontal size={16} />
-                FILTERS
-              </button>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader className="animate-spin text-[#4B2D8E]" size={32} />
+            </div>
+          )}
 
-              {/* Loading State */}
-              {isLoading && (
-                <div className="flex items-center justify-center py-20">
-                  <Loader className="animate-spin text-[#4B2D8E]" size={32} />
+          {/* Products Grid — full width, no sidebar */}
+          {!isLoading && (
+            <>
+              {filtered.length === 0 ? (
+                <div className="text-center py-16">
+                  <p className="text-gray-500 font-body text-lg mb-2">No products found.</p>
+                  <p className="text-gray-400 font-body text-sm">Try selecting a different category or clearing your filters.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filtered.map((product) => (
+                    <div key={product.id}
+                      className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all border border-gray-100">
+                      <Link href={`/product/${product.slug}`} className="block">
+                        <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
+                          <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=400'} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
+                          {/* Top-left badges */}
+                          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                            {product.isNew && (
+                              <span className="bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
+                            )}
+                            {(product as any).grade && (
+                              <span className={`font-display text-[10px] px-2.5 py-1 rounded-full ${GRADE_COLORS[(product as any).grade] || 'bg-gray-400 text-white'}`}>
+                                {(product as any).grade}
+                              </span>
+                            )}
+                          </div>
+                          {/* Top-right strain tag */}
+                          <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono text-xs px-2 py-1 rounded-full">{product.strainType}</span>
+                        </div>
+                      </Link>
+                      <div className="p-4">
+                        <Link href={`/product/${product.slug}`}>
+                          <h3 className="font-display text-sm text-[#4B2D8E] mb-1 hover:text-[#F15929] transition-colors">{product.name.toUpperCase()}</h3>
+                        </Link>
+                        <p className="text-xs text-gray-500 font-body mb-1">{product.flavor} · {product.weight}</p>
+                        <p className="text-xs text-gray-400 font-mono mb-3">THC: {product.thc}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-display text-lg text-[#4B2D8E]">${parseFloat(product.price.toString()).toFixed(2)}</span>
+                          <button onClick={(e) => { e.preventDefault(); addItem({ ...product, id: String(product.id), categorySlug: product.category, strainType: product.strainType || 'N/A', price: parseFloat(product.price.toString()), inStock: product.stock > 0, rating: 4.5, reviewCount: 0, images: product.images || [], image: product.image || '', description: product.description || '', shortDescription: product.shortDescription || '', flavor: product.flavor || '', weight: product.weight || '' } as any); toast.success(`${product.name} added to cart`); }}
+                            className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
+                            aria-label={`Add ${product.name} to cart`}>
+                            <ShoppingCart size={16} />
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-[#4B2D8E] font-body mt-2 flex items-center gap-1">
+                          <Star size={10} className="text-[#F15929]" /> Earn {parseFloat(product.price.toString()).toFixed(0)} points
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Products */}
-              {!isLoading && (
-                <>
-                  {/* Mix-and-match note for ounce deals and flower */}
-                  {(selectedCategory === 'ounce-deals' || selectedCategory === 'shake-n-bake') && (
-                    <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-3 mb-4 text-center">
-                      <p className="text-sm font-body text-[#4B2D8E]">*Mix and match available within same category/pricing</p>
-                    </div>
-                  )}
-
-                  {filtered.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 font-body">No products found. Try adjusting your filters.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filtered.map((product, i) => (
-                        <div key={product.id}
-                          className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all border border-gray-100">
-                          <Link href={`/product/${product.slug}`} className="block">
-                            <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
-                              <img src={product.image || 'https://images.unsplash.com/photo-1599599810694-b5ac4dd64b74?w=400'} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" width="400" height="400" />
-                              {/* Badges row */}
-                              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-                                {product.isNew && (
-                                  <span className="bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
-                                )}
-                                {/* Grade badge */}
-                                {(product as any).grade && (
-                                  <span className={`font-display text-[10px] px-2.5 py-1 rounded-full ${GRADE_COLORS[(product as any).grade] || 'bg-gray-400 text-white'}`}>
-                                    {(product as any).grade}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono text-xs px-2 py-1 rounded-full">{product.strainType}</span>
-                            </div>
-                          </Link>
-                          <div className="p-4">
-                            <Link href={`/product/${product.slug}`}>
-                              <h3 className="font-display text-sm text-[#4B2D8E] mb-1 hover:text-[#F15929] transition-colors">{product.name.toUpperCase()}</h3>
-                            </Link>
-                            <p className="text-xs text-gray-500 font-body mb-1">{product.flavor} · {product.weight}</p>
-                            <p className="text-xs text-gray-400 font-mono mb-3">THC: {product.thc}</p>
-                            <div className="flex items-center justify-between">
-                              <span className="font-display text-lg text-[#4B2D8E]">${parseFloat(product.price.toString()).toFixed(2)}</span>
-                              <button onClick={(e) => { e.preventDefault(); addItem({ ...product, id: String(product.id), categorySlug: product.category, strainType: product.strainType || 'N/A', price: parseFloat(product.price.toString()), inStock: product.stock > 0, rating: 4.5, reviewCount: 0, images: product.images || [], image: product.image || '', description: product.description || '', shortDescription: product.shortDescription || '', flavor: product.flavor || '', weight: product.weight || '' } as any); toast.success(`${product.name} added to cart`); }}
-                                className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
-                                aria-label={`Add ${product.name} to cart`}>
-                                <ShoppingCart size={16} />
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-[#4B2D8E] font-body mt-2 flex items-center gap-1">
-                              <Star size={10} className="text-[#F15929]" /> Earn {parseFloat(product.price.toString()).toFixed(0)} points
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </section>
     </>
