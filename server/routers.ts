@@ -1352,6 +1352,10 @@ Return ONLY the JSON object with the improved template.`;
     product: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
       return db.getProductBySlug(input.slug);
     }),
+    /** Return all weight variants for a given base product name (e.g. "Pink Taco" → 3.5g, 7g, 14g, 28g rows) */
+    productVariants: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+      return db.getProductVariants(input.slug);
+    }),
     shippingZones: publicProcedure.query(async () => {
       return db.getAllShippingZones();
     }),

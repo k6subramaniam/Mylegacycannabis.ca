@@ -845,6 +845,43 @@ export async function getProductBySlug(slug: string) {
   return rows[0];
 }
 
+/**
+ * Given a product slug, find its "base name" (strip weight suffixes like "- 3.5g", "- 7g", etc.)
+ * and return all active product rows that share the same base name. This powers the
+ * weight selector on the product detail page.
+ */
+export async function getProductVariants(slug: string): Promise<schema.Product[]> {
+  if (!USE_PERSISTENT_DB) return _mem_getProductVariants(slug);
+
+  // First get the product to find its name
+  const rows = await getDb().select().from(schema.products).where(eq(schema.products.slug, slug)).limit(1);
+  if (!rows[0]) return [];
+
+  const product = rows[0];
+  // Derive the base strain name by stripping common weight suffixes
+  const baseName = deriveBaseName(product.name);
+
+  // Find all active products whose name starts with the base name (same strain, different weights)
+  const allVariants = await getDb().select().from(schema.products)
+    .where(and(
+      eq(schema.products.isActive, true),
+      ilike(schema.products.name, `${baseName}%`),
+      eq(schema.products.category, product.category as any),
+    ));
+
+  // Filter to only products whose derived base name matches exactly
+  return allVariants.filter(v => deriveBaseName(v.name) === baseName);
+}
+
+/** Strip weight suffixes like " - 3.5g", " — 28g", " 7g", " (14g)" to get a base strain name */
+function deriveBaseName(name: string): string {
+  return name
+    .replace(/\s*[-–—]\s*\d+(\.\d+)?\s*g\b/i, '')   // "Name - 3.5g" → "Name"
+    .replace(/\s*\(\d+(\.\d+)?\s*g\)/i, '')           // "Name (28g)" → "Name"
+    .replace(/\s+\d+(\.\d+)?\s*g$/i, '')              // "Name 3.5g" → "Name"
+    .trim();
+}
+
 export async function createProduct(data: schema.InsertProduct): Promise<number> {
   if (!USE_PERSISTENT_DB) return _mem_createProduct(data);
   const result = await getDb().insert(schema.products).values(data).returning({ id: schema.products.id });
@@ -1818,6 +1855,12 @@ function _mem_getAllProducts(opts?: any) {
 }
 function _mem_getProductById(id: number) { return _products.find(p => p.id === id); }
 function _mem_getProductBySlug(slug: string) { return _products.find(p => p.slug === slug); }
+function _mem_getProductVariants(slug: string) {
+  const product = _products.find(p => p.slug === slug);
+  if (!product) return [];
+  const baseName = product.name.replace(/\s*[-–—]\s*\d+(\.\d+)?\s*g\b/i, '').replace(/\s*\(\d+(\.\d+)?\s*g\)/i, '').replace(/\s+\d+(\.\d+)?\s*g$/i, '').trim();
+  return _products.filter(p => p.isActive && p.category === product.category && p.name.replace(/\s*[-–—]\s*\d+(\.\d+)?\s*g\b/i, '').replace(/\s*\(\d+(\.\d+)?\s*g\)/i, '').replace(/\s+\d+(\.\d+)?\s*g$/i, '').trim() === baseName);
+}
 function _mem_createProduct(data: any) { const id = nextId(); const now = new Date(); _products.push({ id, ...data, stock: data.stock ?? 0, featured: data.featured ?? false, isNew: data.isNew ?? false, isActive: data.isActive ?? true, rewardPoints: 0, createdAt: now, updatedAt: now }); return id; }
 function _mem_updateProduct(id: number, data: any) { const p = _products.find(p => p.id === id); if (p) Object.assign(p, data, { updatedAt: new Date() }); }
 function _mem_deleteProduct(id: number) { const idx = _products.findIndex(p => p.id === id); if (idx !== -1) _products.splice(idx, 1); }
