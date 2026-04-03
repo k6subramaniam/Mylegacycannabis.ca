@@ -617,7 +617,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:18px;">Tracking Information</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
-                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Tracking Number:</strong> <span style="color:#666; font-size:14px;">{{tracking_number}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Tracking Number:</strong> <a href="{{tracking_url}}" style="color:#4B2DBE; font-size:14px; text-decoration:underline; font-weight:500;">{{tracking_number}}</a></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Carrier:</strong> <span style="color:#666; font-size:14px;">Canada Post</span></td></tr>
                                 </table>
                             </div>

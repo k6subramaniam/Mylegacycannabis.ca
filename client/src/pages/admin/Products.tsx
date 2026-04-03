@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Package, Plus, Search, Edit2, Trash2, Eye, EyeOff, Star, X, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-const CATEGORIES = ["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories"] as const;
+const CATEGORIES = ["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake"] as const;
 const STRAIN_TYPES = ["Sativa", "Indica", "Hybrid", "CBD", "N/A"] as const;
 
 export default function AdminProducts() {

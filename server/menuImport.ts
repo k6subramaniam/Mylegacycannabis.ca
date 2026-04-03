@@ -12,6 +12,7 @@
 
 import * as db from "./db";
 import { getAiConfig } from "./_core/llm";
+import { getMlcContextBrief } from "./mlcContext";
 
 // ─── Types ───
 
@@ -41,7 +42,11 @@ export interface MenuImportPayload {
 
 // ─── Vision parsing ───
 
-const MENU_PARSE_PROMPT = `You are a cannabis menu data extractor. Analyze this menu image and extract EVERY product into a JSON array.
+const MENU_PARSE_PROMPT = `You are a cannabis menu data extractor for My Legacy Cannabis.
+
+${getMlcContextBrief()}
+
+Analyze this menu image and extract EVERY product into a JSON array.
 
 For each product extract:
 - "category": one of "Indica Flower", "Sativa Flower", "Hybrid Flower", "Ounce Deals", "Shake n Bake"

@@ -32,10 +32,10 @@ const GRADE_FILTERS = ['AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'SHAKE'];
 const STRAIN_TYPES = ['Indica', 'Sativa', 'Hybrid'];
 
 // Categories that show grade filters
-const GRADE_CATEGORIES = new Set(['flower', 'ounce-deals', 'shake-n-bake', '']);
+const GRADE_CATEGORIES = new Set(['flower', 'pre-rolls', 'ounce-deals', 'shake-n-bake', '']);
 
-// Categories that are flower-related (show strain pills but NOT price sort)
-const FLOWER_CATEGORIES = new Set(['flower', 'ounce-deals', 'shake-n-bake']);
+// Categories that are cannabis-product-related (show strain pills, grade filters, NOT price sort, group by strain)
+const FLOWER_CATEGORIES = new Set(['flower', 'pre-rolls', 'ounce-deals', 'shake-n-bake']);
 
 /**
  * Strip weight suffixes to get a base strain name for grouping.
