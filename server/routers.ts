@@ -31,6 +31,7 @@ import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured }
 import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
 import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
+import { getMlcBusinessContext } from "./mlcContext";
 
 export const appRouter = router({
   system: systemRouter,
@@ -144,7 +145,7 @@ export const appRouter = router({
       create: adminProcedure.input(z.object({
         name: z.string().min(1),
         slug: z.string().min(1),
-        category: z.enum(["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories"]),
+        category: z.enum(["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake"]),
         strainType: z.enum(["Sativa", "Indica", "Hybrid", "CBD", "N/A"]).optional(),
         price: z.string(),
         weight: z.string().optional(),
@@ -167,7 +168,7 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().optional(),
         slug: z.string().optional(),
-        category: z.enum(["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories"]).optional(),
+        category: z.enum(["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake"]).optional(),
         strainType: z.enum(["Sativa", "Indica", "Hybrid", "CBD", "N/A"]).optional(),
         price: z.string().optional(),
         weight: z.string().optional(),
@@ -504,13 +505,9 @@ export const appRouter = router({
         const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
         const logoUrl = await db.getSiteSetting("email_logo_url") || `${siteBase}/logo.png`;
 
-        const systemPrompt = `You are an email template designer for MyLegacy Cannabis, a premium cannabis delivery service in the Greater Toronto Area (GTA), Canada.
+        const systemPrompt = `You are an email template designer for My Legacy Cannabis.
 
-BRAND CONTEXT:
-- Business: MyLegacy Cannabis — GTA's premier cannabis delivery
-- Hours: 10 AM – 10 PM Daily
-- Payment: Interac e-Transfer
-- Support email: support@mylegacycannabis.ca
+${getMlcBusinessContext()}
 - Website: https://mylegacycannabis.ca
 
 TEMPLATE STRUCTURE — MANDATORY:
@@ -555,12 +552,12 @@ YOUR OUTPUT must be the COMPLETE HTML document including the header and footer s
 
 DESIGN RULES:
 - Use inline CSS only (no <style> blocks) — email clients strip them
-- Primary brand purple: #720eec / #4B2D8E
+- Primary brand purple: #4B2DBE, Secondary purple: #3A2270, Accent orange: #F19929
 - Accent colors: success #4CAF50, warning #FF9800, danger #F44336, info #2196F3
 - Always start body with a colored heading row: <tr><td style="background:linear-gradient(135deg, #COLOR1 0%, #COLOR2 100%); padding:20px 30px; text-align:center;"><h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">HEADING</h1></td></tr>
 - Then a body row: <tr><td style="padding:40px 30px;">...content...</td></tr>
 - Use {{variable_name}} placeholders for dynamic content
-- CTA buttons: <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Button Text</a>
+- CTA buttons: <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:50px; font-size:16px; font-weight:bold;">Button Text</a>
 - Info boxes: <div style="background-color:#E3F2FD; border-left:4px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">...</div>
 - Warning boxes: <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">...</div>
 - Always end with: Questions? Contact us at support@mylegacycannabis.ca
@@ -653,7 +650,9 @@ Return ONLY the JSON object, no extra text or markdown fences.`;
         currentVariables: z.array(z.string()),
         instruction: z.string().min(5).max(2000),
       })).mutation(async ({ input }) => {
-        const systemPrompt = `You are an email template designer for MyLegacy Cannabis, a premium cannabis delivery service in the GTA, Canada.
+        const systemPrompt = `You are an email template designer for My Legacy Cannabis.
+
+${getMlcBusinessContext()}
 
 You will be given an EXISTING email template and an instruction to improve it. Return the improved version.
 
@@ -662,7 +661,7 @@ RULES:
 - Only modify the CONTENT between header and footer unless specifically asked to change structure
 - Preserve all existing {{variable}} placeholders unless told to remove them
 - Use inline CSS only — no <style> blocks
-- Brand purple: #720eec / #4B2D8E
+- Brand purple: #4B2DBE (primary), #3A2270 (secondary), Orange: #F19929
 - Do NOT use emoji characters
 - Keep the same slug/name unless the admin asks for a rename
 

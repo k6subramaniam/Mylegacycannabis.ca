@@ -189,8 +189,16 @@ function OrderDetail({ id }: { id: number }) {
             <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Tracking</h2>
             {order.trackingNumber ? (
               <div>
-                <p className="text-sm font-mono text-[#4B2D8E] font-semibold">{order.trackingNumber}</p>
-                {order.trackingUrl && <a href={order.trackingUrl as string} target="_blank" rel="noopener noreferrer" className="text-xs text-[#F15929] hover:underline">Track Package</a>}
+                <a
+                  href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${order.trackingNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-mono text-[#4B2D8E] font-semibold hover:text-[#F15929] hover:underline transition-colors inline-flex items-center gap-1"
+                >
+                  {order.trackingNumber}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+                {order.trackingUrl && <a href={order.trackingUrl as string} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#F15929] hover:underline mt-1">Track on Canada Post</a>}
               </div>
             ) : (
               <div className="space-y-2">
