@@ -1430,7 +1430,23 @@ function LogoManagementSection() {
 
             {/* Upload Drop Zone */}
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Upload New Logo</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-sm font-medium text-gray-700">Upload New Logo</p>
+                <div className="relative group/tip">
+                  <Info size={14} className="text-gray-400 cursor-help" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 bg-gray-900 text-white text-xs rounded-lg px-4 py-3 shadow-xl opacity-0 pointer-events-none group-hover/tip:opacity-100 group-hover/tip:pointer-events-auto transition-opacity z-50">
+                    <p className="font-semibold mb-1.5">Recommended Logo Specs</p>
+                    <ul className="space-y-1 text-gray-300">
+                      <li><span className="text-white font-medium">Default file:</span> logo.png &mdash; 1024 x 572 px (RGBA)</li>
+                      <li><span className="text-white font-medium">Aspect ratio:</span> ~1.79 : 1 (landscape)</li>
+                      <li><span className="text-white font-medium">Display size:</span> h-10 (40 px) mobile, h-14 (56 px) desktop</li>
+                      <li><span className="text-white font-medium">Width:</span> auto-scales to maintain ratio</li>
+                      <li><span className="text-white font-medium">Best format:</span> transparent PNG or SVG</li>
+                    </ul>
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-[6px] border-x-transparent border-t-[6px] border-t-gray-900" />
+                  </div>
+                </div>
+              </div>
               <label
                 className={`relative flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                   dragging

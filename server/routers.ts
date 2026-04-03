@@ -1050,8 +1050,8 @@ Return ONLY the JSON object with the improved template.`;
     emailLogo: router({
       get: adminProcedure.query(async () => {
         const raw = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url") || "";
-        // If the stored logo is an oversized data URL (>50KB), fall back to static file
-        const url = (raw && raw.length < 50000) ? raw : "/logo.png";
+        // If the stored value is an oversized data URL (legacy), fall back to /logo.png
+        const url = (raw && !(raw.startsWith("data:") && raw.length > 50000)) ? raw : "/logo.png";
         return { url };
       }),
       update: adminProcedure.input(z.object({
@@ -1327,9 +1327,9 @@ Return ONLY the JSON object with the improved template.`;
         db.getSiteSetting("site_logo_url"),
         db.getSiteSetting("email_logo_url"),
       ]);
-      // If the stored logo is an oversized data URL (>50KB), fall back to static file
+      // If the stored value is an oversized data URL (legacy), fall back to /logo.png
       const rawLogo = siteLogoUrl || emailLogoUrl || "";
-      const logoUrl = (rawLogo && rawLogo.length < 50000) ? rawLogo : "/logo.png";
+      const logoUrl = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.png";
       return {
         idVerificationEnabled,
         idVerificationMode,

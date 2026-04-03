@@ -1,8 +1,11 @@
 // Storage helpers for file upload/download via configured storage proxy
 // Uses Bearer token authentication. Set STORAGE_API_URL and STORAGE_API_KEY in .env to enable.
-// When not configured, image upload endpoints return a placeholder URL gracefully.
+// When not configured, files are saved to the local dist/public/uploads/ directory
+// and served via Express static middleware.
 
 import { ENV } from './_core/env';
+import fs from 'fs';
+import path from 'path';
 
 type StorageConfig = { baseUrl: string; apiKey: string } | null;
 
@@ -73,13 +76,41 @@ export async function storagePut(
 ): Promise<{ key: string; url: string }> {
   const config = getStorageConfig();
   if (!config) {
-    // No storage backend — embed the image as a base64 data URL so it is
-    // always viewable in the admin panel without any external service.
+    // No storage backend — save file to dist/public/uploads/ and serve
+    // via Express static middleware. This avoids oversized data URLs in the DB.
     const key = normalizeKey(relKey);
     const buf = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data as any);
-    const b64 = buf.toString("base64");
-    const dataUrl = `data:${contentType};base64,${b64}`;
-    return { key, url: dataUrl };
+
+    // Resolve the dist/public directory — check multiple possible locations:
+    //   1. <cwd>/dist/public  (dev mode with vite build output)
+    //   2. <script_dir>/_core/public (production bundled)
+    const projectRoot = process.cwd();
+    const candidates = [
+      path.resolve(projectRoot, "dist", "public"),
+      ...(import.meta.dirname ? [
+        path.resolve(import.meta.dirname, "_core", "public"),
+        path.resolve(import.meta.dirname, "..", "dist", "public"),
+      ] : []),
+    ];
+    const distPath = candidates.find(p => fs.existsSync(p)) || candidates[0];
+    const uploadsDir = path.join(distPath, "uploads");
+    fs.mkdirSync(uploadsDir, { recursive: true });
+
+    // Use the relKey filename (e.g. "branding/site-logo.png" → "site-logo.png")
+    const fileName = path.basename(key);
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, buf);
+
+    // Also write to client/public/uploads/ so Vite dev server serves it too
+    const clientPublicDir = path.resolve(projectRoot, "client", "public");
+    if (fs.existsSync(clientPublicDir)) {
+      const clientUploadsDir = path.join(clientPublicDir, "uploads");
+      fs.mkdirSync(clientUploadsDir, { recursive: true });
+      fs.writeFileSync(path.join(clientUploadsDir, fileName), buf);
+    }
+
+    const publicUrl = `/uploads/${fileName}`;
+    return { key, url: publicUrl };
   }
   const { baseUrl, apiKey } = config;
   const key = normalizeKey(relKey);
