@@ -106,9 +106,13 @@ async function sendToAdminAndCustomer(
 async function commonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
   // Check site_logo_url first (new unified key), then email_logo_url (legacy), then fallback
-  const logoUrl = await db.getSiteSetting("site_logo_url")
+  let logoUrl = await db.getSiteSetting("site_logo_url")
     || await db.getSiteSetting("email_logo_url")
     || getDefaultLogoUrl();
+  // Emails need absolute URLs — if stored as relative path, prepend site URL
+  if (logoUrl && logoUrl.startsWith("/")) {
+    logoUrl = `${base}${logoUrl}`;
+  }
   const paymentEmail = await db.getSiteSetting("payment_email")
     || process.env.GMAIL_PAYMENT_EMAIL
     || "payments@mylegacycannabis.ca";
