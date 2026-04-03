@@ -36,7 +36,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     bodyHtml: emailShell("Welcome to MyLegacy Cannabis", `
                     <!-- HEADING -->
                     <tr>
-                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Welcome to MyLegacy Cannabis!</h1>
                         </td>
                     </tr>
@@ -49,7 +49,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
                                 Thank you for creating an account with MyLegacy Cannabis - GTA's premier cannabis delivery service!
                             </p>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 15px 0;">
                                     <strong>NEXT STEP: Verify Your Age</strong>
                                 </p>
@@ -63,13 +63,13 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{account_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">
+                                        <a href="{{account_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">
                                             Upload Your ID Now
                                         </a>
                                     </td>
                                 </tr>
                             </table>
-                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333333; font-size:14px; line-height:1.6; margin:0 0 10px 0;">
                                     <strong>Your Privacy is Protected:</strong>
                                 </p>
@@ -81,7 +81,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                 </ul>
                             </div>
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">
-                                Questions? Reply to this email or contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a>
+                                Questions? Reply to this email or contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a>
                             </p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
@@ -98,7 +98,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "New ID Verification Required — {{customer_name}}",
     bodyHtml: emailShell("New ID Verification Pending", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:22px; font-weight:bold;">New ID Verification Required</h1>
                         </td>
                     </tr>
@@ -108,7 +108,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
                                 A new customer has uploaded their ID for age verification review.
                             </p>
-                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF3E0; border-left:4px solid #F19929; padding:20px; margin:20px 0; border-radius:8px;">
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}} ({{customer_email}})</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">User ID:</strong> <span style="color:#666; font-size:14px;">{{user_id}}</span></td></tr>
@@ -118,10 +118,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{admin_review_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Review ID Document</a>
+                                    <a href="{{admin_review_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">Review ID Document</a>
                                 </td></tr>
                             </table>
-                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Response Time Target:</strong> Please review within 24 hours to maintain excellent customer service.</p>
                             </div>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated notification from your MyLegacy Cannabis admin dashboard.</p>
@@ -148,11 +148,11 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">We were unable to verify your age with the ID document you submitted.</p>
-                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 15px 0;"><strong>Verification Issue:</strong></p>
                                 <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">{{rejection_reason}}</p>
                             </div>
-                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Please resubmit with a valid ID showing:</strong></p>
                                 <ul style="color:#666; font-size:14px; line-height:1.6; margin:0; padding-left:20px;">
                                     <li>Clear, readable photo (not blurry)</li>
@@ -164,10 +164,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{resubmit_url}}" style="display:inline-block; background-color:#F44336; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Upload New ID Document</a>
+                                    <a href="{{resubmit_url}}" style="display:inline-block; background-color:#E53935; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">Upload New ID Document</a>
                                 </td></tr>
                             </table>
-                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:14px; line-height:1.6; margin:0 0 10px 0;"><strong>Tips for a Successful Verification:</strong></p>
                                 <ul style="color:#666; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
                                     <li>Take photo in good lighting</li>
@@ -177,7 +177,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <li>Use a high-resolution camera</li>
                                 </ul>
                             </div>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Need help? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Need help? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","rejection_reason","resubmit_url","logo_url","unsubscribe_url","privacy_url"],
@@ -201,16 +201,16 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! Your ID has been verified and your MyLegacy Cannabis account is now <strong>ACTIVE</strong>.</p>
-                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 15px 0;"><strong>You're Ready to Shop!</strong></p>
                                 <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">Browse our premium cannabis selection and enjoy fast, discreet delivery across the GTA.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{shop_url}}" style="display:inline-block; background-color:#4CAF50; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Start Shopping Now</a>
+                                    <a href="{{shop_url}}" style="display:inline-block; background-color:#4CAF50; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">Start Shopping Now</a>
                                 </td></tr>
                             </table>
-                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:14px; line-height:1.6; margin:0 0 10px 0;"><strong>Your Account Benefits:</strong></p>
                                 <ul style="color:#666; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
                                     <li><strong>Earn 1 point per $1</strong> spent on every order</li>
@@ -220,14 +220,14 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <li>Exclusive member-only promotions</li>
                                 </ul>
                             </div>
-                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;">
                                     <strong>Delivery Zone:</strong> GTA-wide (Downtown: $5, Scarborough: $10, Mississauga: $12)<br>
                                     <strong>Minimum Order:</strong> $40<br>
                                     <strong>Operating Hours:</strong> 10 AM - 10 PM Daily
                                 </p>
                             </div>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","shop_url","logo_url","unsubscribe_url","privacy_url"],
@@ -243,7 +243,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "Order Confirmed — #{{order_id}}",
     bodyHtml: emailShell("Order Confirmation", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Confirmed!</h1>
                         </td>
                     </tr>
@@ -251,7 +251,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Thank you for your order! We've received your order <strong>#{{order_id}}</strong> and it's ready for payment.</p>
-                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:18px;">Order Summary</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order Number:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
@@ -260,7 +260,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Delivery Address:</strong><br><span style="color:#666; font-size:13px;">{{delivery_address}}</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:16px;">Next Step: Send Payment via Interac e-Transfer</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">payments@mylegacycannabis.ca</span></td></tr>
@@ -269,10 +269,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the reference number in your e-transfer message</em></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours will be automatically cancelled.</p>
                             </div>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","logo_url","unsubscribe_url","privacy_url"],
@@ -296,7 +296,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! We've received your payment for order <strong>#{{order_id}}</strong>. Your order is now confirmed and being prepared.</p>
-                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Payment Confirmed</strong></p>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
@@ -304,15 +304,15 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Received</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:14px; line-height:1.6; margin:0;"><strong>What happens next?</strong><br>Our team will process your order and prepare it for shipping. You'll receive a tracking number once your package is on its way via Canada Post.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Your Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">View Your Order</a>
                                 </td></tr>
                             </table>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
@@ -328,7 +328,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "New Payment Received — Order #{{order_id}}",
     bodyHtml: emailShell("New Payment Received", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">New Payment Received</h1>
                         </td>
                     </tr>
@@ -336,7 +336,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A payment has been received for order <strong>#{{order_id}}</strong>. Please verify the e-Transfer and update the order status.</p>
-                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF3E0; border-left:4px solid #F19929; padding:20px; margin:20px 0; border-radius:8px;">
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}}</span></td></tr>
@@ -344,12 +344,12 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Marked Received</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Action Required:</strong> Verify the Interac e-Transfer was deposited, then change order status to "Confirmed" and begin fulfillment.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Review Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">Review Order</a>
                                 </td></tr>
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
@@ -368,7 +368,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "Order Received — #{{order_id}}",
     bodyHtml: emailShell("Order Received", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Received</h1>
                         </td>
                     </tr>
@@ -376,14 +376,14 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Thank you for your order with MyLegacy Cannabis! We've received order <strong>#{{order_id}}</strong> and it's ready for payment.</p>
-                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; border:2px solid #4A90E2; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:18px;">Order Summary</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order Number:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Total Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:16px;">Next Step: Send Payment via Interac e-Transfer</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">payments@mylegacycannabis.ca</span></td></tr>
@@ -392,10 +392,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the order number in your e-transfer message</em></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours may be automatically cancelled.</p>
                             </div>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
@@ -411,7 +411,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "New Guest ID Verification — Order #{{order_id}}",
     bodyHtml: emailShell("New Guest Order", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:22px; font-weight:bold;">New Guest Order</h1>
                         </td>
                     </tr>
@@ -419,19 +419,19 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A guest customer has submitted an ID for age verification. Please review and approve or reject.</p>
-                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF3E0; border-left:4px solid #F19929; padding:20px; margin:20px 0; border-radius:8px;">
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Guest Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}} ({{customer_email}})</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Submitted:</strong> <span style="color:#666; font-size:14px;">{{submission_date}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">ID Type:</strong> <span style="color:#666; font-size:14px;">{{id_type}}</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Response Time Target:</strong> Please review within 24 hours. The customer's order is on hold pending verification.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#FF9800; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Review ID Document</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">Review ID Document</a>
                                 </td></tr>
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
@@ -458,11 +458,11 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Unfortunately, we were unable to verify your age with the ID document you submitted. Your order is on hold until verification is complete.</p>
-                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; border-left:4px solid #F44336; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Verification Issue:</strong></p>
                                 <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">{{rejection_reason}}</p>
                             </div>
-                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF9C4; border-left:4px solid #FFC107; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Please resubmit with a valid ID showing:</strong></p>
                                 <ul style="color:#666; font-size:14px; line-height:1.6; margin:0; padding-left:20px;">
                                     <li>Clear, readable photo (not blurry)</li>
@@ -474,10 +474,10 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">View Order</a>
                                 </td></tr>
                             </table>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","rejection_reason","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
@@ -501,16 +501,16 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! Your ID has been verified and your order is now being processed.</p>
-                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 10px 0;"><strong>Your ID is Verified!</strong></p>
                                 <p style="color:#666; font-size:14px; line-height:1.6; margin:0;">Your age verification is complete. If you've already sent payment, your order will be prepared and shipped shortly. You'll receive a tracking number via email once shipped.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">View Order</a>
                                 </td></tr>
                             </table>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
@@ -534,7 +534,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Great news! We've received your payment for order <strong>#{{order_id}}</strong>. Your order is now confirmed and being prepared for shipping.</p>
-                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E8F5E9; border-left:4px solid #4CAF50; padding:20px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:15px; line-height:1.6; margin:0 0 10px 0;"><strong>Payment Confirmed</strong></p>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
@@ -542,15 +542,15 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Status:</strong> <span style="color:#4CAF50; font-size:14px; font-weight:bold;">Payment Received</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:14px; line-height:1.6; margin:0;"><strong>What happens next?</strong><br>Our team will process your order and prepare it for shipping via Canada Post. You'll receive a tracking number once your package is on its way.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">View Order</a>
                                 </td></tr>
                             </table>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
@@ -566,7 +566,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "Guest Payment Received — Order #{{order_id}}",
     bodyHtml: emailShell("Guest Payment Received", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #FF9800 0%, #FF5722 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Guest Payment Received</h1>
                         </td>
                     </tr>
@@ -574,19 +574,19 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi Admin,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">A guest customer's payment has been received for order <strong>#{{order_id}}</strong>. Please verify the e-Transfer and begin fulfillment.</p>
-                            <div style="background-color:#FFF3E0; border-left:4px solid #FF9800; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF3E0; border-left:4px solid #F19929; padding:20px; margin:20px 0; border-radius:8px;">
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Guest Customer:</strong> <span style="color:#666; font-size:14px;">{{customer_name}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
                                 </table>
                             </div>
-                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Action Required:</strong> Verify the Interac e-Transfer, confirm order status, and prepare for shipping.</p>
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{action_url}}" style="display:inline-block; background-color:#720eec; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">View Order</a>
+                                    <a href="{{action_url}}" style="display:inline-block; background-color:#F19929; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:Roboto,Arial,Helvetica,sans-serif;">View Order</a>
                                 </td></tr>
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
@@ -613,7 +613,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Your order <strong>#{{order_id}}</strong> has been shipped via Canada Post and is on its way to you!</p>
-                            <div style="background-color:#E3F2FD; border:2px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; border:2px solid #2196F3; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:18px;">Tracking Information</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
@@ -623,13 +623,13 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0;">
                                 <tr><td align="center">
-                                    <a href="{{tracking_url}}" style="display:inline-block; background-color:#2196F3; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:4px; font-size:16px; font-weight:bold;">Track Your Package</a>
+                                    <a href="{{tracking_url}}" style="display:inline-block; background-color:#2196F3; color:#FFFFFF; text-decoration:none; padding:15px 40px; border-radius:8px; font-size:16px; font-weight:bold;">Track Your Package</a>
                                 </td></tr>
                             </table>
-                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#FFF9C4; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Estimated Delivery:</strong> Canada Post typically delivers within 2-5 business days depending on your location. Tracking updates may take 24 hours to appear.</p>
                             </div>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","tracking_number","tracking_url","logo_url","unsubscribe_url","privacy_url"],
@@ -645,7 +645,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     subject: "Order Update — #{{order_id}} is now {{order_status}}",
     bodyHtml: emailShell("Order Status Update", `
                     <tr>
-                        <td style="background:linear-gradient(135deg, #720eec 0%, #9C27B0 100%); padding:20px 30px; text-align:center;">
+                        <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Update</h1>
                         </td>
                     </tr>
@@ -653,15 +653,15 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                         <td style="padding:40px 30px;">
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Hi <strong>{{customer_name}}</strong>,</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:0 0 20px 0;">Your order <strong>#{{order_id}}</strong> has been updated.</p>
-                            <div style="background-color:#E3F2FD; border-left:4px solid #2196F3; padding:20px; margin:20px 0; border-radius:4px;">
+                            <div style="background-color:#E3F2FD; border-left:4px solid #2196F3; padding:20px; margin:20px 0; border-radius:8px;">
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Order:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
-                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">New Status:</strong> <span style="color:#720eec; font-size:14px; font-weight:bold;">{{order_status}}</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">New Status:</strong> <span style="color:#4B2DBE; font-size:14px; font-weight:bold;">{{order_status}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Updated:</strong> <span style="color:#666; font-size:14px;">{{update_date}}</span></td></tr>
                                 </table>
                             </div>
                             <p style="color:#666; font-size:14px; line-height:1.6; margin:20px 0;">{{status_message}}</p>
-                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#720eec; text-decoration:none;">support@mylegacycannabis.ca</a></p>
+                            <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
     variables: ["customer_name","order_id","order_status","update_date","status_message","logo_url","unsubscribe_url","privacy_url"],

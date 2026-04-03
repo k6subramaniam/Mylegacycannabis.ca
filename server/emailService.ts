@@ -338,28 +338,31 @@ export async function sendOTPEmail(
   const subject = `My Legacy Cannabis — Your Verification Code: ${code}`;
   const resolvedLogo = await getLogoUrl();
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${resolvedLogo}"
-             alt="My Legacy Cannabis" style="height: 48px;" />
+    <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+      <div style="background-color: #3A2270; padding: 24px; text-align: center;">
+        <img src="${resolvedLogo}" alt="My Legacy Cannabis" style="max-width: 200px; height: auto;" />
       </div>
-      <h2 style="color: #4B2D8E; text-align: center; margin-bottom: 8px;">Verification Code</h2>
-      <p style="color: #555; text-align: center; margin-bottom: 24px;">
-        Use this code to ${purposeText} your account:
-      </p>
-      <div style="background: #F5F5F5; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
-        <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4B2D8E;">${code}</span>
+      <div style="height: 5px; background: linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%);"></div>
+      <div style="padding: 32px 24px;">
+        <h2 style="color: #4B2DBE; text-align: center; margin: 0 0 8px 0; font-size: 22px;">Verification Code</h2>
+        <p style="color: #323233; text-align: center; margin: 0 0 24px 0; font-size: 15px;">
+          Use this code to ${purposeText} your account:
+        </p>
+        <div style="background: #F5F5F5; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4B2DBE;">${code}</span>
+        </div>
+        <p style="color: #858481; font-size: 13px; text-align: center; margin: 0 0 8px 0;">
+          This code expires in <strong>10 minutes</strong>.
+        </p>
+        <p style="color: #858481; font-size: 11px; text-align: center; margin: 16px 0 0 0;">
+          If you did not request this code, please ignore this email.
+        </p>
       </div>
-      <p style="color: #888; font-size: 13px; text-align: center;">
-        This code expires in <strong>10 minutes</strong>.
-      </p>
-      <p style="color: #aaa; font-size: 11px; text-align: center; margin-top: 20px;">
-        If you did not request this code, please ignore this email.
-      </p>
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-      <p style="color: #aaa; font-size: 11px; text-align: center;">
-        My Legacy Cannabis · Mississauga, ON · mylegacycannabis.ca
-      </p>
+      <div style="background-color: #3A2270; padding: 16px; text-align: center;">
+        <p style="color: #999; font-size: 11px; margin: 0;">
+          My Legacy Cannabis &middot; mylegacycannabis.ca
+        </p>
+      </div>
     </div>
   `;
 
@@ -447,22 +450,24 @@ export async function sendAdminNotification(
 
   const resolvedLogo = await getLogoUrl();
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${resolvedLogo}"
-             alt="My Legacy Cannabis" style="height: 40px;" />
+    <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+      <div style="background-color: #3A2270; padding: 20px; text-align: center;">
+        <img src="${resolvedLogo}" alt="My Legacy Cannabis" style="max-width: 180px; height: auto;" />
       </div>
-      <div style="background: #4B2D8E; color: white; padding: 12px 20px; border-radius: 8px 8px 0 0;">
-        <h2 style="margin: 0; font-size: 16px;">🔔 ${subject}</h2>
+      <div style="height: 5px; background: linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%);"></div>
+      <div style="background: #4B2DBE; color: white; padding: 14px 20px;">
+        <h2 style="margin: 0; font-size: 16px; font-weight: bold;">Admin Alert: ${subject}</h2>
       </div>
-      <div style="background: #F9F9F9; padding: 20px; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px;">
-        <p style="color: #333; font-size: 14px; line-height: 1.6; margin: 0;">
+      <div style="background: #F5F5F5; padding: 24px; border: 1px solid #eee; border-top: none;">
+        <p style="color: #323233; font-size: 14px; line-height: 1.6; margin: 0;">
           ${content.replace(/\n/g, "<br/>")}
         </p>
       </div>
-      <p style="color: #aaa; font-size: 11px; text-align: center; margin-top: 20px;">
-        My Legacy Cannabis Admin Notification · ${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })}
-      </p>
+      <div style="background-color: #3A2270; padding: 14px; text-align: center;">
+        <p style="color: #999; font-size: 11px; margin: 0;">
+          MyLegacy Cannabis Admin &middot; ${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })}
+        </p>
+      </div>
     </div>
   `;
 
@@ -483,16 +488,19 @@ export async function sendCustomerEmail(
   // Otherwise wrap in a simple layout (for inline content)
   const resolvedLogo = await getLogoUrl();
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${resolvedLogo}"
-             alt="My Legacy Cannabis" style="height: 40px;" />
+    <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+      <div style="background-color: #3A2270; padding: 20px; text-align: center;">
+        <img src="${resolvedLogo}" alt="My Legacy Cannabis" style="max-width: 180px; height: auto;" />
       </div>
-      ${bodyHtml}
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-      <p style="color: #aaa; font-size: 11px; text-align: center;">
-        My Legacy Cannabis · Mississauga, ON · mylegacycannabis.ca
-      </p>
+      <div style="height: 5px; background: linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%);"></div>
+      <div style="padding: 24px;">
+        ${bodyHtml}
+      </div>
+      <div style="background-color: #3A2270; padding: 16px; text-align: center;">
+        <p style="color: #999; font-size: 11px; margin: 0;">
+          MyLegacy Cannabis &middot; mylegacycannabis.ca
+        </p>
+      </div>
     </div>
   `;
 

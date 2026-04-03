@@ -1050,8 +1050,10 @@ Return ONLY the JSON object with the improved template.`;
     // ─── SITE LOGO (global — used in header, footer, admin, emails, etc.) ───
     emailLogo: router({
       get: adminProcedure.query(async () => {
-        const url = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url");
-        return { url: url || "/logo.png" };
+        const raw = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url") || "";
+        // If the stored logo is an oversized data URL (>50KB), fall back to static file
+        const url = (raw && raw.length < 50000) ? raw : "/logo.png";
+        return { url };
       }),
       update: adminProcedure.input(z.object({
         url: z.string().url(),
@@ -1090,6 +1092,20 @@ Return ONLY the JSON object with the improved template.`;
           details: `Uploaded new site logo (${input.fileName})`,
         });
         return { success: true, url };
+      }),
+      reset: adminProcedure.mutation(async ({ ctx }) => {
+        // Clear custom logo — revert to the default /logo.png
+        await db.setSiteSetting("site_logo_url", "");
+        await db.setSiteSetting("email_logo_url", "");
+        await db.logAdminActivity({
+          adminId: ctx.user?.id || 0,
+          adminName: ctx.user?.name || "Admin",
+          action: "reset_site_logo",
+          entityType: "site_setting",
+          entityId: 0,
+          details: `Reset site logo to default /logo.png`,
+        });
+        return { success: true, url: "/logo.png" };
       }),
     }),
 
@@ -1312,7 +1328,9 @@ Return ONLY the JSON object with the improved template.`;
         db.getSiteSetting("site_logo_url"),
         db.getSiteSetting("email_logo_url"),
       ]);
-      const logoUrl = siteLogoUrl || emailLogoUrl || "/logo.png";
+      // If the stored logo is an oversized data URL (>50KB), fall back to static file
+      const rawLogo = siteLogoUrl || emailLogoUrl || "";
+      const logoUrl = (rawLogo && rawLogo.length < 50000) ? rawLogo : "/logo.png";
       return {
         idVerificationEnabled,
         idVerificationMode,

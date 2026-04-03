@@ -354,28 +354,31 @@ export async function sendTestEmail(to: string): Promise<{
   const subject = `[Test] My Legacy Cannabis — Email Health Check (${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })})`;
   const resolvedLogo = await getLogoUrl();
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="${resolvedLogo}"
-             alt="My Legacy Cannabis" style="height: 48px;" />
+    <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+      <div style="background-color: #3A2270; padding: 20px; text-align: center;">
+        <img src="${resolvedLogo}" alt="My Legacy Cannabis" style="max-width: 180px; height: auto;" />
       </div>
-      <div style="background: #10B981; color: white; padding: 16px 20px; border-radius: 12px; text-align: center; margin-bottom: 16px;">
-        <h2 style="margin: 0; font-size: 18px;">Email Health Check Passed</h2>
+      <div style="height: 5px; background: linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%);"></div>
+      <div style="background: #4CAF50; color: white; padding: 16px 20px; text-align: center;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: bold;">Email Health Check Passed</h2>
       </div>
-      <p style="color: #555; text-align: center; font-size: 14px;">
-        This is a test email from the Email Health Monitor.
-        If you're reading this, your email delivery is working correctly.
-      </p>
-      <div style="background: #F5F5F5; border-radius: 8px; padding: 12px 16px; margin-top: 16px;">
-        <p style="color: #888; font-size: 12px; margin: 0;">
-          Sent at: ${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })} ET<br/>
-          Provider: ${ENV.resendApiKey ? "Resend" : ENV.smtpHost ? "SMTP" : "None"}
+      <div style="padding: 24px;">
+        <p style="color: #323233; text-align: center; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+          This is a test email from the Email Health Monitor.
+          If you're reading this, your email delivery is working correctly.
+        </p>
+        <div style="background: #F5F5F5; border-radius: 8px; padding: 14px 16px;">
+          <p style="color: #858481; font-size: 12px; margin: 0;">
+            Sent at: ${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })} ET<br/>
+            Provider: ${ENV.resendApiKey ? "Resend" : ENV.smtpHost ? "SMTP" : "None"}
+          </p>
+        </div>
+      </div>
+      <div style="background-color: #3A2270; padding: 14px; text-align: center;">
+        <p style="color: #999; font-size: 11px; margin: 0;">
+          MyLegacy Cannabis &middot; Admin Email Health Monitor
         </p>
       </div>
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-      <p style="color: #aaa; font-size: 11px; text-align: center;">
-        My Legacy Cannabis · Admin Email Health Monitor
-      </p>
     </div>
   `;
 
