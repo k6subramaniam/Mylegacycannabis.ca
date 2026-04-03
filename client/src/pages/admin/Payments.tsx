@@ -1,8 +1,9 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import {
-  DollarSign, Search, RefreshCw, Check, X, Eye, AlertCircle,
-  CheckCircle2, Clock, Ban, Link2, Zap, HelpCircle, Mail, Save, Edit3
+  DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
+  CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
+  Download, Trash2, AlertTriangle, FileDown, Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -28,13 +29,27 @@ const STATUS_ICONS: Record<string, any> = {
   ignored: Ban,
 };
 
+/** Escape a value for CSV (handles commas, quotes, newlines) */
+function csvEscape(val: string | null | undefined): string {
+  if (val == null) return "";
+  const s = String(val);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 export default function AdminPayments() {
+  const utils = trpc.useUtils();
   const [tab, setTab] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [matchOrderId, setMatchOrderId] = useState<Record<number, string>>({});
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailInput, setEmailInput] = useState("");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const statusFilter = tab === "all" ? undefined : tab;
 
@@ -53,6 +68,8 @@ export default function AdminPayments() {
       toast.success(`Payment email updated to ${res.email}`);
       setEditingEmail(false);
       refetchStatus();
+      // Also invalidate siteConfig so frontend (Checkout, FAQ, etc.) picks up the change immediately
+      utils.store.siteConfig.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -81,6 +98,67 @@ export default function AdminPayments() {
     onError: (err) => toast.error(err.message),
   });
 
+  const deleteMutation = trpc.etransfer.deleteRecord.useMutation({
+    onSuccess: () => {
+      toast.success("Payment record deleted");
+      setDeletingId(null);
+      setExpandedId(null);
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const clearHistoryMutation = trpc.etransfer.clearHistory.useMutation({
+    onSuccess: (res: any) => {
+      toast.success(`Cleared ${res.deleted} payment records`);
+      setShowClearConfirm(false);
+      setClearConfirmText("");
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ─── Export CSV ───
+  const handleExportCSV = async () => {
+    try {
+      const allRecords: any[] = await utils.etransfer.exportAll.fetch();
+      if (!allRecords || allRecords.length === 0) {
+        toast.error("No payment records to export");
+        return;
+      }
+
+      const headers = ["ID", "Date", "Sender Name", "Sender Email", "Amount", "Memo", "Subject", "Matched Order", "Match Method", "Confidence", "Status", "Admin Notes"];
+      const rows = allRecords.map((r: any) => [
+        r.id,
+        r.receivedAt ? new Date(r.receivedAt).toLocaleString("en-CA") : "",
+        csvEscape(r.senderName),
+        csvEscape(r.senderEmail),
+        r.amount ? parseFloat(r.amount).toFixed(2) : "",
+        csvEscape(r.memo),
+        csvEscape(r.rawSubject),
+        r.matchedOrderNumber || "",
+        r.matchMethod || "",
+        r.matchConfidence || "",
+        r.status || "",
+        csvEscape(r.adminNotes),
+      ]);
+
+      const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mlc-payment-history-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${allRecords.length} records to CSV`);
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    }
+  };
+
   const payments = data?.data || [];
   const total = data?.total || 0;
 
@@ -105,7 +183,7 @@ export default function AdminPayments() {
             Auto-match Interac e-Transfer deposits to orders
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Service Status Badge */}
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
             serviceStatus?.configured ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -113,6 +191,28 @@ export default function AdminPayments() {
             <div className={`w-2 h-2 rounded-full ${serviceStatus?.configured ? "bg-green-500" : "bg-red-500"}`} />
             {serviceStatus?.configured ? "Gmail Connected" : "Gmail Not Configured"}
           </div>
+
+          {/* Export CSV */}
+          <button
+            onClick={handleExportCSV}
+            disabled={total === 0}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-40 transition-all"
+            title="Export all payment records as CSV"
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+
+          {/* Clear History */}
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            disabled={total === 0}
+            className="flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-40 transition-all"
+            title="Wipe all payment history"
+          >
+            <Trash2 size={14} />
+            Clear History
+          </button>
 
           {/* Poll Button */}
           <button
@@ -128,14 +228,22 @@ export default function AdminPayments() {
 
       {/* Payment Email Configuration */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#4B2D8E]/10 flex items-center justify-center">
               <Mail size={18} className="text-[#4B2D8E]" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-800">Customer-Facing Payment Email</h3>
-              <p className="text-xs text-gray-400">This is shown on Checkout, FAQ, and order confirmations</p>
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                Shown on Checkout, order confirmation emails, and FAQ
+                <span className="relative group">
+                  <Info size={12} className="text-gray-300 cursor-help" />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                    <strong>Global setting.</strong> Changing this email updates it everywhere: Checkout page, order confirmation emails, guest emails, and all templates using <code className="bg-white/20 px-1 rounded">{"{{payment_email}}"}</code>.
+                  </span>
+                </span>
+              </p>
             </div>
           </div>
           {!editingEmail ? (
@@ -146,7 +254,7 @@ export default function AdminPayments() {
               <button
                 onClick={() => { setEmailInput(serviceStatus?.paymentEmail || ""); setEditingEmail(true); }}
                 className="p-2 text-gray-400 hover:text-[#4B2D8E] rounded-lg hover:bg-gray-100 transition-colors"
-                title="Edit"
+                title="Edit payment email"
               >
                 <Edit3 size={14} />
               </button>
@@ -157,8 +265,9 @@ export default function AdminPayments() {
                 type="email"
                 value={emailInput}
                 onChange={e => setEmailInput(e.target.value)}
-                placeholder="e.g. kumar.subramaniam@hotmail.com"
+                placeholder="e.g. payments@mylegacycannabis.ca"
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-mono w-72 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none"
+                onKeyDown={e => { if (e.key === "Enter" && emailInput.includes("@")) updateEmailMutation.mutate({ email: emailInput.trim() }); }}
               />
               <button
                 onClick={() => { if (emailInput.includes("@")) updateEmailMutation.mutate({ email: emailInput.trim() }); }}
@@ -212,6 +321,15 @@ export default function AdminPayments() {
         ))}
       </div>
 
+      {/* Stats bar */}
+      {total > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">
+            {total} total record{total !== 1 ? "s" : ""}
+          </p>
+        </div>
+      )}
+
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
@@ -251,12 +369,11 @@ export default function AdminPayments() {
             <tbody className="divide-y divide-gray-50">
               {payments.map((p: any) => {
                 const StatusIcon = STATUS_ICONS[p.status] || HelpCircle;
-                const isExpanded = expandedId === p.id;
 
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {p.receivedAt ? new Date(p.receivedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      {p.receivedAt ? new Date(p.receivedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "\u2014"}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-800">{p.senderName || "Unknown"}</p>
@@ -264,7 +381,7 @@ export default function AdminPayments() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-sm font-semibold text-gray-800">
-                        {p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "—"}
+                        {p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -284,10 +401,10 @@ export default function AdminPayments() {
                             onChange={e => setMatchOrderId({ ...matchOrderId, [p.id]: e.target.value })}
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white max-w-[180px]"
                           >
-                            <option value="">Select order…</option>
+                            <option value="">Select order...</option>
                             {(pendingOrders || []).map((o: any) => (
                               <option key={o.id} value={o.id}>
-                                {o.orderNumber} — ${parseFloat(o.total).toFixed(2)} ({o.guestName || o.guestEmail})
+                                {o.orderNumber} - ${parseFloat(o.total).toFixed(2)} ({o.guestName || o.guestEmail})
                               </option>
                             ))}
                           </select>
@@ -303,7 +420,7 @@ export default function AdminPayments() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-gray-400">{"\u2014"}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -320,7 +437,7 @@ export default function AdminPayments() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                          onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
                           className="p-1.5 text-gray-400 hover:text-[#4B2D8E] rounded-lg hover:bg-gray-100 transition-colors"
                           title="View details"
                         >
@@ -330,12 +447,19 @@ export default function AdminPayments() {
                           <button
                             onClick={() => ignoreMutation.mutate({ paymentId: p.id })}
                             disabled={ignoreMutation.isPending}
-                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-amber-500 rounded-lg hover:bg-amber-50 transition-colors"
                             title="Ignore"
                           >
-                            <X size={14} />
+                            <Ban size={14} />
                           </button>
                         )}
+                        <button
+                          onClick={() => setDeletingId(p.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Delete this record"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -348,7 +472,7 @@ export default function AdminPayments() {
           {total > 25 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
               <p className="text-sm text-gray-500">
-                Showing {(page - 1) * 25 + 1}–{Math.min(page * 25, total)} of {total}
+                Showing {(page - 1) * 25 + 1}-{Math.min(page * 25, total)} of {total}
               </p>
               <div className="flex gap-1">
                 <button
@@ -371,7 +495,7 @@ export default function AdminPayments() {
         </div>
       )}
 
-      {/* Expanded Details Modal */}
+      {/* ═══ Payment Details Modal ═══ */}
       {expandedId && payments.find((p: any) => p.id === expandedId) && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setExpandedId(null)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
@@ -380,19 +504,19 @@ export default function AdminPayments() {
               return (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-800">Payment Details #{p.id}</h3>
+                    <h3 className="font-bold text-gray-800 text-lg">Payment Details #{p.id}</h3>
                     <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 gap-3">
-                      <div><span className="text-gray-400">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p></div>
-                      <div><span className="text-gray-400">Amount</span><p className="font-medium">{p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "—"}</p></div>
-                      <div><span className="text-gray-400">Date</span><p className="font-medium">{p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-CA") : "—"}</p></div>
-                      <div><span className="text-gray-400">Match Method</span><p className="font-medium">{p.matchMethod || "—"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Amount</span><p className="font-medium">{p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Date</span><p className="font-medium">{p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-CA") : "\u2014"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{p.matchMethod || "\u2014"}</p></div>
                     </div>
-                    <div><span className="text-gray-400">Subject</span><p className="font-medium break-words">{p.rawSubject || "—"}</p></div>
-                    <div><span className="text-gray-400">Memo</span><p className="font-medium break-words">{p.memo || "No memo"}</p></div>
-                    <div><span className="text-gray-400">Email Snippet</span><p className="text-xs text-gray-500 break-words bg-gray-50 p-3 rounded-lg max-h-32 overflow-y-auto">{p.rawBodySnippet || "—"}</p></div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Subject</span><p className="font-medium break-words">{p.rawSubject || "\u2014"}</p></div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Memo</span><p className="font-medium break-words">{p.memo || "No memo"}</p></div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Email Snippet</span><p className="text-xs text-gray-500 break-words bg-gray-50 p-3 rounded-lg max-h-32 overflow-y-auto">{p.rawBodySnippet || "\u2014"}</p></div>
                     {p.matchedOrderNumber && (
                       <div className="flex items-center gap-2 pt-2 border-t">
                         <Link2 size={14} className="text-[#4B2D8E]" />
@@ -400,10 +524,110 @@ export default function AdminPayments() {
                         <Link href={`/admin/orders/${p.matchedOrderId}`} className="font-mono text-[#4B2D8E] hover:underline">{p.matchedOrderNumber}</Link>
                       </div>
                     )}
+                    {p.adminNotes && (
+                      <div className="pt-2 border-t">
+                        <span className="text-gray-400 text-xs uppercase tracking-wide">Admin Notes</span>
+                        <p className="font-medium text-gray-600">{p.adminNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Delete from modal */}
+                  <div className="mt-5 pt-4 border-t border-gray-100 flex justify-end">
+                    <button
+                      onClick={() => { setExpandedId(null); setDeletingId(p.id); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={12} /> Delete Record
+                    </button>
                   </div>
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Delete Single Record Confirmation ═══ */}
+      {deletingId !== null && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDeletingId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 size={18} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800">Delete Payment #{deletingId}</h3>
+                <p className="text-xs text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              Are you sure you want to permanently delete this payment record? This will remove it from the database and it cannot be recovered.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeletingId(null)}
+                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate({ paymentId: deletingId })}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-all"
+              >
+                {deleteMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Clear All History Confirmation ═══ */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowClearConfirm(false); setClearConfirmText(""); }}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle size={22} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">Clear All Payment History</h3>
+                <p className="text-xs text-red-500 font-medium">DANGER: This is irreversible</p>
+              </div>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-800">
+                This will permanently delete <strong>all {total} payment records</strong> from the database. This includes matched, unmatched, and ignored records. This action <strong>cannot be undone</strong>.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Type <strong className="text-red-600 font-mono">DELETE ALL</strong> to confirm:
+            </p>
+            <input
+              type="text"
+              value={clearConfirmText}
+              onChange={e => setClearConfirmText(e.target.value)}
+              placeholder="Type DELETE ALL"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono mb-4 focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowClearConfirm(false); setClearConfirmText(""); }}
+                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => clearHistoryMutation.mutate()}
+                disabled={clearConfirmText !== "DELETE ALL" || clearHistoryMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {clearHistoryMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Wipe All Records
+              </button>
+            </div>
           </div>
         </div>
       )}

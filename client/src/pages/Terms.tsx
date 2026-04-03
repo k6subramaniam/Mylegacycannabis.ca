@@ -1,7 +1,9 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function Terms() {
+  const { paymentEmail } = useSiteConfig();
   return (
     <>
       <SEOHead
@@ -32,7 +34,7 @@ export default function Terms() {
               },
               {
                 title: '3. ORDERING & PAYMENT',
-                content: 'The minimum order amount is $40. We currently accept Interac e-Transfer as our only payment method. Orders are processed once payment is received. E-Transfers should be sent to payments@mylegacycannabis.ca with your order number in the message. No taxes are charged on orders.'
+                content: `The minimum order amount is $40. We currently accept Interac e-Transfer as our only payment method. Orders are processed once payment is received. E-Transfers should be sent to ${paymentEmail} with your order number in the message. No taxes are charged on orders.`
               },
               {
                 title: '4. SHIPPING & DELIVERY',
