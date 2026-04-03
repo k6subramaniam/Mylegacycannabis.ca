@@ -263,7 +263,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:16px;">Next Step: Send Payment via Interac e-Transfer</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">payments@mylegacycannabis.ca</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">{{payment_email}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{payment_amount}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Reference:</strong> <span style="color:#666; font-size:14px;">{{payment_reference}}</span></td></tr>
                                     <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the reference number in your e-transfer message</em></td></tr>
@@ -275,7 +275,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","logo_url","unsubscribe_url","privacy_url"],
+    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","payment_email","logo_url","unsubscribe_url","privacy_url"],
     isActive: true,
   },
 
@@ -386,7 +386,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <div style="background-color:#FFF59D; border-left:4px solid #FFD700; padding:20px; margin:20px 0; border-radius:8px;">
                                 <h3 style="color:#333; margin:0 0 15px 0; font-size:16px;">Next Step: Send Payment via Interac e-Transfer</h3>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">payments@mylegacycannabis.ca</span></td></tr>
+                                    <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">{{payment_email}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Reference:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
                                     <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the order number in your e-transfer message</em></td></tr>
@@ -398,13 +398,12 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+    variables: ["customer_name","order_id","order_total","payment_amount","payment_reference","payment_email","action_url","logo_url","unsubscribe_url","privacy_url"],
     isActive: true,
   },
 
   // ═══════════════════════════════════════
   // 9. ADMIN: GUEST ID PENDING
-  // ═══════════════════════════════════════
   {
     slug: "guest-id-pending-admin",
     name: "Admin: Guest ID Pending",

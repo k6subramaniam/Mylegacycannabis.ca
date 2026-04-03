@@ -109,8 +109,12 @@ async function commonVars(): Promise<Record<string, string>> {
   const logoUrl = await db.getSiteSetting("site_logo_url")
     || await db.getSiteSetting("email_logo_url")
     || getDefaultLogoUrl();
+  const paymentEmail = await db.getSiteSetting("payment_email")
+    || process.env.GMAIL_PAYMENT_EMAIL
+    || "payments@mylegacycannabis.ca";
   return {
     logo_url: logoUrl,
+    payment_email: paymentEmail,
     unsubscribe_url: `${base}/unsubscribe`,
     privacy_url: `${base}/privacy`,
     terms_url: `${base}/terms`,

@@ -35,6 +35,7 @@ const ALL_VARIABLES = [
   { key: "order_status", label: "Order Status", group: "Order" },
   { key: "update_date", label: "Update Date", group: "Order" },
   { key: "status_message", label: "Status Message", group: "Order" },
+  { key: "payment_email", label: "Payment Email", group: "Payment" },
   { key: "payment_amount", label: "Payment Amount", group: "Payment" },
   { key: "payment_reference", label: "Payment Reference", group: "Payment" },
   { key: "tracking_number", label: "Tracking Number", group: "Shipping" },
@@ -504,6 +505,249 @@ function AiGenerateModal({ onClose, onCreated }: { onClose: () => void; onCreate
 }
 
 // ═══════════════════════════════════════════════════════════
+// VISUAL EMAIL EDITOR — Block-based editing
+// Parses the email HTML into editable text sections so admins
+// can edit content without touching raw HTML.
+// ═══════════════════════════════════════════════════════════
+
+interface EditableBlock {
+  id: string;
+  /** The full original HTML of this block (for reconstruction) */
+  originalHtml: string;
+  /** The visible/editable text inside the block */
+  text: string;
+  /** Type determines the UI treatment */
+  type: "heading" | "paragraph" | "info-box" | "warning-box" | "success-box" | "danger-box" | "button" | "table-row" | "raw";
+  /** Label shown above the block */
+  label: string;
+}
+
+/** Map inline style patterns to block types */
+function classifyBlock(html: string): EditableBlock["type"] {
+  const lower = html.toLowerCase();
+  if (/background\s*:\s*linear-gradient/i.test(lower) && /<h1/i.test(lower)) return "heading";
+  if (/border-radius:\s*50px|border-radius:\s*50/i.test(lower) && /<a\s/i.test(lower)) return "button";
+  if (/background-color\s*:\s*#e3f2fd|background-color\s*:\s*#ede7f6|border-left\s*:\s*4px\s+solid\s+#(4a90e2|4b2dbe|2196f3)/i.test(lower)) return "info-box";
+  if (/background-color\s*:\s*#fff59d|background-color\s*:\s*#fff3e0|border-left\s*:\s*4px\s+solid\s+#(ffd700|f19929|ff9800)/i.test(lower)) return "warning-box";
+  if (/background-color\s*:\s*#e8f5e9|border-left\s*:\s*4px\s+solid\s+#4caf50/i.test(lower)) return "success-box";
+  if (/background-color\s*:\s*#ffebee|border-left\s*:\s*4px\s+solid\s+#f44336/i.test(lower)) return "danger-box";
+  return "paragraph";
+}
+
+function blockLabel(type: EditableBlock["type"]): string {
+  switch (type) {
+    case "heading": return "Header Banner";
+    case "button": return "CTA Button";
+    case "info-box": return "Info Box";
+    case "warning-box": return "Warning / Payment Box";
+    case "success-box": return "Success Box";
+    case "danger-box": return "Alert Box";
+    case "table-row": return "Table Row";
+    case "paragraph": return "Text Block";
+    default: return "Block";
+  }
+}
+
+function blockColor(type: EditableBlock["type"]): string {
+  switch (type) {
+    case "heading": return "#4B2DBE";
+    case "button": return "#F19929";
+    case "info-box": return "#2196F3";
+    case "warning-box": return "#FF9800";
+    case "success-box": return "#4CAF50";
+    case "danger-box": return "#F44336";
+    default: return "#6B7280";
+  }
+}
+
+/** Extract inner text from HTML string (strip tags) */
+function htmlToText(html: string): string {
+  // Replace <br>, <br/> with newlines, strip remaining tags
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
+    .replace(/<\/div>\s*<div[^>]*>/gi, "\n")
+    .replace(/<\/?(strong|b|em|i|span|a|u|code)[^>]*>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .trim();
+}
+
+/**
+ * Parse the bodyHtml into editable blocks.
+ * We split on top-level <tr>...</tr> blocks which is how MLC email templates
+ * are structured (each <tr> is a visual section).
+ */
+function parseBlocks(html: string): EditableBlock[] {
+  // Split by top-level <tr> tags — each is a section
+  const trRegex = /<tr\b[^>]*>[\s\S]*?<\/tr>/gi;
+  const matches = html.match(trRegex);
+  if (!matches || matches.length === 0) {
+    // Fallback: treat entire HTML as one block
+    return [{ id: "0", originalHtml: html, text: htmlToText(html), type: "raw", label: "Email Body" }];
+  }
+
+  return matches.map((trHtml, idx) => {
+    const type = classifyBlock(trHtml);
+    const text = htmlToText(trHtml);
+    return {
+      id: String(idx),
+      originalHtml: trHtml,
+      text,
+      type,
+      label: blockLabel(type),
+    };
+  });
+}
+
+/**
+ * Given the original full HTML and a set of edited blocks,
+ * reconstruct the HTML by replacing text content in each block.
+ */
+function reconstructHtml(originalHtml: string, blocks: EditableBlock[]): string {
+  let result = originalHtml;
+  for (const block of blocks) {
+    // We find and keep the original block HTML — no reconstruction needed
+    // since we only allow editing via the visual preview iframe
+    // The visual editor uses AI Improve for structural changes
+  }
+  return result;
+}
+
+function VisualEmailEditor({ html, onChange }: { html: string; onChange: (html: string) => void }) {
+  const blocks = parseBlocks(html);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const handleBlockClick = (block: EditableBlock) => {
+    if (block.type === "raw") return;
+    setEditingBlockId(block.id);
+    setEditingText(block.text);
+  };
+
+  const handleBlockSave = (block: EditableBlock) => {
+    if (!editingText.trim()) {
+      setEditingBlockId(null);
+      return;
+    }
+    // Replace the text content inside the original HTML block
+    // Strategy: find all text nodes and replace them
+    let updatedBlockHtml = block.originalHtml;
+    const oldText = block.text;
+    const newText = editingText;
+
+    // For simple text changes, do a targeted text replacement within the HTML
+    // Split both old and new into lines and match line-by-line
+    const oldLines = oldText.split("\n").map(l => l.trim()).filter(Boolean);
+    const newLines = newText.split("\n").map(l => l.trim()).filter(Boolean);
+
+    for (let i = 0; i < oldLines.length && i < newLines.length; i++) {
+      if (oldLines[i] !== newLines[i]) {
+        // Escape special regex chars in old text
+        const escaped = oldLines[i].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(escaped, "g");
+        updatedBlockHtml = updatedBlockHtml.replace(regex, newLines[i]);
+      }
+    }
+
+    // Replace the block in the full HTML
+    const newHtml = html.replace(block.originalHtml, updatedBlockHtml);
+    onChange(newHtml);
+    setEditingBlockId(null);
+  };
+
+  // Variable highlight: show {{vars}} as purple pills in text
+  const highlightVars = (text: string) => {
+    const parts = text.split(/(\{\{[a-z_]+\}\})/g);
+    return parts.map((part, i) =>
+      /^\{\{[a-z_]+\}\}$/.test(part)
+        ? <span key={i} className="inline-block bg-[#4B2DBE]/15 text-[#4B2DBE] text-[11px] font-mono px-1.5 py-0.5 rounded-full mx-0.5">{part}</span>
+        : <span key={i}>{part}</span>
+    );
+  };
+
+  return (
+    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+      <div className="flex items-center gap-2 mb-1">
+        <LayoutTemplate size={13} className="text-[#4B2DBE]" />
+        <span className="text-xs font-medium text-gray-500">Click any section to edit its content</span>
+      </div>
+
+      {blocks.map((block) => {
+        const isEditing = editingBlockId === block.id;
+        const color = blockColor(block.type);
+
+        // Skip blocks with no meaningful text
+        if (!block.text.trim() && block.type !== "heading") return null;
+
+        return (
+          <div key={block.id} className="group relative">
+            {/* Block label */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>{block.label}</span>
+            </div>
+
+            {isEditing ? (
+              /* Edit mode */
+              <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: color }}>
+                <textarea
+                  value={editingText}
+                  onChange={(e) => setEditingText(e.target.value)}
+                  rows={Math.max(3, editingText.split("\n").length + 1)}
+                  className="w-full px-4 py-3 text-sm resize-y focus:outline-none leading-relaxed"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-100">
+                  <span className="text-[10px] text-gray-400">Use {"{{variable_name}}"} for dynamic content</span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setEditingBlockId(null)}
+                      className="px-3 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-200 transition-colors">
+                      Cancel
+                    </button>
+                    <button type="button" onClick={() => handleBlockSave(block)}
+                      className="px-3 py-1 rounded-lg text-xs text-white font-medium transition-colors"
+                      style={{ backgroundColor: color }}>
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* View mode — clickable card */
+              <button
+                type="button"
+                onClick={() => handleBlockClick(block)}
+                className="w-full text-left rounded-xl border border-gray-200 px-4 py-3 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group-hover:border-gray-300"
+              >
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {highlightVars(block.text)}
+                </p>
+                <span className="text-[10px] text-gray-300 group-hover:text-gray-400 mt-1 block transition-colors">Click to edit</span>
+              </button>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Tip */}
+      <div className="flex items-start gap-2 mt-3 px-3 py-2.5 rounded-lg bg-violet-50 border border-violet-100">
+        <Sparkles size={13} className="text-violet-500 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-violet-600 leading-relaxed">
+          <strong>Tip:</strong> For structural changes (add sections, rearrange layout, change colors), use the <strong>AI Improve</strong> button above with a natural language instruction like "Add a delivery ETA section" or "Change the header color to green".
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // EDIT TEMPLATE MODAL — Visual Editor with Live Preview
 // ═══════════════════════════════════════════════════════════
 
@@ -573,6 +817,7 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
     .replace(/\{\{order_total\}\}/g, "$127.50")
     .replace(/\{\{order_items\}\}/g, "Blue Dream 3.5g x2, Gummy Bears 10pk x1")
     .replace(/\{\{delivery_address\}\}/g, "123 Queen St W, Toronto ON M5H 2N2")
+    .replace(/\{\{payment_email\}\}/g, "payments@mylegacycannabis.ca")
     .replace(/\{\{payment_amount\}\}/g, "$127.50")
     .replace(/\{\{payment_reference\}\}/g, "MLC-2026-0042")
     .replace(/\{\{tracking_number\}\}/g, "CP123456789CA")
@@ -700,9 +945,7 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
                 <textarea ref={textareaRef} value={editForm.bodyHtml} onChange={(e) => setEditForm(f => ({ ...f, bodyHtml: e.target.value }))}
                   rows={18} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-mono resize-y bg-gray-50 focus:ring-2 focus:ring-[#4B2DBE] focus:border-transparent leading-relaxed" />
               ) : (
-                <textarea ref={textareaRef} value={editForm.bodyHtml} onChange={(e) => setEditForm(f => ({ ...f, bodyHtml: e.target.value }))}
-                  rows={18} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-y focus:ring-2 focus:ring-[#4B2DBE] focus:border-transparent leading-relaxed"
-                  placeholder="Edit the email HTML here. Use the toolbar above to insert snippets and variables..." />
+                <VisualEmailEditor html={editForm.bodyHtml} onChange={(html) => setEditForm(f => ({ ...f, bodyHtml: html }))} />
               )}
             </div>
 

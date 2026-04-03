@@ -176,6 +176,7 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [savedPointsEarned, setSavedPointsEarned] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   // guestIdSubmitted: guest has uploaded their ID (order allowed, held for review)
   const [guestIdSubmitted, setGuestIdSubmitted] = useState(false);
@@ -266,7 +267,7 @@ export default function Checkout() {
           {isAuthenticated && (
             <div className="bg-[#4B2D8E]/5 rounded-xl p-4 mb-6 flex items-center gap-3">
               <Gift size={18} className="text-[#F15929] shrink-0" />
-              <p className="text-sm font-body text-[#4B2D8E]">You earned <strong>{pointsToEarn} points</strong> with this order!</p>
+              <p className="text-sm font-body text-[#4B2D8E]">You earned <strong>{savedPointsEarned} points</strong> with this order!</p>
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -349,6 +350,8 @@ export default function Checkout() {
         couponCode: appliedCoupon?.code || undefined,
       });
       setOrderNumber(result.orderNumber);
+      // Save points BEFORE clearing the cart (clearCart resets subtotal → 0 → points become 0)
+      setSavedPointsEarned(pointsToEarn);
       setOrderPlaced(true);
 
       // Add the order to the user's orders list so it shows on the Account > Orders tab
