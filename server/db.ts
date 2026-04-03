@@ -1568,6 +1568,36 @@ export async function getUnmatchedPaymentRecords() {
   return getDb().select().from(schema.paymentRecords).where(eq(schema.paymentRecords.status, 'unmatched')).orderBy(desc(schema.paymentRecords.createdAt));
 }
 
+/** Export ALL payment records (no pagination) for CSV download */
+export async function exportAllPaymentRecords() {
+  if (!USE_PERSISTENT_DB) {
+    return [..._mem_paymentRecords].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  return getDb().select().from(schema.paymentRecords).orderBy(desc(schema.paymentRecords.createdAt));
+}
+
+/** Delete a single payment record by ID */
+export async function deletePaymentRecord(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) {
+    const idx = _mem_paymentRecords.findIndex((p: any) => p.id === id);
+    if (idx >= 0) _mem_paymentRecords.splice(idx, 1);
+    return;
+  }
+  await getDb().delete(schema.paymentRecords).where(eq(schema.paymentRecords.id, id));
+}
+
+/** Wipe all payment records (clear history) */
+export async function clearAllPaymentRecords(): Promise<number> {
+  if (!USE_PERSISTENT_DB) {
+    const count = _mem_paymentRecords.length;
+    _mem_paymentRecords.length = 0;
+    return count;
+  }
+  const [{ value: total }] = await getDb().select({ value: count() }).from(schema.paymentRecords);
+  await getDb().delete(schema.paymentRecords);
+  return Number(total);
+}
+
 export async function getPendingETransferOrders() {
   if (!USE_PERSISTENT_DB) return _mem_getPendingETransferOrders();
   return getDb().select().from(schema.orders)

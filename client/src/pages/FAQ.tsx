@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { Link } from 'wouter';
 import { ChevronDown, Search, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useT } from '@/i18n';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 const faqCategories = [
   {
@@ -19,7 +20,7 @@ const faqCategories = [
   {
     name: 'Payment',
     items: [
-      { q: 'What payment methods do you accept?', a: 'We currently accept Interac e-Transfer only. After placing your order, send your e-Transfer to payments@mylegacycannabis.ca with your order number in the message.' },
+      { q: 'What payment methods do you accept?', a: '__PAYMENT_METHOD_ANSWER__' },
       { q: 'Do you accept credit cards?', a: 'Not at this time. We are working on adding credit card payment options in the future.' },
       { q: 'When should I send my e-Transfer?', a: 'Please send your e-Transfer immediately after placing your order. Orders are processed once payment is received.' },
       { q: 'Is my payment secure?', a: 'Yes. Interac e-Transfer is a secure, bank-to-bank payment method used by millions of Canadians.' },
@@ -67,6 +68,7 @@ const faqCategories = [
 
 export default function FAQ() {
   const { t } = useT();
+  const { paymentEmail } = useSiteConfig();
   const [search, setSearch] = useState('');
   const [openCategory, setOpenCategory] = useState<string | null>('Ordering');
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
@@ -77,15 +79,29 @@ export default function FAQ() {
     setOpenItems(next);
   };
 
+  // Inject dynamic payment email into the static FAQ data
+  const dynamicCategories = useMemo(() =>
+    faqCategories.map(cat => ({
+      ...cat,
+      items: cat.items.map(item => ({
+        ...item,
+        a: item.a.replace('__PAYMENT_METHOD_ANSWER__',
+          `We currently accept Interac e-Transfer only. After placing your order, send your e-Transfer to ${paymentEmail} with your order number in the message.`
+        ),
+      })),
+    })),
+    [paymentEmail]
+  );
+
   const filtered = search.trim()
-    ? faqCategories.map(cat => ({
+    ? dynamicCategories.map(cat => ({
         ...cat,
         items: cat.items.filter(item =>
           item.q.toLowerCase().includes(search.toLowerCase()) ||
           item.a.toLowerCase().includes(search.toLowerCase())
         )
       })).filter(cat => cat.items.length > 0)
-    : faqCategories;
+    : dynamicCategories;
 
   return (
     <>
@@ -169,7 +185,7 @@ export default function FAQ() {
       {/* FAQ Schema */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "FAQPage",
-        "mainEntity": faqCategories.flatMap(cat => cat.items.map(item => ({
+        "mainEntity": dynamicCategories.flatMap(cat => cat.items.map(item => ({
           "@type": "Question", "name": item.q,
           "acceptedAnswer": { "@type": "Answer", "text": item.a }
         })))

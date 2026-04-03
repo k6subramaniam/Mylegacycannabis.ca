@@ -1916,6 +1916,42 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       });
       return { success: true, email: input.email };
     }),
+
+    // Admin: export ALL payment records (no pagination) for CSV download
+    exportAll: adminProcedure.query(async () => {
+      const records = await db.exportAllPaymentRecords();
+      return records;
+    }),
+
+    // Admin: delete a single payment record
+    deleteRecord: adminProcedure.input(z.object({
+      paymentId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      await db.deletePaymentRecord(input.paymentId);
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "delete_payment_record",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Deleted payment record #${input.paymentId}`,
+      });
+      return { success: true };
+    }),
+
+    // Admin: wipe all payment history
+    clearHistory: adminProcedure.mutation(async ({ ctx }) => {
+      const deleted = await db.clearAllPaymentRecords();
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "clear_payment_history",
+        entityType: "payment",
+        entityId: 0,
+        details: `Cleared all payment history (${deleted} records deleted)`,
+      });
+      return { success: true, deleted };
+    }),
   }),
 });
 
