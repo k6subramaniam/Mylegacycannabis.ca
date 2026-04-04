@@ -50,6 +50,8 @@ export default function AdminPayments() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearConfirmText, setClearConfirmText] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reassignOrderId, setReassignOrderId] = useState<Record<number, string>>({});
+  const [reassigningId, setReassigningId] = useState<number | null>(null);
 
   const statusFilter = tab === "all" ? undefined : tab;
 
@@ -85,6 +87,23 @@ export default function AdminPayments() {
   const matchMutation = trpc.etransfer.manualMatch.useMutation({
     onSuccess: () => {
       toast.success("Payment matched to order!");
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const reassignMutation = trpc.etransfer.reassign.useMutation({
+    onSuccess: () => {
+      toast.success("Payment reassigned to new order!");
+      setReassignOrderId({});
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const unmatchMutation = trpc.etransfer.unmatch.useMutation({
+    onSuccess: () => {
+      toast.success("Payment unlinked from order");
       refetch();
     },
     onError: (err) => toast.error(err.message),
@@ -391,9 +410,52 @@ export default function AdminPayments() {
                     </td>
                     <td className="px-4 py-3">
                       {p.matchedOrderNumber ? (
-                        <Link href={`/admin/orders/${p.matchedOrderId}`} className="text-sm font-mono text-[#4B2D8E] hover:underline">
-                          {p.matchedOrderNumber}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/admin/orders/${p.matchedOrderId}`} className="text-sm font-mono text-[#4B2D8E] hover:underline">
+                            {p.matchedOrderNumber}
+                          </Link>
+                          <button
+                            onClick={() => setReassigningId(reassigningId === p.id ? null : p.id)}
+                            className="p-1 text-gray-400 hover:text-orange-500 rounded hover:bg-orange-50 transition-colors"
+                            title="Reassign to different order"
+                          >
+                            <Edit3 size={11} />
+                          </button>
+                          <button
+                            onClick={() => unmatchMutation.mutate({ paymentId: p.id })}
+                            disabled={unmatchMutation.isPending}
+                            className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
+                            title="Unlink from this order"
+                          >
+                            <X size={11} />
+                          </button>
+                          {reassigningId === p.id && (
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={reassignOrderId[p.id] || ""}
+                                onChange={e => setReassignOrderId({ ...reassignOrderId, [p.id]: e.target.value })}
+                                className="text-xs border border-orange-200 rounded-lg px-2 py-1 bg-white max-w-[160px]"
+                              >
+                                <option value="">New order...</option>
+                                {(pendingOrders || []).map((o: any) => (
+                                  <option key={o.id} value={o.id}>
+                                    {o.orderNumber} - ${parseFloat(o.total).toFixed(2)}
+                                  </option>
+                                ))}
+                              </select>
+                              {reassignOrderId[p.id] && (
+                                <button
+                                  onClick={() => reassignMutation.mutate({ paymentId: p.id, newOrderId: parseInt(reassignOrderId[p.id]) })}
+                                  disabled={reassignMutation.isPending}
+                                  className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                                  title="Reassign"
+                                >
+                                  <Check size={12} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : p.status === "unmatched" ? (
                         <div className="flex items-center gap-1.5">
                           <select

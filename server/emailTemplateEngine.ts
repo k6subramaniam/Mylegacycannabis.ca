@@ -167,6 +167,7 @@ export async function triggerOrderConfirmation(params: {
     delivery_address: params.deliveryAddress,
     payment_amount: `$${params.paymentAmount}`,
     payment_reference: params.orderId,
+    payment_instructions: `<div style="background-color:#FFF8E1;border-left:4px solid #FFD700;padding:20px;margin:20px 0;border-radius:4px;"><p style="margin:0 0 10px 0;font-weight:bold;color:#333;font-size:15px;">IMPORTANT: Include Your Order Number in the E-Transfer</p><p style="margin:0 0 8px 0;color:#555;font-size:14px;">When sending your Interac e-Transfer, please include this order number in the <strong>memo/message field</strong>:</p><p style="margin:0;background-color:#FFFFFF;border:2px solid #4B2DBE;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:18px;font-weight:bold;color:#4B2DBE;text-align:center;letter-spacing:2px;">${params.orderId}</p><p style="margin:10px 0 0 0;color:#888;font-size:12px;">This ensures your payment is matched instantly to your order.</p></div>`,
     action_url: `${base}/account`,
     ...await commonVars(),
   };
