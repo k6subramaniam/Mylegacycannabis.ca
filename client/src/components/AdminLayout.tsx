@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          {sidebarOpen && <img src={resolvedLogo} alt="My Legacy" className="h-9" />}
+          {sidebarOpen && <img src={resolvedLogo} alt="My Legacy" className="h-9" width="160" height="36" />}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
             {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
@@ -116,7 +116,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-lg hover:bg-gray-100">
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <img src={resolvedLogo} alt="My Legacy" className="h-8" />
+            <img src={resolvedLogo} alt="My Legacy" className="h-8" width="140" height="32" />
           </div>
           <span className="text-xs font-semibold text-[#4B2D8E] bg-[#4B2D8E]/10 px-3 py-1 rounded-full">ADMIN</span>
         </header>
