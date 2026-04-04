@@ -416,22 +416,46 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
           status: match && (match.confidence === "exact" || match.confidence === "high") ? "auto_matched" : "unmatched",
         };
 
-        await db.createPaymentRecord(record);
-        stats.processed++;
-
         // If auto-matched, update the order's payment status
         if (match && (match.confidence === "exact" || match.confidence === "high")) {
-          await db.updateOrder(match.orderId, { paymentStatus: "received" } as any);
-          stats.matched++;
-          console.log(`[ETransfer] ✅ Auto-matched $${parsed.amount} → order ${match.orderNumber} (${match.method})`);
+          // ─── 1:1 CARDINALITY GUARD: prevent double-matching ───
+          const alreadyMatched = await db.isOrderAlreadyMatched(match.orderId);
+          if (alreadyMatched) {
+            console.warn(`[ETransfer] ⚠️ Order ${match.orderNumber} already has a matched payment — treating as unmatched`);
+            record.status = "unmatched";
+            record.matchConfidence = "none";
+            record.matchedOrderId = null;
+            record.matchedOrderNumber = null;
+            await db.createPaymentRecord(record);
+            stats.processed++;
+          } else {
+            await db.createPaymentRecord(record);
+            stats.processed++;
 
-          // Trigger payment confirmation email (fire-and-forget)
-          try {
-            await sendPaymentReceivedNotification(match.orderId, match.orderNumber, parsed.amount || 0);
-          } catch (emailErr) {
-            console.warn("[ETransfer] Failed to send payment confirmation email:", emailErr);
+            // ─── LOW-VALUE AUTO-CONFIRM ───
+            // If high confidence + exact amount + < $200: auto-promote to Payment: Confirmed AND Order: Confirmed
+            const orderTotal = parsed.amount || 0;
+            const isExactAmount = match.method.includes("amount") || match.method === "memo_order_number";
+            if ((match.confidence === "exact" || match.confidence === "high") && isExactAmount && orderTotal < 200) {
+              await db.updateOrder(match.orderId, { paymentStatus: "confirmed", status: "confirmed" } as any);
+              console.log(`[ETransfer] ✅ Auto-confirmed (low value $${orderTotal} < $200) → order ${match.orderNumber} payment: confirmed, status: confirmed`);
+            } else {
+              await db.updateOrder(match.orderId, { paymentStatus: "received" } as any);
+              console.log(`[ETransfer] ✅ Auto-matched $${parsed.amount} → order ${match.orderNumber} (${match.method}) — payment: received (admin review needed)`);
+            }
+
+            stats.matched++;
+
+            // Trigger payment confirmation email (fire-and-forget)
+            try {
+              await sendPaymentReceivedNotification(match.orderId, match.orderNumber, parsed.amount || 0);
+            } catch (emailErr) {
+              console.warn("[ETransfer] Failed to send payment confirmation email:", emailErr);
+            }
           }
         } else {
+          await db.createPaymentRecord(record);
+          stats.processed++;
           console.log(`[ETransfer] ⚠️ Unmatched: $${parsed.amount} from "${parsed.senderName}" memo="${parsed.memo}"`);
         }
 
@@ -459,13 +483,11 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
 
 export async function manualMatchPayment(paymentId: number, orderId: number, adminId: number): Promise<boolean> {
   try {
-    const orders = await db.getPendingETransferOrders();
-    const allOrders = orders; // Could also search all orders
-    const order = allOrders.find(o => o.id === orderId);
-    if (!order) {
-      // Try fetching by ID directly
-      const allO = await db.getAllPaymentRecords();
-      // We need to get order info — just update the record
+    // ─── 1:1 CARDINALITY GUARD ───
+    const alreadyMatched = await db.isOrderAlreadyMatched(orderId);
+    if (alreadyMatched) {
+      console.warn(`[ETransfer] Cannot manual-match: order ${orderId} already has a linked payment`);
+      return false;
     }
 
     await db.updatePaymentRecord(paymentId, {

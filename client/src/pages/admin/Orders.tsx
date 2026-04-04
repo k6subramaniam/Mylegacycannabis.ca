@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
-import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2, Ban, Lock, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -61,8 +61,14 @@ function validateCanadaPostTracking(raw: string): TrackingValidation {
   return { valid: false, format: null, error: "Not a valid Canada Post tracking number. Expected: 16 digits, 12 digits, or 2 letters + digits + CA (11 or 13 chars)." };
 }
 
+// Helper: format snake_case status to Title Case label
+const formatStatus = (s: string) =>
+  s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"] as const;
-const PAYMENT_OPTIONS = ["pending", "received", "confirmed", "refunded"] as const;
+// Statuses available in the manual dropdown — "shipped" is excluded because it's triggered by tracking entry
+const MANUAL_STATUS_OPTIONS = ["pending", "confirmed", "processing", "delivered", "cancelled", "refunded"] as const;
+const PAYMENT_OPTIONS = ["pending", "received", "confirmed", "partially_refunded", "refunded"] as const;
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700",
@@ -72,6 +78,7 @@ const statusColors: Record<string, string> = {
   delivered: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-700",
   refunded: "bg-gray-100 text-gray-700",
+  partially_refunded: "bg-orange-100 text-orange-700",
   received: "bg-blue-100 text-blue-700",
 };
 
@@ -91,6 +98,10 @@ function OrderDetail({ id }: { id: number }) {
   if (!order) return <div className="p-6 text-center text-gray-500">Order not found</div>;
 
   const addr = order.shippingAddress as any;
+  const paymentConfirmed = order.paymentStatus === 'confirmed' || order.paymentStatus === 'partially_refunded';
+  const paymentGated = !paymentConfirmed;
+  // Tracking can only be added when payment is confirmed AND order is in confirmed/processing
+  const trackingBlocked = paymentGated || !['confirmed', 'processing'].includes(order.status);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -107,8 +118,28 @@ function OrderDetail({ id }: { id: number }) {
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
           <ShieldAlert size={20} className="text-orange-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-orange-800">⚠ Held — Awaiting ID Verification</p>
+            <p className="text-sm font-semibold text-orange-800">Held — Awaiting ID Verification</p>
             <p className="text-xs text-orange-700 mt-1">This order was placed by a guest whose ID is under review. Do not process or ship until identity is confirmed in <Link href="/admin/verifications" className="underline font-semibold">ID Verifications</Link>.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Payment warning banner — shown when no payment is confirmed */}
+      {order.paymentStatus === 'pending' && order.status !== 'cancelled' && order.status !== 'refunded' && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">No Payment Matched</p>
+            <p className="text-xs text-red-700 mt-1">No e-Transfer payment has been detected for this order. The order cannot advance until payment is received and confirmed. Check the <Link href="/admin/payments" className="underline font-semibold">Payments</Link> panel for unmatched transfers.</p>
+          </div>
+        </div>
+      )}
+      {order.paymentStatus === 'received' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+          <Info size={20} className="text-blue-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Payment Received — Awaiting Confirmation</p>
+            <p className="text-xs text-blue-700 mt-1">A payment has been matched to this order but has not been verified yet. Confirm the payment amount in the <Link href="/admin/payments" className="underline font-semibold">Payments</Link> panel to unlock order processing.</p>
           </div>
         </div>
       )}
@@ -170,17 +201,117 @@ function OrderDetail({ id }: { id: number }) {
             {order.guestPhone && <p className="text-sm text-gray-500">{order.guestPhone}</p>}
           </div>
 
+          {/* Payment Section — linked payment record + confirm button */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><DollarSign size={16} /> Payment</h2>
+            <div className="space-y-3">
+              {/* Payment Status Badge */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Status</span>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}`}>
+                  {formatStatus(order.paymentStatus)}
+                </span>
+              </div>
+
+              {/* Linked Payment Record (from e-transfer match) */}
+              {(order as any).paymentRecord ? (() => {
+                const pr = (order as any).paymentRecord;
+                return (
+                  <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 size={14} className="text-green-600" />
+                      <span className="text-xs font-semibold text-green-700">Payment Matched</span>
+                      <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        pr.matchConfidence === 'exact' ? 'bg-green-100 text-green-700' :
+                        pr.matchConfidence === 'high' ? 'bg-blue-100 text-blue-700' :
+                        pr.matchConfidence === 'low' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {pr.matchConfidence} confidence
+                      </span>
+                    </div>
+                    {pr.senderName && (
+                      <div className="flex justify-between"><span className="text-gray-500">Sender</span><span className="font-medium">{pr.senderName}</span></div>
+                    )}
+                    {pr.senderEmail && (
+                      <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="text-xs truncate max-w-[160px]">{pr.senderEmail}</span></div>
+                    )}
+                    {pr.amount && (
+                      <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="font-semibold">${Number(pr.amount).toFixed(2)}</span></div>
+                    )}
+                    {pr.memo && (
+                      <div className="flex justify-between"><span className="text-gray-500">Memo</span><span className="text-xs truncate max-w-[160px]">{pr.memo}</span></div>
+                    )}
+                    <div className="flex justify-between"><span className="text-gray-500">Method</span><span className="text-xs">{pr.matchMethod}</span></div>
+                    {pr.receivedAt && (
+                      <div className="flex justify-between"><span className="text-gray-500">Received</span><span className="text-xs">{new Date(pr.receivedAt).toLocaleString("en-CA")}</span></div>
+                    )}
+                    {/* Flag if sender name doesn't match customer */}
+                    {pr.senderName && order.guestName && pr.senderName.toLowerCase() !== order.guestName.toLowerCase() && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mt-2 flex items-start gap-1.5">
+                        <ShieldAlert size={12} className="text-orange-500 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-orange-700">Sender name does not match customer. Third-party payment?</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })() : order.paymentStatus === 'pending' && order.status !== 'cancelled' && order.status !== 'refunded' ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start gap-2">
+                  <AlertCircle size={14} className="text-yellow-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-yellow-800">No Payment Matched</p>
+                    <p className="text-[10px] text-yellow-700 mt-0.5">No e-transfer has been linked yet. Check the <Link href="/admin/payments" className="underline font-semibold">Payments</Link> panel.</p>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Confirm Payment shortcut button */}
+              {order.paymentStatus === 'received' && (
+                <button
+                  onClick={() => updatePayment.mutate({ id, paymentStatus: 'confirmed' })}
+                  disabled={updatePayment.isPending}
+                  className="w-full bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 size={14} /> Confirm Payment
+                </button>
+              )}
+
+              {/* Manual payment status override */}
+              <div>
+                <label className="text-[10px] text-gray-400 mb-1 block">Manual Override</label>
+                <select value={order.paymentStatus} onChange={(e) => updatePayment.mutate({ id, paymentStatus: e.target.value as any })}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white">
+                  {PAYMENT_OPTIONS.map(s => <option key={s} value={s}>{formatStatus(s)}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Order Status */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Clock size={16} /> Order Status</h2>
-            <select value={order.status} onChange={(e) => updateStatus.mutate({ id, status: e.target.value as any })}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white mb-3">
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-            </select>
-            <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><DollarSign size={16} /> Payment Status</h2>
-            <select value={order.paymentStatus} onChange={(e) => updatePayment.mutate({ id, paymentStatus: e.target.value as any })}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white">
-              {PAYMENT_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            {/* Payment gate warning */}
+            {paymentGated && order.status === 'pending' && (
+              <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5 flex items-start gap-2">
+                <Lock size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">Payment must be <span className="font-semibold">Confirmed</span> before order can advance past Pending.</p>
+              </div>
+            )}
+            <select
+              value={order.status}
+              onChange={(e) => updateStatus.mutate({ id, status: e.target.value as any })}
+              disabled={paymentGated && !['cancelled', 'refunded', 'pending'].includes(order.status)}
+              title={paymentGated ? "Payment must be confirmed before advancing the order" : undefined}
+              className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white mb-3 ${paymentGated ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              {/* Show current status even if it's "shipped" (read-only) */}
+              {order.status === 'shipped' && <option value="shipped">Shipped</option>}
+              {MANUAL_STATUS_OPTIONS.map(s => {
+                // Disable forward statuses when payment is not confirmed
+                const isForward = ['confirmed', 'processing', 'delivered'].includes(s);
+                const disabled = paymentGated && isForward;
+                return <option key={s} value={s} disabled={disabled}>{formatStatus(s)}{disabled ? ' (payment required)' : ''}</option>;
+              })}
             </select>
           </div>
 
@@ -199,6 +330,18 @@ function OrderDetail({ id }: { id: number }) {
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </a>
                 {order.trackingUrl && <a href={order.trackingUrl as string} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#F15929] hover:underline mt-1">Track on Canada Post</a>}
+              </div>
+            ) : trackingBlocked ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-2">
+                <Lock size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Tracking unavailable</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {paymentGated
+                      ? "Payment must be confirmed before tracking can be added."
+                      : `Order must be in "confirmed" or "processing" state (current: ${order.status}).`}
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -245,6 +388,7 @@ function OrderDetail({ id }: { id: number }) {
                   ) : null
                 )}
                 <p className="text-[11px] text-gray-400">Canada Post: 16 digits, 12 digits, or 2 letters + digits + CA (11 or 13 chars)</p>
+                <p className="text-[11px] text-blue-500 flex items-center gap-1 mt-1"><Info size={11} /> Adding tracking will auto-set the order to <span className="font-semibold">Shipped</span> and award reward points.</p>
               </div>
             )}
           </div>
@@ -283,7 +427,7 @@ export default function AdminOrders({ routeId }: { routeId?: string }) {
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}
           className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white">
           <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{formatStatus(s)}</option>)}
         </select>
       </div>
 
@@ -314,14 +458,14 @@ export default function AdminOrders({ routeId }: { routeId?: string }) {
                     <p className="text-xs text-gray-400">{order.guestEmail}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>{order.status}</span>
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>{formatStatus(order.status)}</span>
                     {isIdPending(order) && (
                       <span className="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700">
                         <ShieldAlert size={10} /> ID Review
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}`}>{order.paymentStatus}</span></td>
+                  <td className="px-4 py-3 hidden md:table-cell"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}`}>{formatStatus(order.paymentStatus)}</span></td>
                   <td className="px-4 py-3 text-right font-semibold">${Number(order.total).toFixed(2)}</td>
                   <td className="px-4 py-3 text-right text-gray-400 text-xs hidden lg:table-cell">{new Date(order.createdAt).toLocaleDateString("en-CA")}</td>
                   <td className="px-4 py-3 text-right">
