@@ -1051,7 +1051,7 @@ Return ONLY the JSON object with the improved template.`;
       get: adminProcedure.query(async () => {
         const raw = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url") || "";
         // If the stored value is an oversized data URL (legacy), fall back to /logo.png
-        const url = (raw && !(raw.startsWith("data:") && raw.length > 50000)) ? raw : "/logo.png";
+        const url = (raw && !(raw.startsWith("data:") && raw.length > 50000)) ? raw : "/logo.webp";
         return { url };
       }),
       update: adminProcedure.input(z.object({
@@ -1093,7 +1093,7 @@ Return ONLY the JSON object with the improved template.`;
         return { success: true, url };
       }),
       reset: adminProcedure.mutation(async ({ ctx }) => {
-        // Clear custom logo — revert to the default /logo.png
+        // Clear custom logo — revert to the default /logo.webp (website) & /logo.png (emails)
         await db.setSiteSetting("site_logo_url", "");
         await db.setSiteSetting("email_logo_url", "");
         await db.logAdminActivity({
@@ -1102,9 +1102,9 @@ Return ONLY the JSON object with the improved template.`;
           action: "reset_site_logo",
           entityType: "site_setting",
           entityId: 0,
-          details: `Reset site logo to default /logo.png`,
+          details: `Reset site logo to default /logo.webp`,
         });
-        return { success: true, url: "/logo.png" };
+        return { success: true, url: "/logo.webp" };
       }),
     }),
 
@@ -1327,9 +1327,44 @@ Return ONLY the JSON object with the improved template.`;
         db.getSiteSetting("site_logo_url"),
         db.getSiteSetting("email_logo_url"),
       ]);
-      // If the stored value is an oversized data URL (legacy), fall back to /logo.png
+      // Determine the best logo URL:
+      //  1. Skip oversized base64 data URLs (legacy storage bug)
+      //  2. If the stored path is a PNG, check for an optimized .webp sibling on disk
+      //  3. Fall back to the bundled /logo.webp (33 KB, 512×286)
       const rawLogo = siteLogoUrl || emailLogoUrl || "";
-      const logoUrl = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.webp";
+      let logoUrl = "/logo.webp"; // default fallback
+      if (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) {
+        // If it's a local PNG upload, prefer a .webp version if it exists on disk
+        if (rawLogo.endsWith(".png") && rawLogo.startsWith("/uploads/")) {
+          const fs = await import("fs");
+          const path = await import("path");
+          const webpPath = rawLogo.replace(/\.png$/i, ".webp");
+          const projectRoot = process.cwd();
+          const distFile = path.resolve(projectRoot, "dist", "public", webpPath.slice(1));
+          const pngDistFile = path.resolve(projectRoot, "dist", "public", rawLogo.slice(1));
+          if (fs.existsSync(distFile)) {
+            logoUrl = webpPath;
+          } else if (fs.existsSync(pngDistFile)) {
+            // PNG exists but WebP doesn't — auto-generate it once (lazy migration)
+            try {
+              const sharp = await import("sharp").then(m => m.default);
+              const pngBuf = fs.readFileSync(pngDistFile);
+              const webpBuf = await sharp(pngBuf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+              fs.writeFileSync(distFile, webpBuf);
+              console.log(`[SiteConfig] Auto-generated WebP: ${webpPath} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
+              logoUrl = webpPath;
+            } catch {
+              logoUrl = rawLogo; // sharp unavailable — serve PNG
+            }
+          } else {
+            logoUrl = rawLogo; // fall back to the PNG
+          }
+        } else {
+          logoUrl = rawLogo;
+        }
+      }
+      // For emails keep the original PNG (Outlook/Gmail don't fully support WebP)
+      const emailLogo = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.png";
       return {
         idVerificationEnabled,
         idVerificationMode,
@@ -1337,7 +1372,7 @@ Return ONLY the JSON object with the improved template.`;
         storeHours: storeHoursConfig,
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
         logoUrl,
-        emailLogoUrl: logoUrl,
+        emailLogoUrl: emailLogo,
       };
     }),
     products: publicProcedure.input(z.object({

@@ -11,10 +11,13 @@ import * as db from "./db";
 import { sendCustomerEmail, sendAdminTemplatedEmail } from "./emailService";
 import { ENV } from "./_core/env";
 
-// Default logo — uses the site's own /logo.png (static file) via absolute URL.
+// Default logo — uses the site's optimized /logo.webp (33 KB) via absolute URL.
+// Falls back to /logo.png for email clients that don't support WebP.
 // The admin can override this in Admin → Email Templates → Email Header Logo.
 function getDefaultLogoUrl(): string {
   const base = getSiteUrl();
+  // Most modern email clients support WebP (Gmail, Apple Mail, Outlook 365).
+  // For maximum compatibility, use PNG as the default in emails.
   return `${base}/logo.png`;
 }
 

@@ -88,7 +88,7 @@ export default function CompleteProfile() {
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <Link href="/">
-              <img src={logoUrl || '/logo.png'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
+              <img src={logoUrl || '/logo.webp'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
             </Link>
             <h1 className="font-display text-2xl text-white">
               {isWelcome ? 'ALMOST THERE!' : 'COMPLETE PROFILE'}

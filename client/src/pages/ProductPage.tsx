@@ -111,7 +111,7 @@ export default function ProductPage() {
     description: product.shortDescription || product.description || '',
     image: product.image
       ? [product.image]
-      : ['/logo.png'],
+      : ['/logo.webp'],
     sku: `MLC-${product.id}`,
     mpn: `MLC-${product.slug}`,
     brand: {

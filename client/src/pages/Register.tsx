@@ -178,7 +178,7 @@ export default function Register() {
           {/* Logo */}
           <div className="text-center mb-6">
             <Link href="/">
-              <img src={logoUrl || '/logo.png'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
+              <img src={logoUrl || '/logo.webp'} alt="My Legacy Cannabis" className="h-14 mx-auto mb-4" />
             </Link>
             <h1 className="font-display text-2xl text-white">CREATE ACCOUNT</h1>
             <p className="text-white/60 font-body text-sm mt-1">Join My Legacy Rewards — earn points on every purchase</p>

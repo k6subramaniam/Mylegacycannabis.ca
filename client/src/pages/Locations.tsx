@@ -279,7 +279,7 @@ export default function Locations() {
               '@id': `https://mylegacycannabisca-production.up.railway.app/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
               image: [
-                '/logo.png',
+                '/logo.webp',
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
               ],
               url: 'https://mylegacycannabisca-production.up.railway.app/locations',

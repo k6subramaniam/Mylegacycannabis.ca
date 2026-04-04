@@ -26,7 +26,7 @@ export default function Home() {
         title="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa"
         description="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide. No taxes on any order."
         canonical="https://mylegacycannabisca-production.up.railway.app/"
-        ogImage="/logo.png"
+        ogImage="/logo.webp"
       />
 
       {/* HERO SECTION — no animations, content immediately visible for LCP */}
@@ -207,9 +207,8 @@ export default function Home() {
               <Link
                 href="/shipping"
                 className="bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-6 rounded-full transition-all hover:scale-105 shrink-0"
-                aria-label="Learn more about our nationwide shipping policy"
               >
-                LEARN MORE
+                SHIPPING DETAILS
               </Link>
             </div>
           </div>
