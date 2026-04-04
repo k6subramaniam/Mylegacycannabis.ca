@@ -162,6 +162,7 @@ export const appRouter = router({
       })).mutation(async ({ input, ctx }) => {
         const id = await db.createProduct(input as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "product", entityId: id, details: `Created product: ${input.name}` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { id };
       }),
       update: adminProcedure.input(z.object({
@@ -186,11 +187,13 @@ export const appRouter = router({
         const { id, ...data } = input;
         await db.updateProduct(id, data as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "product", entityId: id, details: `Updated product #${id}` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
       delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
         await db.deleteProduct(input.id);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "delete", entityType: "product", entityId: input.id, details: `Deleted product #${input.id}` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
       bulkUpdate: adminProcedure.input(z.object({
@@ -201,6 +204,7 @@ export const appRouter = router({
           await db.updateProduct(id, input.data as any);
         }
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "bulk_update", entityType: "product", details: `Bulk updated ${input.ids.length} products` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
     }),
@@ -257,6 +261,12 @@ export const appRouter = router({
           const pointsResult = await db.awardOrderPoints(input.id);
           if (pointsResult) {
             console.log(`[Rewards] Awarded ${pointsResult.points} points for order #${input.id}`);
+          }
+          // Refresh AI memory for the user who placed this order
+          if (previousOrder.userId) {
+            db.refreshAiUserMemory(previousOrder.userId).catch(err =>
+              console.error(`[AiMemory] Failed to refresh user #${previousOrder.userId}:`, err)
+            );
           }
         }
 
@@ -515,6 +525,7 @@ export const appRouter = router({
         const { id, ...data } = input;
         await db.updateShippingZone(id, data as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "shipping_zone", entityId: id, details: `Updated shipping zone #${id}` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
       create: adminProcedure.input(z.object({
@@ -526,6 +537,7 @@ export const appRouter = router({
       })).mutation(async ({ input, ctx }) => {
         const id = await db.createShippingZone(input as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "shipping_zone", entityId: id, details: `Created shipping zone: ${input.zoneName}` });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { id };
       }),
     }),
@@ -808,6 +820,7 @@ Return ONLY the JSON object with the improved template.`;
           entityId: 0,
           details: `Updated setting "${input.key}" to "${input.value}"`,
         });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
     }),
@@ -1382,6 +1395,7 @@ Return ONLY the JSON object with the improved template.`;
           entityId: id,
           details: `Updated location: ${input.name || id}`,
         });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
 
@@ -1395,13 +1409,43 @@ Return ONLY the JSON object with the improved template.`;
           entityId: input.id,
           details: `Deleted location #${input.id}`,
         });
+        db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
     }),
 
-  }),
+    // ─── ADMIN: AI MEMORY & KNOWLEDGE ───
+    aiMemory: router({
+      /** Get AI memory for a specific user */
+      getUserMemory: adminProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
+        return db.getAiUserMemory(input.userId);
+      }),
+      /** Get behavior summary for a specific user */
+      getUserBehavior: adminProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
+        return db.getUserBehaviorSummary(input.userId);
+      }),
+      /** Force refresh AI memory for a specific user */
+      refreshUserMemory: adminProcedure.input(z.object({ userId: z.number() })).mutation(async ({ input }) => {
+        await db.refreshAiUserMemory(input.userId);
+        return { success: true, userId: input.userId, refreshedAt: new Date().toISOString() };
+      }),
+      /** Batch refresh all AI user memories */
+      refreshAllMemories: adminProcedure.mutation(async () => {
+        const result = await db.refreshAllAiUserMemories();
+        return { success: true, ...result, refreshedAt: new Date().toISOString() };
+      }),
+      /** Force refresh site knowledge sync */
+      syncKnowledge: adminProcedure.mutation(async () => {
+        await db.syncAllSiteKnowledge();
+        return { success: true, syncedAt: new Date().toISOString() };
+      }),
+      /** Get all site knowledge entries */
+      allKnowledge: adminProcedure.query(async () => {
+        return db.getAllSiteKnowledge();
+      }),
+    }),
 
-  // ─── PUBLIC: STOREFRONT API ───
+  }),
   store: router({
     // ─── PUBLIC: LOCATIONS LIST ───
     locations: publicProcedure.query(async () => {
@@ -1541,6 +1585,53 @@ Return ONLY the JSON object with the improved template.`;
     /** Return all weight variants for a given base product name (e.g. "Pink Taco" → 3.5g, 7g, 14g, 28g rows) */
     productVariants: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
       return db.getProductVariants(input.slug);
+    }),
+
+    /** Real-time active product counts per category (for homepage tiles) */
+    categoryCounts: publicProcedure.query(async () => {
+      return db.getCategoryCounts();
+    }),
+
+    /** Batch record user behavior events (page views, clicks, time-on-page, etc.) */
+    trackBehavior: publicProcedure.input(z.object({
+      events: z.array(z.object({
+        sessionId: z.string(),
+        eventType: z.enum([
+          'page_view', 'product_view', 'category_view', 'add_to_cart',
+          'remove_from_cart', 'search', 'click', 'checkout_start',
+          'checkout_complete', 'review_submit', 'wishlist_add',
+        ]),
+        page: z.string().optional(),
+        productId: z.number().optional(),
+        productSlug: z.string().optional(),
+        category: z.string().optional(),
+        searchQuery: z.string().optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
+        dwellTimeMs: z.number().optional(),
+      })),
+    })).mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id || null;
+      await db.recordBehaviorEvents(input.events.map(e => ({
+        ...e,
+        userId,
+        metadata: e.metadata ?? undefined,
+      })));
+      return { recorded: input.events.length };
+    }),
+
+    /** Get AI user memory/profile for the current user */
+    aiMemory: protectedProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) return null;
+      const memory = await db.getAiUserMemory(userId);
+      return memory;
+    }),
+
+    /** Get site-wide knowledge snapshot (for AI chat / recommendations) */
+    siteKnowledge: publicProcedure.input(z.object({
+      key: z.string(),
+    })).query(async ({ input }) => {
+      return db.getSiteKnowledge(input.key);
     }),
     shippingZones: publicProcedure.query(async () => {
       return db.getAllShippingZones();
@@ -1683,6 +1774,10 @@ Return ONLY the JSON object with the improved template.`;
       }
       // Reviews appear immediately (isApproved = true)
       const id = await db.createProductReview({ userId, ...input, isApproved: true } as any);
+      // Async refresh AI memory to include this new review
+      db.refreshAiUserMemory(userId).catch(err =>
+        console.error(`[AiMemory] Failed to refresh after review:`, err)
+      );
       return { id, message: 'Review submitted! Thank you for your feedback.' };
     }),
     // ─── UPDATE OWN REVIEW (authenticated) ───

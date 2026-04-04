@@ -8,7 +8,7 @@
 
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq, desc, sql, ilike, or, and, gte, lte, count } from "drizzle-orm";
+import { eq, desc, sql, ilike, or, and, gte, lte, count, inArray } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
 import { EMAIL_TEMPLATE_SEEDS } from "./emailTemplateSeeds";
 
@@ -434,6 +434,61 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── USER BEHAVIOR TRACKING ───
+  await _sql!.unsafe(`DO $$ BEGIN CREATE TYPE behavior_event_type AS ENUM ('page_view','product_view','category_view','add_to_cart','remove_from_cart','search','click','checkout_start','checkout_complete','review_submit','wishlist_add'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS user_behavior (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      session_id VARCHAR(64) NOT NULL,
+      event_type behavior_event_type NOT NULL,
+      page VARCHAR(500),
+      product_id INTEGER,
+      product_slug VARCHAR(255),
+      category VARCHAR(100),
+      search_query VARCHAR(255),
+      metadata JSONB,
+      dwell_time_ms INTEGER,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+  // Index for fast per-user lookups
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_user_id ON user_behavior(user_id)`);
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_session ON user_behavior(session_id)`);
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_created ON user_behavior(created_at DESC)`);
+
+  // ─── AI USER MEMORY ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS ai_user_memory (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL UNIQUE,
+      preferred_categories JSONB,
+      preferred_strains JSONB,
+      price_range JSONB,
+      shopping_patterns TEXT,
+      review_history JSONB,
+      last_products JSONB,
+      total_orders INTEGER DEFAULT 0,
+      total_spent NUMERIC(10,2) DEFAULT 0,
+      avg_order_value NUMERIC(10,2) DEFAULT 0,
+      ai_summary TEXT,
+      last_updated TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ─── SITE KNOWLEDGE SYNC ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS site_knowledge_sync (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      content_hash VARCHAR(64),
+      last_synced_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -456,6 +511,9 @@ export async function initializeDatabase(): Promise<void> {
 
   // Auto-fix products: populate subcategory + grade from existing data, re-categorize ounce/shake
   await fixProductCategoriesAndGrades(db);
+
+  // Sync all site knowledge for AI features
+  await syncAllSiteKnowledge();
 }
 
 async function seedDefaultSettings(db: PostgresJsDatabase<typeof schema>) {
@@ -1752,6 +1810,481 @@ export async function fileStoreGetAll(): Promise<Array<{ key: string; data: stri
     contentType: schema.fileStore.contentType,
     sizeBytes: schema.fileStore.sizeBytes,
   }).from(schema.fileStore);
+}
+
+// ========================================================================================
+// CATEGORY COUNTS (real-time, active products only)
+// ========================================================================================
+export async function getCategoryCounts(): Promise<Record<string, number>> {
+  if (!USE_PERSISTENT_DB) {
+    // In-memory fallback: count from _products array
+    const counts: Record<string, number> = {};
+    for (const p of _products) {
+      if (p.isActive) counts[p.category] = (counts[p.category] || 0) + 1;
+    }
+    return counts;
+  }
+  const db = getDb();
+  const rows = await db.select({
+    category: schema.products.category,
+    cnt: count(),
+  }).from(schema.products)
+    .where(eq(schema.products.isActive, true))
+    .groupBy(schema.products.category);
+  const result: Record<string, number> = {};
+  for (const r of rows) {
+    result[r.category] = r.cnt;
+  }
+  return result;
+}
+
+// ========================================================================================
+// USER BEHAVIOR TRACKING
+// ========================================================================================
+export async function recordBehaviorEvent(data: schema.InsertUserBehavior): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().insert(schema.userBehavior).values(data);
+}
+
+export async function recordBehaviorEvents(events: schema.InsertUserBehavior[]): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  if (events.length === 0) return;
+  await getDb().insert(schema.userBehavior).values(events);
+}
+
+export async function getUserBehaviorSummary(userId: number): Promise<{
+  totalPageViews: number;
+  totalProductViews: number;
+  topCategories: Array<{ category: string; views: number }>;
+  topProducts: Array<{ slug: string; views: number }>;
+  recentSearches: string[];
+  avgDwellTimeMs: number;
+}> {
+  if (!USE_PERSISTENT_DB) {
+    return { totalPageViews: 0, totalProductViews: 0, topCategories: [], topProducts: [], recentSearches: [], avgDwellTimeMs: 0 };
+  }
+  const db = getDb();
+
+  // Total page views
+  const [pvResult] = await db.select({ cnt: count() }).from(schema.userBehavior)
+    .where(and(eq(schema.userBehavior.userId, userId), eq(schema.userBehavior.eventType, 'page_view')));
+  const totalPageViews = pvResult?.cnt ?? 0;
+
+  // Total product views
+  const [prodResult] = await db.select({ cnt: count() }).from(schema.userBehavior)
+    .where(and(eq(schema.userBehavior.userId, userId), eq(schema.userBehavior.eventType, 'product_view')));
+  const totalProductViews = prodResult?.cnt ?? 0;
+
+  // Top categories (by views)
+  const topCats = await _sql!`
+    SELECT category, count(*)::int as views FROM user_behavior
+    WHERE user_id = ${userId} AND category IS NOT NULL
+    GROUP BY category ORDER BY views DESC LIMIT 5
+  `;
+  const topCategories = topCats.map((r: any) => ({ category: r.category, views: r.views }));
+
+  // Top products (by views)
+  const topProds = await _sql!`
+    SELECT product_slug as slug, count(*)::int as views FROM user_behavior
+    WHERE user_id = ${userId} AND product_slug IS NOT NULL AND event_type = 'product_view'
+    GROUP BY product_slug ORDER BY views DESC LIMIT 10
+  `;
+  const topProducts = topProds.map((r: any) => ({ slug: r.slug, views: r.views }));
+
+  // Recent searches
+  const searches = await _sql!`
+    SELECT DISTINCT search_query FROM user_behavior
+    WHERE user_id = ${userId} AND event_type = 'search' AND search_query IS NOT NULL
+    ORDER BY created_at DESC LIMIT 10
+  `;
+  const recentSearches = searches.map((r: any) => r.search_query);
+
+  // Average dwell time
+  const [dwellResult] = await _sql!`
+    SELECT COALESCE(AVG(dwell_time_ms), 0)::int as avg_dwell FROM user_behavior
+    WHERE user_id = ${userId} AND dwell_time_ms IS NOT NULL AND dwell_time_ms > 0
+  `;
+  const avgDwellTimeMs = dwellResult?.avg_dwell ?? 0;
+
+  return { totalPageViews, totalProductViews, topCategories, topProducts, recentSearches, avgDwellTimeMs };
+}
+
+// ========================================================================================
+// AI USER MEMORY (long-term per-user profile)
+// ========================================================================================
+export async function getAiUserMemory(userId: number): Promise<schema.AiUserMemory | null> {
+  if (!USE_PERSISTENT_DB) return null;
+  const rows = await getDb().select().from(schema.aiUserMemory)
+    .where(eq(schema.aiUserMemory.userId, userId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertAiUserMemory(userId: number, data: Partial<Omit<schema.InsertAiUserMemory, 'userId'>>): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const db = getDb();
+  const existing = await db.select({ id: schema.aiUserMemory.id }).from(schema.aiUserMemory)
+    .where(eq(schema.aiUserMemory.userId, userId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(schema.aiUserMemory)
+      .set({ ...data, lastUpdated: new Date() })
+      .where(eq(schema.aiUserMemory.userId, userId));
+  } else {
+    await db.insert(schema.aiUserMemory).values({ userId, ...data });
+  }
+}
+
+/**
+ * Refresh AI memory for a specific user by aggregating their behavior events,
+ * orders, and reviews into a single ai_user_memory profile.
+ * Called periodically or on demand (e.g., after checkout, review, admin request).
+ */
+export async function refreshAiUserMemory(userId: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const db = getDb();
+
+  // 1. Gather order history
+  const orders = await db.select({
+    total: schema.orders.total,
+    status: schema.orders.status,
+    createdAt: schema.orders.createdAt,
+  }).from(schema.orders).where(eq(schema.orders.userId, userId));
+
+  const completedOrders = orders.filter(o => o.status === 'delivered' || o.status === 'shipped' || o.status === 'confirmed');
+  const totalOrders = completedOrders.length;
+  const totalSpent = completedOrders.reduce((sum, o) => sum + parseFloat(o.total || "0"), 0);
+  const avgOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
+
+  // 2. Gather behavior data
+  const behaviorSummary = await getUserBehaviorSummary(userId);
+
+  // 3. Gather reviews
+  const reviews = await db.select({
+    productId: schema.productReviews.productId,
+    rating: schema.productReviews.rating,
+    createdAt: schema.productReviews.createdAt,
+  }).from(schema.productReviews).where(eq(schema.productReviews.userId, userId));
+  const reviewHistory = reviews.map(r => ({
+    productId: r.productId,
+    rating: r.rating,
+    date: r.createdAt?.toISOString() ?? "",
+  }));
+
+  // 4. Derive preferred categories from behavior + orders
+  const preferredCategories = behaviorSummary.topCategories.slice(0, 5).map(c => c.category);
+
+  // 5. Derive preferred strains from product views
+  const viewedSlugs = behaviorSummary.topProducts.slice(0, 20).map(p => p.slug);
+  const strainSet = new Set<string>();
+  if (viewedSlugs.length > 0) {
+    const viewedProducts = await db.select({
+      strainType: schema.products.strainType,
+    }).from(schema.products).where(inArray(schema.products.slug, viewedSlugs));
+    for (const p of viewedProducts) {
+      if (p.strainType) strainSet.add(p.strainType);
+    }
+  }
+  const preferredStrains = Array.from(strainSet);
+
+  // 6. Derive price range from viewed products
+  let priceRange: { min: number; max: number } | undefined;
+  if (viewedSlugs.length > 0) {
+    const priceRows = await db.select({
+      price: schema.products.price,
+    }).from(schema.products).where(inArray(schema.products.slug, viewedSlugs));
+    const prices = priceRows.map(r => parseFloat(r.price || "0")).filter(p => p > 0);
+    if (prices.length > 0) {
+      priceRange = { min: Math.min(...prices), max: Math.max(...prices) };
+    }
+  }
+
+  // 7. Last viewed products (most recent 10)
+  const recentViews = await _sql!`
+    SELECT product_slug as slug, created_at FROM user_behavior
+    WHERE user_id = ${userId} AND event_type = 'product_view' AND product_slug IS NOT NULL
+    ORDER BY created_at DESC LIMIT 10
+  `;
+  const lastProductSlugs = recentViews.map((r: any) => r.slug);
+  let lastProducts: Array<{ slug: string; name: string; viewedAt: string }> = [];
+  if (lastProductSlugs.length > 0) {
+    const prodNames = await db.select({
+      slug: schema.products.slug,
+      name: schema.products.name,
+    }).from(schema.products).where(inArray(schema.products.slug, lastProductSlugs));
+    const nameMap = new Map(prodNames.map(p => [p.slug, p.name]));
+    lastProducts = recentViews.map((r: any) => ({
+      slug: r.slug,
+      name: nameMap.get(r.slug) || r.slug,
+      viewedAt: r.created_at?.toISOString() ?? "",
+    }));
+  }
+
+  // 8. Generate AI summary
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : "N/A";
+  const searchTerms = behaviorSummary.recentSearches.slice(0, 5).join(", ");
+  const aiSummary = [
+    `User has ${totalOrders} completed order(s) with $${totalSpent.toFixed(2)} total spent (avg $${avgOrderValue.toFixed(2)}).`,
+    preferredCategories.length > 0 ? `Preferred categories: ${preferredCategories.join(", ")}.` : "",
+    preferredStrains.length > 0 ? `Preferred strains: ${preferredStrains.join(", ")}.` : "",
+    priceRange ? `Price range: $${priceRange.min.toFixed(2)} - $${priceRange.max.toFixed(2)}.` : "",
+    reviews.length > 0 ? `Has written ${reviews.length} review(s) with avg rating ${avgRating}.` : "",
+    searchTerms ? `Recent searches: ${searchTerms}.` : "",
+    `Total page views: ${behaviorSummary.totalPageViews}. Product views: ${behaviorSummary.totalProductViews}. Avg dwell: ${(behaviorSummary.avgDwellTimeMs / 1000).toFixed(1)}s.`,
+  ].filter(Boolean).join(" ");
+
+  // 9. Shopping patterns summary
+  const shoppingPatterns = [
+    behaviorSummary.topCategories.length > 0
+      ? `Most viewed categories: ${behaviorSummary.topCategories.map(c => `${c.category} (${c.views}x)`).join(", ")}.`
+      : "No category browsing data yet.",
+    behaviorSummary.topProducts.length > 0
+      ? `Most viewed products: ${behaviorSummary.topProducts.slice(0, 5).map(p => `${p.slug} (${p.views}x)`).join(", ")}.`
+      : "",
+    behaviorSummary.recentSearches.length > 0
+      ? `Recent searches: ${behaviorSummary.recentSearches.join(", ")}.`
+      : "",
+  ].filter(Boolean).join(" ");
+
+  // 10. Upsert the memory
+  await upsertAiUserMemory(userId, {
+    preferredCategories,
+    preferredStrains,
+    priceRange,
+    shoppingPatterns,
+    reviewHistory,
+    lastProducts,
+    totalOrders,
+    totalSpent: totalSpent.toFixed(2),
+    avgOrderValue: avgOrderValue.toFixed(2),
+    aiSummary,
+  });
+
+  console.log(`[AiMemory] Refreshed user #${userId}: ${totalOrders} orders, $${totalSpent.toFixed(2)} spent, ${behaviorSummary.totalPageViews} page views`);
+}
+
+/**
+ * Batch refresh AI memory for all users who have behavior events since last refresh.
+ * Called by background job (every 30 minutes) or admin trigger.
+ */
+export async function refreshAllAiUserMemories(): Promise<{ refreshed: number }> {
+  if (!USE_PERSISTENT_DB) return { refreshed: 0 };
+
+  // Find distinct user IDs with recent behavior events
+  const rows = await _sql!`
+    SELECT DISTINCT user_id FROM user_behavior
+    WHERE user_id IS NOT NULL
+    AND created_at > COALESCE(
+      (SELECT last_updated FROM ai_user_memory WHERE ai_user_memory.user_id = user_behavior.user_id),
+      '1970-01-01'
+    )
+  `;
+  let count = 0;
+  for (const r of rows) {
+    try {
+      await refreshAiUserMemory(r.user_id);
+      count++;
+    } catch (err) {
+      console.error(`[AiMemory] Failed to refresh user #${r.user_id}:`, err);
+    }
+  }
+  // Also refresh users with orders but no memory yet
+  const usersWithOrders = await _sql!`
+    SELECT DISTINCT user_id FROM orders
+    WHERE user_id IS NOT NULL
+    AND user_id NOT IN (SELECT user_id FROM ai_user_memory)
+  `;
+  for (const r of usersWithOrders) {
+    try {
+      await refreshAiUserMemory(r.user_id);
+      count++;
+    } catch (err) {
+      console.error(`[AiMemory] Failed to refresh user #${r.user_id}:`, err);
+    }
+  }
+  console.log(`[AiMemory] Batch refresh complete: ${count} user(s) updated`);
+  return { refreshed: count };
+}
+
+// ========================================================================================
+// SITE KNOWLEDGE SYNC
+// ========================================================================================
+export async function getSiteKnowledge(key: string): Promise<string | null> {
+  if (!USE_PERSISTENT_DB) return null;
+  const rows = await getDb().select().from(schema.siteKnowledgeSync)
+    .where(eq(schema.siteKnowledgeSync.key, key)).limit(1);
+  return rows[0]?.content ?? null;
+}
+
+export async function upsertSiteKnowledge(key: string, content: string, hash?: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const db = getDb();
+  const existing = await db.select({ id: schema.siteKnowledgeSync.id }).from(schema.siteKnowledgeSync)
+    .where(eq(schema.siteKnowledgeSync.key, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(schema.siteKnowledgeSync)
+      .set({ content, contentHash: hash, lastSyncedAt: new Date() })
+      .where(eq(schema.siteKnowledgeSync.key, key));
+  } else {
+    await db.insert(schema.siteKnowledgeSync).values({ key, content, contentHash: hash });
+  }
+}
+
+export async function getAllSiteKnowledge(): Promise<schema.SiteKnowledgeSync[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  return getDb().select().from(schema.siteKnowledgeSync);
+}
+
+/**
+ * Sync all site-wide knowledge into the site_knowledge_sync table.
+ * This is called on server startup and whenever products/settings change.
+ */
+export async function syncAllSiteKnowledge(): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const db = getDb();
+
+  // 1. Active Products snapshot
+  const products = await db.select({
+    id: schema.products.id,
+    name: schema.products.name,
+    slug: schema.products.slug,
+    category: schema.products.category,
+    strainType: schema.products.strainType,
+    price: schema.products.price,
+    weight: schema.products.weight,
+    thc: schema.products.thc,
+    grade: schema.products.grade,
+    stock: schema.products.stock,
+    shortDescription: schema.products.shortDescription,
+  }).from(schema.products).where(eq(schema.products.isActive, true));
+  await upsertSiteKnowledge("active_products", JSON.stringify(products));
+
+  // 2. Category counts
+  const catCounts = await getCategoryCounts();
+  await upsertSiteKnowledge("category_counts", JSON.stringify(catCounts));
+
+  // 3. Shipping zones
+  const zones = await db.select().from(schema.shippingZones).where(eq(schema.shippingZones.isActive, true));
+  await upsertSiteKnowledge("shipping_zones", JSON.stringify(zones));
+
+  // 4. Store locations
+  const locations = await db.select().from(schema.storeLocations).where(eq(schema.storeLocations.isActive, true));
+  await upsertSiteKnowledge("store_locations", JSON.stringify(locations));
+
+  // 5. Site settings (non-sensitive)
+  const settings = await db.select().from(schema.siteSettings);
+  const safeSettings = settings.filter(s => !s.key.includes('password') && !s.key.includes('secret') && !s.key.includes('token'));
+  await upsertSiteKnowledge("site_settings", JSON.stringify(safeSettings));
+
+  // 6. Product links (for quick AI reference)
+  const productLinks = products.map(p => ({
+    name: p.name,
+    url: `/product/${p.slug}`,
+    category: p.category,
+    price: p.price,
+    stock: p.stock,
+  }));
+  await upsertSiteKnowledge("product_links", JSON.stringify(productLinks));
+
+  // 7. FAQ content (hardcoded in the frontend, synced for AI reference)
+  const faqContent = [
+    { category: "Ordering", items: [
+      { q: "What is the minimum order amount?", a: "The minimum order amount is $40. Orders below this amount cannot be processed." },
+      { q: "How do I place an order?", a: "Browse our shop, add items to your cart, and proceed to checkout. You'll need a verified account to complete your order." },
+      { q: "Can I modify or cancel my order?", a: "Please contact us as soon as possible if you need to modify or cancel your order. Once an order has been shipped, it cannot be cancelled." },
+      { q: "Are there taxes on my order?", a: "No! My Legacy Cannabis does not charge any taxes on orders. The price you see is the price you pay (plus shipping if applicable)." },
+    ]},
+    { category: "Payment", items: [
+      { q: "What payment methods do you accept?", a: "We accept Interac e-Transfer as our payment method. Send your e-Transfer to our payment email with your order number in the message." },
+      { q: "Do you accept credit cards?", a: "Not at this time. We are working on adding credit card payment options in the future." },
+      { q: "When should I send my e-Transfer?", a: "Please send your e-Transfer immediately after placing your order. Orders are processed once payment is received." },
+      { q: "Is my payment secure?", a: "Yes. Interac e-Transfer is a secure, bank-to-bank payment method used by millions of Canadians." },
+    ]},
+    { category: "Shipping & Delivery", items: [
+      { q: "Where do you ship?", a: "We ship nationwide across Canada with tracked Xpresspost shipping." },
+      { q: "How much does shipping cost?", a: "Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $150!" },
+      { q: "How long does delivery take?", a: "Ontario: 1-2 business days, Quebec: 2-3 days, Western Canada: 3-5 days, Atlantic Canada: 3-5 days, Territories: 5-10 days." },
+      { q: "Do I get a tracking number?", a: "Yes! A tracking number is emailed to you once your order ships." },
+      { q: "Is the packaging discreet?", a: "Absolutely. All orders are shipped in plain, unmarked packaging with no indication of the contents." },
+    ]},
+    { category: "ID Verification", items: [
+      { q: "Why do I need to verify my ID?", a: "Canadian law requires all cannabis purchasers to be 19 years of age or older. ID verification is a one-time process to confirm your age." },
+      { q: "What ID do you accept?", a: "We accept Canadian Driver's License, Canadian Passport, Provincial Health Card (with photo), and Canadian Citizenship Card." },
+      { q: "How long does verification take?", a: "ID verification is typically completed within 1-2 hours during business hours. You'll receive an email once verified." },
+      { q: "Is my ID information secure?", a: "Yes. Your ID documents are securely transmitted and stored. We only use them for age verification and delete them after the process is complete." },
+      { q: "Do I need to verify every time I order?", a: "No! ID verification is a one-time process. Once verified, you can place orders freely." },
+    ]},
+    { category: "Rewards Program", items: [
+      { q: "How do I earn points?", a: "Earn 1 point for every $1 spent (pre-tax, pre-shipping). Plus bonus points for signing up (25 pts), birthdays (100 pts), reviews (10 pts), and referrals (50 pts)." },
+      { q: "How do I redeem points?", a: "Redeem points at checkout. Minimum 100 points for $5 OFF, up to 2,000 points for $150 OFF." },
+      { q: "Do points expire?", a: "No! Points never expire as long as your account remains active." },
+      { q: "Can I combine rewards with other offers?", a: "Yes, rewards can be combined with other promotions and discounts." },
+      { q: "What is the maximum discount from rewards?", a: "Rewards cannot exceed 50% of your order subtotal." },
+    ]},
+    { category: "Account", items: [
+      { q: "How do I create an account?", a: "Click 'Sign Up' and fill in your details. You'll receive 25 bonus reward points just for creating an account!" },
+      { q: "I forgot my password. What do I do?", a: "Contact our support team at support@mylegacycannabis.ca and we'll help you reset your password." },
+      { q: "Can I track my orders?", a: "Yes! Log in to your account and visit the 'Orders' tab to see all your order history and tracking information." },
+    ]},
+  ];
+  await upsertSiteKnowledge("faq", JSON.stringify(faqContent));
+
+  // 8. Terms & Conditions
+  const termsContent = [
+    { title: "Age Requirement", content: "You must be at least 19 years of age to use this website and purchase products from My Legacy Cannabis." },
+    { title: "Products", content: "All products sold by My Legacy Cannabis are intended for legal use in Canada. Product availability, pricing, and descriptions are subject to change without notice." },
+    { title: "Ordering & Payment", content: "The minimum order amount is $40. We currently accept Interac e-Transfer. Orders are processed once payment is received. No taxes are charged on orders." },
+    { title: "Shipping & Delivery", content: "We ship nationwide across Canada with tracked Xpresspost shipping. Free shipping on orders over $150. Signature required upon delivery." },
+    { title: "Returns & Refunds", content: "We cannot accept returns on opened products. If you receive a damaged or incorrect item, contact us within 48 hours with photos." },
+    { title: "Rewards Program", content: "Points earned on completed orders. Points never expire for active accounts. Rewards cannot exceed 50% of order subtotal." },
+    { title: "Account Responsibility", content: "You are responsible for maintaining the confidentiality of your account credentials." },
+    { title: "Contact", content: "For questions about Terms & Conditions, contact support@mylegacycannabis.ca or call (437) 215-4722." },
+  ];
+  await upsertSiteKnowledge("terms_and_conditions", JSON.stringify(termsContent));
+
+  // 9. Privacy Policy
+  const privacyContent = [
+    { title: "Information We Collect", content: "Name, email, phone, shipping address, government ID for age verification, payment info, communication preferences, birthday." },
+    { title: "How We Use Your Information", content: "To process orders, verify age/identity, manage rewards account, communicate about orders and promotions, improve services, comply with legal obligations." },
+    { title: "ID Verification Data", content: "Government ID documents are securely transmitted using encryption, used solely for age verification, deleted after verification, and never shared with third parties." },
+    { title: "Data Security", content: "We implement appropriate technical and organizational measures to protect personal information." },
+    { title: "Cookies and Tracking", content: "We use cookies to enhance browsing, remember preferences, and analyze traffic." },
+    { title: "Your Rights", content: "Access, correct, delete your data. Opt out of marketing. Request a data copy." },
+    { title: "Contact", content: "privacy@mylegacycannabis.ca or (437) 215-4722." },
+  ];
+  await upsertSiteKnowledge("privacy_policy", JSON.stringify(privacyContent));
+
+  // 10. Shipping Policy summary
+  const shippingPolicyContent = {
+    freeShippingThreshold: 150,
+    minimumOrder: 40,
+    carrier: "Canada Post Xpresspost",
+    rates: [
+      { region: "Ontario", rate: 9.99, delivery: "1-2 business days" },
+      { region: "Quebec", rate: 12.99, delivery: "2-3 business days" },
+      { region: "British Columbia", rate: 14.99, delivery: "3-5 business days" },
+      { region: "Alberta", rate: 12.99, delivery: "3-5 business days" },
+      { region: "Rest of Canada", rate: 16.99, delivery: "3-7 business days" },
+    ],
+    policies: [
+      "Signature required (age verification 19+)",
+      "No P.O. Box deliveries — street address required",
+      "Tracking number provided via email",
+      "E-Transfer payment must be received before shipment",
+      "Weekend/holiday orders processed next business day",
+      "Discreet plain packaging with no product indication",
+    ],
+  };
+  await upsertSiteKnowledge("shipping_policy", JSON.stringify(shippingPolicyContent));
+
+  // 11. Email templates (for AI to know what automated emails exist)
+  const templates = await db.select({
+    slug: schema.emailTemplates.slug,
+    subject: schema.emailTemplates.subject,
+  }).from(schema.emailTemplates);
+  await upsertSiteKnowledge("email_templates", JSON.stringify(templates));
+
+  console.log(`[KnowledgeSync] Synced: ${products.length} products, ${Object.keys(catCounts).length} categories, ${zones.length} zones, ${locations.length} locations, FAQ, terms, privacy, shipping policy, ${templates.length} email templates`);
 }
 
 // ========================================================================================

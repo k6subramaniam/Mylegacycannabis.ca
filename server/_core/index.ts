@@ -14,7 +14,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut } from "../db";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 
@@ -334,6 +334,39 @@ async function startServer() {
       console.error("[Startup] Background job error:", err);
     }
   }, 5000);
+
+  // ─── AI MEMORY & KNOWLEDGE SYNC BACKGROUND JOBS ───
+  // Refresh AI user memories every 30 minutes (processes behavior events into profiles)
+  if (USE_PERSISTENT_DB) {
+    setInterval(async () => {
+      try {
+        const result = await refreshAllAiUserMemories();
+        if (result.refreshed > 0) console.log(`[Cron] AI memory refresh: ${result.refreshed} user(s) updated`);
+      } catch (err) {
+        console.error("[Cron] AI memory refresh error:", err);
+      }
+    }, 30 * 60 * 1000); // every 30 minutes
+
+    // Re-sync site knowledge every 2 hours (catches any drift)
+    setInterval(async () => {
+      try {
+        await syncAllSiteKnowledge();
+        console.log("[Cron] Site knowledge re-synced");
+      } catch (err) {
+        console.error("[Cron] Knowledge sync error:", err);
+      }
+    }, 2 * 60 * 60 * 1000); // every 2 hours
+
+    // Run initial AI memory refresh 15s after startup
+    setTimeout(async () => {
+      try {
+        const result = await refreshAllAiUserMemories();
+        if (result.refreshed > 0) console.log(`[Startup] AI memory refresh: ${result.refreshed} user(s) updated`);
+      } catch (err) {
+        console.error("[Startup] AI memory refresh error:", err);
+      }
+    }, 15000);
+  }
 }
 
 startServer().catch(console.error);

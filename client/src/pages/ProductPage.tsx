@@ -5,11 +5,12 @@ import ProductReviews from '@/components/ProductReviews';
 import { useCart } from '@/contexts/CartContext';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, calculatePointsEarned } from '@/lib/data';
 import { ShoppingCart, Minus, Plus, Truck, Star, Shield, Clock, Gift, ArrowRight, Loader } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useT, interpolate } from '@/i18n';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 // Grade colour badge mapping (mirrors Shop page)
 const GRADE_COLORS: Record<string, string> = {
@@ -46,6 +47,14 @@ export default function ProductPage() {
   const { addItem } = useCart();
   const { t } = useT();
   const [quantity, setQuantity] = useState(1);
+  const { trackProductView, trackAddToCart } = useBehavior();
+
+  // Track product view when product loads
+  useEffect(() => {
+    if (product && slug) {
+      trackProductView(slug, product.id, product.category);
+    }
+  }, [product?.id, slug]);
 
   // Fetch weight variants for this product
   const { data: variants } = trpc.store.productVariants.useQuery(
@@ -206,6 +215,7 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     addItem(ap as any, quantity);
+    trackAddToCart(ap.slug, ap.id, { quantity, price: ap.price, name: ap.name });
     toast.success(interpolate(t.productPage.addedToCartToast, { quantity, name: ap.name }));
     setQuantity(1);
   };

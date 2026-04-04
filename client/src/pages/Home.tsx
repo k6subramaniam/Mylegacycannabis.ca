@@ -5,20 +5,36 @@ import { products, categories, storeLocations as fallbackLocations, FREE_SHIPPIN
 import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useT } from '@/i18n';
 import { trpc } from '@/lib/trpc';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp';
 
 export default function Home() {
   const { addItem } = useCart();
+  const { trackAddToCart } = useBehavior();
   const { t } = useT();
   const featured = products.filter(p => p.featured).slice(0, 4);
   const { data: dbLocations } = trpc.store.locations.useQuery();
   const { idVerificationEnabled } = useSiteConfig();
   const storeLocations = dbLocations && dbLocations.length > 0 ? dbLocations : fallbackLocations;
+
+  // Fetch real-time category counts from the database
+  const { data: categoryCounts } = trpc.store.categoryCounts.useQuery(undefined, {
+    staleTime: 60_000, // refresh every minute
+  });
+
+  // Merge real counts into static category definitions
+  const categoriesWithCounts = useMemo(() => {
+    if (!categoryCounts) return categories;
+    return categories.map(cat => ({
+      ...cat,
+      productCount: categoryCounts[cat.slug] ?? cat.productCount,
+    }));
+  }, [categoryCounts]);
 
   return (
     <>
@@ -102,7 +118,7 @@ export default function Home() {
             <p className="text-gray-600 font-body max-w-lg mx-auto">{t.home.findYourLegacyDesc}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map((cat) => (
+            {categoriesWithCounts.map((cat) => (
               <Link key={cat.slug} href={`/shop/${cat.slug}`}
                 className="group block relative rounded-2xl overflow-hidden bg-[#F5F5F5] aspect-[4/3] hover:shadow-xl transition-all">
                 <img
@@ -163,7 +179,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <span className="font-display text-lg text-[#4B2D8E]">${(typeof product.price === 'string' ? parseFloat(product.price) : product.price).toFixed(2)}</span>
                     <button
-                      onClick={(e) => { e.preventDefault(); addItem(product); toast.success(`${product.name} added to cart`); }}
+                      onClick={(e) => { e.preventDefault(); addItem(product); trackAddToCart(product.slug, undefined, { price: product.price, name: product.name }); toast.success(`${product.name} added to cart`); }}
                       className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
                       aria-label={`Add ${product.name} to cart`}
                     >
