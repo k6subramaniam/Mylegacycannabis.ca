@@ -1891,11 +1891,15 @@ export async function getUserBehaviorSummary(userId: number): Promise<{
   `;
   const topProducts = topProds.map((r: any) => ({ slug: r.slug, views: r.views }));
 
-  // Recent searches
+  // Recent searches (use subquery to get latest timestamp per unique query for ordering)
   const searches = await _sql!`
-    SELECT DISTINCT search_query FROM user_behavior
-    WHERE user_id = ${userId} AND event_type = 'search' AND search_query IS NOT NULL
-    ORDER BY created_at DESC LIMIT 10
+    SELECT search_query FROM (
+      SELECT search_query, MAX(created_at) as latest
+      FROM user_behavior
+      WHERE user_id = ${userId} AND event_type = 'search' AND search_query IS NOT NULL
+      GROUP BY search_query
+    ) sub
+    ORDER BY latest DESC LIMIT 10
   `;
   const recentSearches = searches.map((r: any) => r.search_query);
 
@@ -1966,7 +1970,7 @@ export async function refreshAiUserMemory(userId: number): Promise<void> {
   const reviewHistory = reviews.map(r => ({
     productId: r.productId,
     rating: r.rating,
-    date: r.createdAt?.toISOString() ?? "",
+    date: r.createdAt instanceof Date ? r.createdAt.toISOString() : (r.createdAt ? String(r.createdAt) : ""),
   }));
 
   // 4. Derive preferred categories from behavior + orders
@@ -2014,7 +2018,7 @@ export async function refreshAiUserMemory(userId: number): Promise<void> {
     lastProducts = recentViews.map((r: any) => ({
       slug: r.slug,
       name: nameMap.get(r.slug) || r.slug,
-      viewedAt: r.created_at?.toISOString() ?? "",
+      viewedAt: r.created_at instanceof Date ? r.created_at.toISOString() : (r.created_at ? String(r.created_at) : ""),
     }));
   }
 
@@ -2072,11 +2076,11 @@ export async function refreshAllAiUserMemories(): Promise<{ refreshed: number }>
 
   // Find distinct user IDs with recent behavior events
   const rows = await _sql!`
-    SELECT DISTINCT user_id FROM user_behavior
-    WHERE user_id IS NOT NULL
-    AND created_at > COALESCE(
-      (SELECT last_updated FROM ai_user_memory WHERE ai_user_memory.user_id = user_behavior.user_id),
-      '1970-01-01'
+    SELECT DISTINCT ub.user_id FROM user_behavior ub
+    WHERE ub.user_id IS NOT NULL
+    AND ub.created_at > COALESCE(
+      (SELECT last_updated FROM ai_user_memory WHERE ai_user_memory.user_id = ub.user_id),
+      '1970-01-01'::timestamp
     )
   `;
   let count = 0;
