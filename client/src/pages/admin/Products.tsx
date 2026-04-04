@@ -1,10 +1,141 @@
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
-import { Package, Plus, Search, Edit2, Trash2, Eye, EyeOff, Star, X, Save, Upload } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Package, Plus, Search, Edit2, Trash2, Eye, EyeOff, Star, X, Save, Upload, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const CATEGORIES = ["flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake"] as const;
 const STRAIN_TYPES = ["Sativa", "Indica", "Hybrid", "CBD", "N/A"] as const;
+
+// ─── Drag & Drop Image Upload Component ────────────────────────────────────────
+// Supports file upload (drag/drop + click), auto-converts to optimised WebP,
+// and still allows manual URL entry as a fallback.
+function ProductImageUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadMutation = trpc.admin.upload.useMutation();
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are supported");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be under 10 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]); // strip data:... prefix
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadMutation.mutateAsync({
+        fileName: file.name,
+        base64,
+        contentType: file.type,
+      });
+      // Use the optimised WebP URL if available, otherwise the raw upload URL
+      const imageUrl = (result as any).optimized?.url || result.url;
+      onChange(imageUrl);
+      const origKB = (file.size / 1024).toFixed(0);
+      toast.success(`Image optimised & uploaded (${origKB} KB → WebP)`);
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }, [onChange, uploadMutation]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  const onFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  }, [handleFile]);
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Product Image</label>
+      {value ? (
+        /* ── Preview with replace/remove ── */
+        <div className="relative group rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
+          <img src={value} alt="Product" className="w-full h-48 object-contain" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              className="bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-100 flex items-center gap-1">
+              <Upload size={12} /> Replace
+            </button>
+            <button type="button" onClick={() => onChange("")}
+              className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 flex items-center gap-1">
+              <X size={12} /> Remove
+            </button>
+          </div>
+          {value.endsWith(".webp") && (
+            <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">WebP</span>
+          )}
+        </div>
+      ) : (
+        /* ── Drop zone ── */
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
+            ${dragOver ? "border-[#4B2D8E] bg-[#4B2D8E]/5" : "border-gray-200 hover:border-gray-300 bg-gray-50/50"}`}
+        >
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 size={24} className="text-[#4B2D8E] animate-spin" />
+              <p className="text-sm text-gray-500">Optimising image...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <ImageIcon size={28} className="text-gray-400" />
+              <p className="text-sm text-gray-600">
+                <span className="font-medium text-[#4B2D8E]">Click to upload</span> or drag & drop
+              </p>
+              <p className="text-xs text-gray-400">PNG, JPG, WebP, HEIC &mdash; max 10 MB</p>
+              <p className="text-xs text-gray-400">Auto-converted to optimised WebP (thumb + card + full)</p>
+            </div>
+          )}
+        </div>
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={onFileSelect}
+        className="hidden"
+      />
+      {/* URL fallback toggle */}
+      <div className="mt-1.5 flex items-center gap-2">
+        <button type="button" onClick={() => setShowUrlInput(!showUrlInput)}
+          className="text-xs text-gray-400 hover:text-[#4B2D8E] transition-colors">
+          {showUrlInput ? "Hide URL input" : "Or paste image URL"}
+        </button>
+      </div>
+      {showUrlInput && (
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+          placeholder="https://..." className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+      )}
+    </div>
+  );
+}
 
 export default function AdminProducts() {
   const [page, setPage] = useState(1);
@@ -225,11 +356,11 @@ export default function AdminProducts() {
                 <input type="text" value={form.flavor} onChange={(e) => setForm(f => ({ ...f, flavor: e.target.value }))}
                   placeholder="Grape & Earth" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
-                <input type="text" value={form.image} onChange={(e) => setForm(f => ({ ...f, image: e.target.value }))}
-                  placeholder="https://..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
-              </div>
+              {/* ── Product Image Upload ────────────────────────────────────── */}
+              <ProductImageUpload
+                value={form.image}
+                onChange={(url) => setForm(f => ({ ...f, image: url }))}
+              />
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Short Description</label>
                 <input type="text" value={form.shortDescription} onChange={(e) => setForm(f => ({ ...f, shortDescription: e.target.value }))}

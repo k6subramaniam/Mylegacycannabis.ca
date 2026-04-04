@@ -872,6 +872,9 @@ Return ONLY the JSON object with the improved template.`;
     }),
 
     // ─── FILE UPLOAD ───
+    // Uploads any file. For image types (png/jpg/webp/etc.), sharp auto-generates
+    // optimised WebP versions at three responsive sizes (thumb 200px, card 400px, full 1200px).
+    // Returns { url, key, optimized? } — optimized contains thumb/card/full/original URLs.
     upload: adminProcedure.input(z.object({
       fileName: z.string(),
       base64: z.string(),
@@ -880,8 +883,8 @@ Return ONLY the JSON object with the improved template.`;
       const ext = input.fileName.split('.').pop() || 'bin';
       const key = `uploads/${nanoid()}.${ext}`;
       const buffer = Buffer.from(input.base64, 'base64');
-      const { url } = await storagePut(key, buffer, input.contentType);
-      return { url, key };
+      const { url, optimized } = await storagePut(key, buffer, input.contentType);
+      return { url, key, optimized };
     }),
 
     // ─── COUPONS ───

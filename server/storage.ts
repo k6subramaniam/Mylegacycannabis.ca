@@ -7,6 +7,17 @@ import { ENV } from './_core/env';
 import fs from 'fs';
 import path from 'path';
 
+// ─── Image optimization constants ──────────────────────────────────────────────
+// Responsive breakpoints for product images
+const IMAGE_SIZES = {
+  thumb:  { width: 200, suffix: '-thumb' },   // product list thumbnails
+  card:   { width: 400, suffix: '-card' },     // shop grid cards
+  full:   { width: 1200, suffix: '' },         // product detail page (original name)
+} as const;
+const WEBP_QUALITY = 82;
+const IS_IMAGE_RE = /\.(png|jpe?g|webp|avif|gif|heic|heif|tiff?)$/i;
+const IS_BRANDING_RE = /^branding\//;
+
 type StorageConfig = { baseUrl: string; apiKey: string } | null;
 
 function getStorageConfig(): StorageConfig {
@@ -69,11 +80,60 @@ function buildAuthHeaders(apiKey: string): HeadersInit {
   return { Authorization: `Bearer ${apiKey}` };
 }
 
+// ─── Image optimisation helper ─────────────────────────────────────────────────
+// Converts any uploaded image to WebP at multiple responsive sizes.
+// Returns an object with the URLs of each size, or null if the file is not an
+// image or sharp is unavailable.
+export interface OptimizedImages {
+  /** Full-size WebP (max 1200 px wide) — used as the canonical product image */
+  url: string;
+  /** Thumbnail (200 px) */
+  thumb: string;
+  /** Card size (400 px) */
+  card: string;
+  /** Original file kept as-is */
+  original: string;
+}
+
+async function optimizeImage(
+  buf: Buffer,
+  baseName: string,
+  uploadsDir: string,
+  clientUploadsDir: string | null,
+): Promise<OptimizedImages | null> {
+  try {
+    const sharp = await import("sharp").then(m => m.default);
+    const stem = baseName.replace(/\.[^.]+$/, ""); // e.g. "abc123"
+    const results: OptimizedImages = { url: "", thumb: "", card: "", original: "" };
+
+    for (const [key, { width, suffix }] of Object.entries(IMAGE_SIZES)) {
+      const webpName = `${stem}${suffix}.webp`;
+      const webpBuf = await sharp(buf)
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+      fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
+      if (clientUploadsDir) {
+        fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+      }
+      const publicUrl = `/uploads/${webpName}`;
+      if (key === "full")  results.url   = publicUrl;
+      if (key === "thumb") results.thumb = publicUrl;
+      if (key === "card")  results.card  = publicUrl;
+      console.log(`[Storage] WebP ${key}: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
+    }
+    return results;
+  } catch {
+    console.log("[Storage] sharp not available — skipping image optimisation");
+    return null;
+  }
+}
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
-): Promise<{ key: string; url: string }> {
+): Promise<{ key: string; url: string; optimized?: OptimizedImages }> {
   const config = getStorageConfig();
   if (!config) {
     // No storage backend — save file to dist/public/uploads/ and serve
@@ -103,34 +163,43 @@ export async function storagePut(
 
     // Also write to client/public/uploads/ so Vite dev server serves it too
     const clientPublicDir = path.resolve(projectRoot, "client", "public");
+    let clientUploadsDir: string | null = null;
     if (fs.existsSync(clientPublicDir)) {
-      const clientUploadsDir = path.join(clientPublicDir, "uploads");
+      clientUploadsDir = path.join(clientPublicDir, "uploads");
       fs.mkdirSync(clientUploadsDir, { recursive: true });
       fs.writeFileSync(path.join(clientUploadsDir, fileName), buf);
     }
 
-    // Auto-generate an optimized WebP version for PNG uploads (logos etc.)
-    // This avoids serving 800+ KB PNGs when a 30 KB WebP would suffice.
-    if (/\.png$/i.test(fileName)) {
-      try {
-        const sharp = await import("sharp").then(m => m.default);
-        const webpName = fileName.replace(/\.png$/i, ".webp");
-        const webpBuf = await sharp(buf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-        fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
-        if (fs.existsSync(clientPublicDir)) {
-          const clientUploadsDir = path.join(clientPublicDir, "uploads");
-          fs.mkdirSync(clientUploadsDir, { recursive: true });
-          fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+    // ── Auto-optimise uploaded images to WebP ──────────────────────────────
+    // For branding uploads (logos): single WebP at 512 px wide
+    // For product / general images: responsive WebP set (thumb, card, full)
+    const publicUrl = `/uploads/${fileName}`;
+    let optimized: OptimizedImages | undefined;
+
+    if (IS_IMAGE_RE.test(fileName)) {
+      if (IS_BRANDING_RE.test(key)) {
+        // Branding logo — single size
+        try {
+          const sharp = await import("sharp").then(m => m.default);
+          const webpName = fileName.replace(/\.[^.]+$/, ".webp");
+          const webpBuf = await sharp(buf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+          fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
+          if (clientUploadsDir) fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+          console.log(`[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
+        } catch {
+          console.log("[Storage] sharp not available — skipping WebP auto-generation");
         }
-        console.log(`[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
-      } catch (e) {
-        // sharp not installed — skip WebP generation (the PNG will still be served)
-        console.log("[Storage] sharp not available — skipping WebP auto-generation");
+      } else {
+        // Product / general image — responsive set
+        const result = await optimizeImage(buf, fileName, uploadsDir, clientUploadsDir);
+        if (result) {
+          result.original = publicUrl;
+          optimized = result;
+        }
       }
     }
 
-    const publicUrl = `/uploads/${fileName}`;
-    return { key, url: publicUrl };
+    return { key, url: optimized?.url || publicUrl, optimized };
   }
   const { baseUrl, apiKey } = config;
   const key = normalizeKey(relKey);
