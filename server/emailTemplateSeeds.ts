@@ -266,8 +266,12 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">{{payment_email}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{payment_amount}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Reference:</strong> <span style="color:#666; font-size:14px;">{{payment_reference}}</span></td></tr>
-                                    <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the reference number in your e-transfer message</em></td></tr>
                                 </table>
+                                <div style="background-color:#FFFFFF; border:3px solid #4B2DBE; border-radius:10px; padding:15px; margin:15px 0 0 0; text-align:center;">
+                                    <p style="color:#333; font-size:13px; font-weight:bold; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.5px;">INCLUDE THIS ORDER NUMBER IN YOUR E-TRANSFER MEMO:</p>
+                                    <p style="font-family:monospace; font-size:22px; font-weight:bold; color:#4B2DBE; margin:0; letter-spacing:3px;">{{order_id}}</p>
+                                    <p style="color:#888; font-size:11px; margin:8px 0 0 0;">This ensures your payment is matched instantly to your order.</p>
+                                </div>
                             </div>
                             <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours will be automatically cancelled.</p>
@@ -275,7 +279,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","payment_email","logo_url","unsubscribe_url","privacy_url"],
+    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","payment_email","payment_instructions","logo_url","unsubscribe_url","privacy_url"],
     isActive: true,
   },
 
@@ -389,8 +393,12 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Send To:</strong> <span style="color:#666; font-size:14px;">{{payment_email}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Amount:</strong> <span style="color:#666; font-size:14px;">{{order_total}}</span></td></tr>
                                     <tr><td style="padding:5px 0;"><strong style="color:#333; font-size:14px;">Reference:</strong> <span style="color:#666; font-size:14px;">#{{order_id}}</span></td></tr>
-                                    <tr><td style="padding:10px 0 0 0;"><em style="color:#666; font-size:12px;">IMPORTANT: Include the order number in your e-transfer message</em></td></tr>
                                 </table>
+                                <div style="background-color:#FFFFFF; border:3px solid #4B2DBE; border-radius:10px; padding:15px; margin:15px 0 0 0; text-align:center;">
+                                    <p style="color:#333; font-size:13px; font-weight:bold; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.5px;">INCLUDE THIS ORDER NUMBER IN YOUR E-TRANSFER MEMO:</p>
+                                    <p style="font-family:monospace; font-size:22px; font-weight:bold; color:#4B2DBE; margin:0; letter-spacing:3px;">{{order_id}}</p>
+                                    <p style="color:#888; font-size:11px; margin:8px 0 0 0;">This ensures your payment is matched instantly to your order.</p>
+                                </div>
                             </div>
                             <div style="background-color:#FFEBEE; padding:15px; margin:20px 0; border-radius:8px;">
                                 <p style="color:#333; font-size:13px; line-height:1.5; margin:0;"><strong>Payment Deadline:</strong> Please send payment within 24 hours to confirm your order. Orders not paid within 24 hours may be automatically cancelled.</p>
@@ -398,7 +406,7 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
                     </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","payment_amount","payment_reference","payment_email","action_url","logo_url","unsubscribe_url","privacy_url"],
+    variables: ["customer_name","order_id","order_total","payment_amount","payment_reference","payment_email","payment_instructions","action_url","logo_url","unsubscribe_url","privacy_url"],
     isActive: true,
   },
 

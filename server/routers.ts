@@ -2062,6 +2062,102 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       return { success: true };
     }),
 
+    // Admin: reassign a payment from one order to another
+    reassign: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      newOrderId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      // ─── 1:1 CARDINALITY GUARD: prevent double-matching on the NEW order ───
+      const alreadyMatched = await db.isOrderAlreadyMatched(input.newOrderId);
+      if (alreadyMatched) {
+        throw new Error("The target order already has a matched payment. Each order can only be linked to one payment.");
+      }
+
+      // Get the current payment record to find the old order
+      const allRecords = await db.exportAllPaymentRecords();
+      const paymentRecord = allRecords.find((r: any) => r.id === input.paymentId);
+      if (!paymentRecord) throw new Error("Payment record not found");
+
+      const oldOrderId = paymentRecord.matchedOrderId;
+      const oldOrderNumber = paymentRecord.matchedOrderNumber;
+
+      // Get the new order details
+      const newOrder = await db.getOrderById(input.newOrderId);
+      if (!newOrder) throw new Error("Target order not found");
+
+      // Revert the old order's payment status back to pending (if it was set by this payment)
+      if (oldOrderId) {
+        await db.updateOrder(oldOrderId, { paymentStatus: "pending" } as any);
+        console.log(`[Reassign] Reverted old order #${oldOrderId} payment to pending`);
+      }
+
+      // Update the payment record to point to the new order
+      await db.updatePaymentRecord(input.paymentId, {
+        matchedOrderId: input.newOrderId,
+        matchedOrderNumber: newOrder.orderNumber,
+        status: "manual_matched" as any,
+        matchMethod: "manual_reassign",
+        matchConfidence: "exact" as any,
+        reviewedBy: ctx.user?.id || 0,
+        reviewedAt: new Date(),
+      } as any);
+
+      // Set the new order's payment status to received (admin must then confirm)
+      await db.updateOrder(input.newOrderId, { paymentStatus: "received" } as any);
+
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "etransfer_reassign",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Reassigned payment #${input.paymentId} from order ${oldOrderNumber || oldOrderId || "none"} → order ${newOrder.orderNumber}`,
+      });
+
+      console.log(`[Reassign] Payment #${input.paymentId}: ${oldOrderNumber || "unmatched"} → ${newOrder.orderNumber}`);
+      return { success: true };
+    }),
+
+    // Admin: unmatch a payment (detach from its order)
+    unmatch: adminProcedure.input(z.object({
+      paymentId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      const allRecords = await db.exportAllPaymentRecords();
+      const paymentRecord = allRecords.find((r: any) => r.id === input.paymentId);
+      if (!paymentRecord) throw new Error("Payment record not found");
+
+      const oldOrderId = paymentRecord.matchedOrderId;
+      const oldOrderNumber = paymentRecord.matchedOrderNumber;
+
+      // Revert the order's payment status back to pending
+      if (oldOrderId) {
+        await db.updateOrder(oldOrderId, { paymentStatus: "pending" } as any);
+      }
+
+      // Clear the match from the payment record
+      await db.updatePaymentRecord(input.paymentId, {
+        matchedOrderId: null,
+        matchedOrderNumber: null,
+        status: "unmatched" as any,
+        matchConfidence: "none" as any,
+        matchMethod: null,
+        reviewedBy: ctx.user?.id || 0,
+        reviewedAt: new Date(),
+        adminNotes: `Unmatched by admin (was: ${oldOrderNumber || oldOrderId || "none"})`,
+      } as any);
+
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "etransfer_unmatch",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Unmatched payment #${input.paymentId} from order ${oldOrderNumber || oldOrderId || "none"}`,
+      });
+
+      return { success: true };
+    }),
+
     // Admin: ignore a payment record
     ignore: adminProcedure.input(z.object({
       paymentId: z.number(),
