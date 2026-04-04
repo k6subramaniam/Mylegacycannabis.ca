@@ -87,10 +87,10 @@ export interface MatchResult {
 // Handles various Canadian bank Interac e-Transfer notification formats
 
 /**
- * Patterns that identify an Interac e-Transfer deposit notification.
- * We need at least one of these in subject or body.
+ * FALLBACK patterns that identify an Interac e-Transfer deposit notification.
+ * Used when no admin-configured keyword rules exist.
  */
-const ETRANSFER_INDICATORS = [
+const DEFAULT_ETRANSFER_INDICATORS = [
   /interac\s*e[\-\s]?transfer/i,
   /e[\-\s]?transfer.*deposit/i,
   /has been automatically deposited/i,
@@ -99,6 +99,85 @@ const ETRANSFER_INDICATORS = [
   /virement\s*interac/i,           // French (Desjardins, National Bank)
   /a été automatiquement déposé/i,  // French auto-deposit
 ];
+
+/** Exported for the test endpoint in routers.ts */
+export const DEFAULT_ETRANSFER_INDICATORS_FOR_TEST = DEFAULT_ETRANSFER_INDICATORS;
+
+// ─── ADMIN-CONFIGURABLE KEYWORD RULES ───
+// Stored in site_settings under key "etransfer_keyword_rules"
+// Format: Array of rule groups. Each group has an operator (AND/OR) and keywords[].
+// Groups are evaluated with OR between them (any group match = e-Transfer).
+// Within a group: AND means all keywords must be present, OR means any keyword.
+
+export interface KeywordRule {
+  id: string;
+  name: string;              // Human-readable rule name, e.g. "Interac auto-deposit"
+  operator: "AND" | "OR";    // How keywords within this rule combine
+  keywords: string[];        // Case-insensitive keyword/phrases
+  enabled: boolean;
+}
+
+/** In-memory cache for keyword rules to avoid DB hits on every email */
+let _cachedRules: KeywordRule[] | null = null;
+let _cacheExpiry = 0;
+const CACHE_TTL_MS = 60_000; // 1 minute
+
+export async function getKeywordRules(): Promise<KeywordRule[]> {
+  const now = Date.now();
+  if (_cachedRules !== null && now < _cacheExpiry) return _cachedRules;
+
+  try {
+    const raw = await db.getSiteSetting("etransfer_keyword_rules");
+    if (raw) {
+      _cachedRules = JSON.parse(raw) as KeywordRule[];
+    } else {
+      _cachedRules = [];
+    }
+  } catch {
+    _cachedRules = [];
+  }
+  _cacheExpiry = now + CACHE_TTL_MS;
+  return _cachedRules;
+}
+
+export function clearKeywordRulesCache(): void {
+  _cachedRules = null;
+  _cacheExpiry = 0;
+}
+
+/**
+ * Evaluate a single keyword rule against combined email text.
+ * Returns true if the rule matches.
+ */
+function evaluateRule(rule: KeywordRule, text: string): boolean {
+  if (!rule.enabled || rule.keywords.length === 0) return false;
+  const lower = text.toLowerCase();
+
+  if (rule.operator === "AND") {
+    return rule.keywords.every(kw => lower.includes(kw.toLowerCase()));
+  } else {
+    // OR
+    return rule.keywords.some(kw => lower.includes(kw.toLowerCase()));
+  }
+}
+
+/**
+ * Check if email text matches admin-configured keyword rules.
+ * Rules are combined with OR (any rule match = true).
+ * Falls back to hardcoded regex patterns if no rules are configured.
+ */
+async function matchesKeywordRules(subject: string, body: string): Promise<boolean> {
+  const rules = await getKeywordRules();
+  const enabledRules = rules.filter(r => r.enabled);
+
+  if (enabledRules.length === 0) {
+    // No admin rules → use defaults
+    return false; // signals caller to fall back
+  }
+
+  const combined = `${subject} ${body}`;
+  return enabledRules.some(rule => evaluateRule(rule, combined));
+}
 
 /**
  * Extract sender name from various bank formats:
@@ -141,9 +220,26 @@ const ORDER_NUMBER_PATTERNS = [
   /\b(ORD-[\d\-]+)\b/i,
 ];
 
-function isETransferEmail(subject: string, body: string): boolean {
+function isETransferEmailSync(subject: string, body: string): boolean {
   const combined = `${subject} ${body}`;
-  return ETRANSFER_INDICATORS.some(p => p.test(combined));
+  return DEFAULT_ETRANSFER_INDICATORS.some(p => p.test(combined));
+}
+
+/**
+ * Async version: checks admin keyword rules first, then falls back to defaults.
+ */
+async function isETransferEmail(subject: string, body: string): Promise<boolean> {
+  // Try admin-configured rules first
+  const rulesMatch = await matchesKeywordRules(subject, body);
+  if (rulesMatch) return true;
+
+  // Check if admin has rules configured (even if none matched)
+  const rules = await getKeywordRules();
+  const hasEnabledRules = rules.some(r => r.enabled);
+
+  // If admin has configured rules but none matched, still check defaults
+  // (admin rules are additive, not a replacement — ensures backwards compat)
+  return isETransferEmailSync(subject, body);
 }
 
 function extractSenderName(subject: string, body: string): string {
@@ -373,8 +469,8 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
         const dateStr = getHeader(headers, "Date");
         const body = getEmailBody(payload);
 
-        // Check if this is actually an e-Transfer email
-        if (!isETransferEmail(subject, body)) {
+        // Check if this is actually an e-Transfer email (uses admin keyword rules + defaults)
+        if (!(await isETransferEmail(subject, body))) {
           // Not an e-Transfer — label it and skip
           if (labelId) {
             await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
