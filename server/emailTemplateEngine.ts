@@ -121,10 +121,16 @@ async function commonVars(): Promise<Record<string, string>> {
     || "payments@mylegacycannabis.ca";
   return {
     logo_url: logoUrl,
+    site_url: base,
+    shop_url: `${base}/shop`,
+    account_url: `${base}/account`,
+    action_url: `${base}/shop`,
     payment_email: paymentEmail,
     unsubscribe_url: `${base}/unsubscribe`,
     privacy_url: `${base}/privacy`,
     terms_url: `${base}/terms`,
+    locations_url: `${base}/locations`,
+    faq_url: `${base}/faq`,
   };
 }
 
@@ -318,4 +324,41 @@ export async function triggerIdRejected(params: {
   sendTemplatedEmail(slug, params.customerEmail, vars).catch(err =>
     console.warn(`[TemplateEmail] ID rejected email failed:`, err.message)
   );
+}
+
+// ─── 9. PROMOTIONAL / CUSTOM EMAIL (admin-created via AI or manual) ───
+export async function triggerPromotionalEmail(params: {
+  slug: string;
+  recipientEmail: string;
+  recipientName?: string;
+  customVars?: Record<string, string>;
+}): Promise<boolean> {
+  const base = getSiteUrl();
+  const vars: Record<string, string> = {
+    customer_name: params.recipientName || "Valued Customer",
+    site_url: base,
+    shop_url: `${base}/shop`,
+    account_url: `${base}/account`,
+    action_url: `${base}/shop`,
+    locations_url: `${base}/locations`,
+    faq_url: `${base}/faq`,
+    ...await commonVars(),
+    ...params.customVars || {},
+  };
+
+  return sendTemplatedEmail(params.slug, params.recipientEmail, vars);
+}
+
+// ─── EXPORTED: Get resolved common variables (for admin preview) ───
+export async function getResolvedCommonVars(): Promise<Record<string, string>> {
+  const base = getSiteUrl();
+  return {
+    ...await commonVars(),
+    site_url: base,
+    shop_url: `${base}/shop`,
+    account_url: `${base}/account`,
+    action_url: `${base}/shop`,
+    locations_url: `${base}/locations`,
+    faq_url: `${base}/faq`,
+  };
 }

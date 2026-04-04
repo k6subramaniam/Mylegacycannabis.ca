@@ -2280,7 +2280,10 @@ export async function syncAllSiteKnowledge(): Promise<void> {
   // 11. Email templates (for AI to know what automated emails exist)
   const templates = await db.select({
     slug: schema.emailTemplates.slug,
+    name: schema.emailTemplates.name,
     subject: schema.emailTemplates.subject,
+    variables: schema.emailTemplates.variables,
+    isActive: schema.emailTemplates.isActive,
   }).from(schema.emailTemplates);
   await upsertSiteKnowledge("email_templates", JSON.stringify(templates));
 
