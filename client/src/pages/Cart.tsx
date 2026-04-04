@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { useT } from '@/i18n';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
@@ -19,6 +20,7 @@ export default function Cart() {
   const { items, updateQuantity, removeItem, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, freeShippingProgress, amountToFreeShipping, meetsMinimum, pointsToEarn, appliedReward, applyReward, rewardDiscount } = useCart();
   const { user } = useAuth();
   const { idVerificationEnabled } = useSiteConfig();
+  const { trackRemoveFromCart } = useBehavior();
   const eligibleTiers = user ? getEligibleRewardTiers(user.rewardsPoints) : [];
   const { data: shippingZones } = trpc.store.shippingZones.useQuery();
 
@@ -101,7 +103,7 @@ export default function Cart() {
                         </Link>
                         <p className="text-xs text-gray-500 font-body">{item.product.category} · {item.product.weight}</p>
                       </div>
-                      <button onClick={() => { removeItem(item.product.id); toast.info(`${item.product.name} removed`); }}
+                      <button onClick={() => { removeItem(item.product.id); trackRemoveFromCart(item.product.slug, Number(item.product.id) || undefined); toast.info(`${item.product.name} removed`); }}
                         className="text-gray-400 hover:text-red-500 p-1 transition-colors" aria-label={`Remove ${item.product.name}`}>
                         <Trash2 size={16} />
                       </button>

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useT } from '@/i18n';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-shop-5tiqFdCHUdeMeR3zPVXYu5.webp';
 
@@ -82,12 +83,14 @@ export default function Shop() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const { addItem } = useCart();
+  const { trackCategoryView, trackSearch, trackAddToCart } = useBehavior();
 
   // Reset strain + grade when category changes
   useEffect(() => {
     setSelectedStrain('');
     setSelectedGrade('');
     setSortBy('featured');
+    if (selectedCategory) trackCategoryView(selectedCategory);
   }, [selectedCategory]);
 
   // Fetch products from backend
@@ -498,6 +501,7 @@ export default function Shop() {
                                     flavor: product.flavor || '',
                                     weight: product.weight || '',
                                   } as any);
+                                  trackAddToCart(product.slug, product.id, { price: product.price, name: product.name });
                                   toast.success(`${product.name} added to cart`);
                                 }}
                                 className="bg-[#F19929] hover:bg-[#d98520] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"

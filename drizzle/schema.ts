@@ -404,3 +404,65 @@ export const fileStore = pgTable("file_store", {
 
 export type FileStoreEntry = typeof fileStore.$inferSelect;
 export type InsertFileStoreEntry = typeof fileStore.$inferInsert;
+
+// ─── USER BEHAVIOR TRACKING ───
+// Captures page views, clicks, time-on-page, and shopping patterns per user/session.
+export const behaviorEventTypeEnum = pgEnum("behavior_event_type", [
+  "page_view", "product_view", "category_view", "add_to_cart",
+  "remove_from_cart", "search", "click", "checkout_start",
+  "checkout_complete", "review_submit", "wishlist_add",
+]);
+
+export const userBehavior = pgTable("user_behavior", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),                                // null for anonymous visitors
+  sessionId: varchar("session_id", { length: 64 }).notNull(), // browser session fingerprint
+  eventType: behaviorEventTypeEnum("event_type").notNull(),
+  page: varchar("page", { length: 500 }),                    // URL path
+  productId: integer("product_id"),                          // when event is product-related
+  productSlug: varchar("product_slug", { length: 255 }),
+  category: varchar("category", { length: 100 }),
+  searchQuery: varchar("search_query", { length: 255 }),
+  metadata: json("metadata").$type<Record<string, any>>(),   // flexible extra data (time_on_page_ms, click_target, etc.)
+  dwellTimeMs: integer("dwell_time_ms"),                     // time spent on page in milliseconds
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UserBehavior = typeof userBehavior.$inferSelect;
+export type InsertUserBehavior = typeof userBehavior.$inferInsert;
+
+// ─── AI USER MEMORY (long-term profile) ───
+// Stores an AI-generated summary of each user's preferences, patterns, and profile.
+export const aiUserMemory = pgTable("ai_user_memory", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),             // one memory per registered user
+  preferredCategories: json("preferred_categories").$type<string[]>(),
+  preferredStrains: json("preferred_strains").$type<string[]>(),
+  priceRange: json("price_range").$type<{ min: number; max: number }>(),
+  shoppingPatterns: text("shopping_patterns"),                // AI-generated natural language summary
+  reviewHistory: json("review_history").$type<Array<{ productId: number; rating: number; date: string }>>(),
+  lastProducts: json("last_products").$type<Array<{ slug: string; name: string; viewedAt: string }>>(),
+  totalOrders: integer("total_orders").default(0),
+  totalSpent: numeric("total_spent", { precision: 10, scale: 2 }).default("0"),
+  avgOrderValue: numeric("avg_order_value", { precision: 10, scale: 2 }).default("0"),
+  aiSummary: text("ai_summary"),                             // AI-generated holistic user profile
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AiUserMemory = typeof aiUserMemory.$inferSelect;
+export type InsertAiUserMemory = typeof aiUserMemory.$inferInsert;
+
+// ─── SITE KNOWLEDGE SYNC ───
+// Stores the latest AI-consumable snapshot of site-wide knowledge (products, FAQ, policies, etc.)
+export const siteKnowledgeSync = pgTable("site_knowledge_sync", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),   // e.g. "active_products", "faq", "policies", "terms"
+  content: text("content").notNull(),                         // JSON or markdown content
+  contentHash: varchar("content_hash", { length: 64 }),       // SHA-256 hash to detect changes
+  lastSyncedAt: timestamp("last_synced_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SiteKnowledgeSync = typeof siteKnowledgeSync.$inferSelect;
+export type InsertSiteKnowledgeSync = typeof siteKnowledgeSync.$inferInsert;

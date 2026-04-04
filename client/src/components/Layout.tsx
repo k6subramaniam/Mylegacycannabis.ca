@@ -8,6 +8,7 @@ import { Menu, X, ShoppingCart, Home, Search, User, Phone, Mail, Gift, ChevronRi
 import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 const LOGO_URL_FALLBACK = '/logo.webp';
 
@@ -819,6 +820,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     try { return localStorage.getItem('mlc-age-verified') === 'true'; } catch { return false; }
   });
   const { maintenance, logoUrl } = useSiteConfig();
+  const [location] = useLocation();
+  const { trackPageView } = useBehavior();
+
+  // Track page views on route changes
+  useEffect(() => {
+    trackPageView(location);
+  }, [location, trackPageView]);
 
   const handleAgeConfirm = () => {
     setAgeVerified(true);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { useT } from '@/i18n';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 /* ================================================================
    GUEST ID VERIFICATION INLINE COMPONENT
@@ -173,6 +174,10 @@ export default function Checkout() {
   const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
   const { idVerificationEnabled, paymentEmail } = useSiteConfig();
+  const { trackCheckoutStart, trackCheckoutComplete } = useBehavior();
+
+  // Track checkout start
+  useEffect(() => { trackCheckoutStart(); }, []);
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -353,6 +358,9 @@ export default function Checkout() {
       // Save points BEFORE clearing the cart (clearCart resets subtotal → 0 → points become 0)
       setSavedPointsEarned(pointsToEarn);
       setOrderPlaced(true);
+
+      // Track checkout completion for AI behavior
+      trackCheckoutComplete(result.orderNumber, finalTotal.toFixed(2));
 
       // Add the order to the user's orders list so it shows on the Account > Orders tab
       if (isAuthenticated) {
