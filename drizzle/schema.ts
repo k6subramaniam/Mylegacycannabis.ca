@@ -24,7 +24,7 @@ export const orderStatusEnum = pgEnum("order_status", [
   "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded",
 ]);
 export const paymentStatusEnum = pgEnum("payment_status", [
-  "pending", "received", "confirmed", "refunded",
+  "pending", "received", "confirmed", "partially_refunded", "refunded",
 ]);
 export const verificationStatusEnum = pgEnum("verification_status", ["pending", "approved", "rejected"]);
 export const rewardsTypeEnum = pgEnum("rewards_type", ["earned", "redeemed", "bonus", "deducted", "admin_add", "admin_deduct", "birthday", "referral", "review"]);

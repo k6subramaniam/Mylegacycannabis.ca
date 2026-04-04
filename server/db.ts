@@ -58,7 +58,7 @@ export async function initializeDatabase(): Promise<void> {
     { name: 'product_category', values: "'flower','pre-rolls','edibles','vapes','concentrates','accessories','ounce-deals','shake-n-bake'" },
     { name: 'strain_type', values: "'Sativa','Indica','Hybrid','CBD','N/A'" },
     { name: 'order_status', values: "'pending','confirmed','processing','shipped','delivered','cancelled','refunded'" },
-    { name: 'payment_status', values: "'pending','received','confirmed','refunded'" },
+    { name: 'payment_status', values: "'pending','received','confirmed','partially_refunded','refunded'" },
     { name: 'verification_status', values: "'pending','approved','rejected'" },
     { name: 'rewards_type', values: "'earned','redeemed','bonus','deducted','admin_add','admin_deduct'" },
   ];
@@ -70,6 +70,9 @@ export async function initializeDatabase(): Promise<void> {
   for (const val of ['ounce-deals', 'shake-n-bake']) {
     await _sql!.unsafe(`DO $$ BEGIN ALTER TYPE product_category ADD VALUE IF NOT EXISTS '${val}'; EXCEPTION WHEN duplicate_object THEN null; END $$`);
   }
+
+  // Add partially_refunded to payment_status enum (safe for existing DBs)
+  await _sql!.unsafe(`DO $$ BEGIN ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'partially_refunded' BEFORE 'refunded'; EXCEPTION WHEN duplicate_object THEN null; END $$`);
 
   // Add subcategory and grade columns if missing
   await _sql!.unsafe(`DO $$ BEGIN ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory VARCHAR(100); EXCEPTION WHEN duplicate_column THEN null; END $$`);
@@ -1434,6 +1437,84 @@ export async function awardOrderPoints(orderId: number): Promise<{ points: numbe
   await addRewardsHistory({ userId: user.id, points, type: 'earned', description: `Earned ${points} points from order ${order.orderNumber}`, orderId } as any);
 
   return { points, userId: user.id };
+}
+
+/**
+ * Clawback (reverse) reward points when an order is refunded.
+ * Looks up the 'earned' rewards history entry for this order and subtracts those points.
+ */
+export async function clawbackOrderPoints(orderId: number): Promise<{ points: number; userId?: number } | null> {
+  const order = await getOrderById(orderId);
+  if (!order) return null;
+  // Find the original earned entry
+  let earnedEntry: any = null;
+  if (USE_PERSISTENT_DB) {
+    const rows = await getDb().select().from(schema.rewardsHistory)
+      .where(and(eq(schema.rewardsHistory.orderId, orderId), eq(schema.rewardsHistory.type, 'earned')))
+      .limit(1);
+    earnedEntry = rows[0] || null;
+  } else {
+    earnedEntry = _rewardsHistory.find((r: any) => r.orderId === orderId && r.type === 'earned') || null;
+  }
+  if (!earnedEntry) return null; // no points were ever awarded
+
+  // Check if already clawed back
+  if (USE_PERSISTENT_DB) {
+    const existing = await getDb().select().from(schema.rewardsHistory)
+      .where(and(eq(schema.rewardsHistory.orderId, orderId), eq(schema.rewardsHistory.type, 'redeemed')))
+      .limit(1);
+    // We use 'redeemed' type with negative description as clawback marker
+    const clawbacks = await getDb().select().from(schema.rewardsHistory)
+      .where(and(
+        eq(schema.rewardsHistory.orderId, orderId),
+        sql`${schema.rewardsHistory.description} LIKE '%clawback%'`
+      )).limit(1);
+    if (clawbacks.length > 0) return null; // already clawed back
+  } else {
+    const existing = _rewardsHistory.find((r: any) => r.orderId === orderId && r.description?.includes('clawback'));
+    if (existing) return null;
+  }
+
+  const points = earnedEntry.points;
+  if (!order.guestEmail) return null;
+  const user = await getUserByEmail(order.guestEmail);
+  if (!user) return null;
+
+  const newPoints = Math.max(0, (user.rewardPoints || 0) - points);
+  await updateUser(user.id, { rewardPoints: newPoints } as any);
+  await addRewardsHistory({ userId: user.id, points: -points, type: 'redeemed', description: `Points clawback for refunded order ${order.orderNumber}`, orderId } as any);
+
+  return { points, userId: user.id };
+}
+
+/**
+ * Get the payment record linked to a specific order (by matched_order_id).
+ * Enforces 1:1 — returns the first match or null.
+ */
+export async function getPaymentRecordByOrderId(orderId: number): Promise<any | null> {
+  if (!USE_PERSISTENT_DB) {
+    return _mem_paymentRecords.find((p: any) => p.matchedOrderId === orderId) || null;
+  }
+  const rows = await getDb().select().from(schema.paymentRecords)
+    .where(eq(schema.paymentRecords.matchedOrderId, orderId))
+    .limit(1);
+  return rows[0] || null;
+}
+
+/**
+ * Check if an order already has a matched payment record (1:1 cardinality guard).
+ */
+export async function isOrderAlreadyMatched(orderId: number): Promise<boolean> {
+  if (!USE_PERSISTENT_DB) {
+    return _mem_paymentRecords.some((p: any) => p.matchedOrderId === orderId && (p.status === 'auto_matched' || p.status === 'manual_matched'));
+  }
+  const rows = await getDb().select({ id: schema.paymentRecords.id }).from(schema.paymentRecords)
+    .where(and(
+      eq(schema.paymentRecords.matchedOrderId, orderId),
+      or(eq(schema.paymentRecords.status, 'auto_matched' as any), eq(schema.paymentRecords.status, 'manual_matched' as any))
+    ))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /**

@@ -221,13 +221,33 @@ export const appRouter = router({
         const order = await db.getOrderById(input.id);
         if (!order) return null;
         const items = await db.getOrderItems(input.id);
-        return { ...order, items };
+        // Include linked payment record (if any) for the order detail view
+        const paymentRecord = await db.getPaymentRecordByOrderId(input.id);
+        return { ...order, items, paymentRecord };
       }),
       updateStatus: adminProcedure.input(z.object({
         id: z.number(),
         status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]),
       })).mutation(async ({ input, ctx }) => {
         const previousOrder = await db.getOrderById(input.id);
+        if (!previousOrder) throw new Error("Order not found");
+
+        // ─── PAYMENT GATE (server-enforced) ───
+        // Order cannot advance to confirmed/processing/shipped/delivered unless payment is confirmed (or partially_refunded).
+        // Exception: cancelled and refunded are always allowed (end states).
+        const PAYMENT_GATED_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered'];
+        const PAYMENT_OK_FOR_ADVANCE = ['confirmed', 'partially_refunded'];
+        if (PAYMENT_GATED_STATUSES.includes(input.status) && !PAYMENT_OK_FOR_ADVANCE.includes(previousOrder.paymentStatus)) {
+          throw new Error(`Cannot set order to "${input.status}" — payment must be confirmed first (current: ${previousOrder.paymentStatus}).`);
+        }
+
+        // ─── SHIPPED GATE: only via addTracking ───
+        // "Shipped" can ONLY be set by the addTracking mutation (which auto-cascades).
+        // This ensures every shipped order has a tracking number.
+        if (input.status === 'shipped') {
+          throw new Error('Cannot manually set status to "Shipped". Add a tracking number instead — it will automatically set the order to Shipped.');
+        }
+
         await db.updateOrder(input.id, { status: input.status });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_status", entityType: "order", entityId: input.id, details: `Changed order #${input.id} status to ${input.status}` });
         await notifyOwner({ title: `Order Status Updated`, content: `Order #${input.id} status changed to ${input.status}` });
@@ -241,9 +261,29 @@ export const appRouter = router({
         }
 
         // ─── RESTORE STOCK on cancellation / refund ───
-        if ((input.status === 'cancelled' || input.status === 'refunded') && previousOrder && previousOrder.status !== 'cancelled' && previousOrder.status !== 'refunded') {
+        if ((input.status === 'cancelled' || input.status === 'refunded') && previousOrder.status !== 'cancelled' && previousOrder.status !== 'refunded') {
           await db.restoreStock(input.id);
           console.log(`[Stock] Restored stock for cancelled/refunded order #${input.id}`);
+        }
+
+        // ─── AUTO-CASCADE: Cancel → set payment to refunded (if applicable) ───
+        if (input.status === 'cancelled' && previousOrder.paymentStatus !== 'pending') {
+          await db.updateOrder(input.id, { paymentStatus: 'refunded' } as any);
+          console.log(`[Cascade] Order #${input.id} cancelled → payment set to refunded`);
+        }
+
+        // ─── AUTO-CASCADE: Refund → clawback reward points + set payment refunded ───
+        if (input.status === 'refunded') {
+          // Clawback points
+          const clawback = await db.clawbackOrderPoints(input.id);
+          if (clawback) {
+            console.log(`[Rewards] Clawed back ${clawback.points} points for refunded order #${input.id}`);
+          }
+          // Set payment to refunded
+          if (previousOrder.paymentStatus !== 'refunded') {
+            await db.updateOrder(input.id, { paymentStatus: 'refunded' } as any);
+            console.log(`[Cascade] Order #${input.id} refunded → payment set to refunded`);
+          }
         }
 
         // Send status update email to customer
@@ -272,7 +312,7 @@ export const appRouter = router({
       }),
       updatePayment: adminProcedure.input(z.object({
         id: z.number(),
-        paymentStatus: z.enum(["pending", "received", "confirmed", "refunded"]),
+        paymentStatus: z.enum(["pending", "received", "confirmed", "partially_refunded", "refunded"]),
       })).mutation(async ({ input, ctx }) => {
         await db.updateOrder(input.id, { paymentStatus: input.paymentStatus });
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_payment", entityType: "order", entityId: input.id, details: `Changed order #${input.id} payment to ${input.paymentStatus}` });
@@ -306,9 +346,36 @@ export const appRouter = router({
           ),
         trackingUrl: z.string().optional(),
       })).mutation(async ({ input, ctx }) => {
+        const order = await db.getOrderById(input.id);
+        if (!order) throw new Error("Order not found");
+
+        // ─── TRACKING GATE: payment must be confirmed (or partially_refunded) ───
+        if (order.paymentStatus !== 'confirmed' && order.paymentStatus !== 'partially_refunded') {
+          throw new Error(`Cannot add tracking — payment must be confirmed first (current: ${order.paymentStatus}).`);
+        }
+
+        // ─── TRACKING DEPENDENCY: order must be in confirmed or processing state ───
+        if (!['confirmed', 'processing'].includes(order.status)) {
+          throw new Error(`Cannot add tracking — order must be in "confirmed" or "processing" state (current: ${order.status}).`);
+        }
+
         const trackingUrl = input.trackingUrl || `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${input.trackingNumber}`;
-        await db.updateOrder(input.id, { trackingNumber: input.trackingNumber, trackingUrl });
-        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "add_tracking", entityType: "order", entityId: input.id, details: `Added tracking: ${input.trackingNumber}` });
+
+        // ─── AUTO-CASCADE: Enter tracking → set order to shipped + award points ───
+        await db.updateOrder(input.id, {
+          trackingNumber: input.trackingNumber,
+          trackingUrl,
+          status: 'shipped',
+        } as any);
+
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "add_tracking", entityType: "order", entityId: input.id, details: `Added tracking: ${input.trackingNumber} → auto-set to shipped` });
+        console.log(`[Cascade] Order #${input.id} tracking added → auto-set to shipped`);
+
+        // Award reward points on shipment (previously only on delivered)
+        const pointsResult = await db.awardOrderPoints(input.id);
+        if (pointsResult) {
+          console.log(`[Rewards] Awarded ${pointsResult.points} points for shipped order #${input.id}`);
+        }
 
         // Send "Order Shipped" email to customer with tracking info
         const trackOrder = await db.getOrderById(input.id);
@@ -1969,6 +2036,12 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       paymentId: z.number(),
       orderId: z.number(),
     })).mutation(async ({ input, ctx }) => {
+      // ─── 1:1 CARDINALITY GUARD: prevent double-matching ───
+      const alreadyMatched = await db.isOrderAlreadyMatched(input.orderId);
+      if (alreadyMatched) {
+        throw new Error("This order already has a matched payment. Each order can only be linked to one payment.");
+      }
+
       const success = await manualMatchPayment(input.paymentId, input.orderId, ctx.user?.id || 0);
       if (!success) throw new Error("Failed to match payment to order");
       // Get the order to update its matched order number
