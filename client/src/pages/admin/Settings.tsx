@@ -1442,17 +1442,24 @@ function AiConfigSection() {
 function LogoManagementSection() {
   const utils = trpc.useUtils();
   const { data: logoData, isLoading } = trpc.admin.emailLogo.get.useQuery();
+  // Track whether we just uploaded — prevents useEffect from reverting preview
+  // to stale logoData while the cache is being refreshed.
+  const [justUploaded, setJustUploaded] = useState(false);
   const uploadMutation = trpc.admin.emailLogo.upload.useMutation({
     onSuccess: (data) => {
+      setJustUploaded(true);
+      // Set the preview immediately with the cache-busted URL from the server
+      setPreview(data.url);
+      // Invalidate both queries so the rest of the app picks up the new logo
       utils.admin.emailLogo.get.invalidate();
       utils.store.siteConfig.invalidate();
-      setPreview(data.url);
       toast.success("Logo uploaded and applied globally! All pages, emails, and the admin panel will now use the new logo.");
     },
     onError: (err: any) => toast.error(err.message || "Failed to upload logo"),
   });
   const resetMutation = trpc.admin.emailLogo.update.useMutation({
     onSuccess: () => {
+      setJustUploaded(false);
       utils.admin.emailLogo.get.invalidate();
       utils.store.siteConfig.invalidate();
       setPreview("/logo.webp");
@@ -1465,7 +1472,11 @@ function LogoManagementSection() {
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    if (logoData?.url) setPreview(logoData.url);
+    // Only sync from server data if we haven't just uploaded
+    // (avoids reverting preview back to stale cached URL)
+    if (logoData?.url && !justUploaded) setPreview(logoData.url);
+    // Once the server data refreshes after upload, clear the flag
+    if (justUploaded && logoData?.url) setJustUploaded(false);
   }, [logoData]);
 
   const handleFileSelect = (file: File) => {
@@ -1510,7 +1521,8 @@ function LogoManagementSection() {
   };
 
   const currentUrl = logoData?.url || "/logo.webp";
-  const isDefault = !logoData?.url || logoData.url === "/logo.webp" || logoData.url.endsWith("/logo.webp");
+  const cleanUrl = currentUrl.split("?")[0]; // strip ?v= for display
+  const isDefault = !logoData?.url || cleanUrl === "/logo.webp" || cleanUrl.endsWith("/logo.webp");
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1565,7 +1577,7 @@ function LogoManagementSection() {
               </div>
               {!isDefault && (
                 <p className="text-xs text-gray-400 mt-2 truncate">
-                  URL: <code className="bg-gray-50 px-1.5 py-0.5 rounded text-[10px]">{currentUrl}</code>
+                  URL: <code className="bg-gray-50 px-1.5 py-0.5 rounded text-[10px]">{cleanUrl}</code>
                 </p>
               )}
             </div>
