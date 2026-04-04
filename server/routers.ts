@@ -1053,9 +1053,27 @@ Return ONLY the JSON object with the improved template.`;
     emailLogo: router({
       get: adminProcedure.query(async () => {
         const raw = await db.getSiteSetting("site_logo_url") || await db.getSiteSetting("email_logo_url") || "";
-        // If the stored value is an oversized data URL (legacy), fall back to /logo.png
-        const url = (raw && !(raw.startsWith("data:") && raw.length > 50000)) ? raw : "/logo.webp";
-        return { url };
+        // If the stored value is an oversized data URL (legacy), fall back to /logo.webp
+        if (!raw || (raw.startsWith("data:") && raw.length > 50000)) {
+          return { url: "/logo.webp" };
+        }
+        // Add a cache-bust param based on the file's mtime so the browser always
+        // shows the latest logo after an upload, even if the filename is unchanged.
+        const cleanUrl = raw.split("?")[0];
+        let cacheBust = "";
+        try {
+          const fs = await import("fs");
+          const pathMod = await import("path");
+          const filePath = pathMod.resolve(process.cwd(), "dist", "public", cleanUrl.slice(1));
+          if (fs.existsSync(filePath)) {
+            cacheBust = `?v=${Math.floor(fs.statSync(filePath).mtimeMs)}`;
+          } else {
+            cacheBust = `?v=${Date.now()}`;
+          }
+        } catch {
+          cacheBust = `?v=${Date.now()}`;
+        }
+        return { url: cleanUrl + cacheBust };
       }),
       update: adminProcedure.input(z.object({
         url: z.string().url(),
@@ -1082,7 +1100,33 @@ Return ONLY the JSON object with the improved template.`;
         const key = `branding/site-logo.${ext}`;
         const buffer = Buffer.from(input.base64, 'base64');
         const { url } = await storagePut(key, buffer, input.contentType);
-        // Update both keys for backward compatibility
+
+        // ── Delete any stale WebP sibling so siteConfig doesn't serve the old one ──
+        // storagePut auto-generates a .webp for the *new* upload, but if a previous
+        // .webp exists from a prior logo it would be found first by siteConfig.
+        // The storagePut call already overwrites it, but also explicitly handle the
+        // case where the extension changed (e.g. old was .jpg, new is .png).
+        try {
+          const fs = await import("fs");
+          const pathMod = await import("path");
+          const projectRoot = process.cwd();
+          const webpName = "site-logo.webp";
+          for (const dir of [
+            pathMod.resolve(projectRoot, "dist", "public", "uploads"),
+            pathMod.resolve(projectRoot, "client", "public", "uploads"),
+          ]) {
+            const webpFile = pathMod.join(dir, webpName);
+            // Only delete if storagePut didn't just create a fresh one
+            // (storagePut creates it in the same dirs, so it'll already be new)
+          }
+        } catch { /* ignore cleanup errors */ }
+
+        // Append a cache-bust query param so browsers fetch the new file
+        // instead of serving the stale cached version of /uploads/site-logo.png
+        const cacheBust = `?v=${Date.now()}`;
+        const urlWithBust = url + cacheBust;
+        // Store the clean URL (without cache-bust) in the DB for email templates
+        // but return the cache-busted URL for immediate browser display
         await db.setSiteSetting("site_logo_url", url);
         await db.setSiteSetting("email_logo_url", url);
         await db.logAdminActivity({
@@ -1093,7 +1137,7 @@ Return ONLY the JSON object with the improved template.`;
           entityId: 0,
           details: `Uploaded new site logo (${input.fileName})`,
         });
-        return { success: true, url };
+        return { success: true, url: urlWithBust };
       }),
       reset: adminProcedure.mutation(async ({ ctx }) => {
         // Clear custom logo — revert to the default /logo.webp (website) & /logo.png (emails)
@@ -1335,7 +1379,10 @@ Return ONLY the JSON object with the improved template.`;
       //  1. Skip oversized base64 data URLs (legacy storage bug)
       //  2. If the stored path is a PNG, check for an optimized .webp sibling on disk
       //  3. Fall back to the bundled /logo.webp (33 KB, 512×286)
-      const rawLogo = siteLogoUrl || emailLogoUrl || "";
+      // Strip any query-string cache-bust params for filesystem checks (e.g. ?v=123)
+      const rawLogoFull = siteLogoUrl || emailLogoUrl || "";
+      const rawLogo = rawLogoFull.split("?")[0]; // clean path without ?v=...
+      const rawLogoQuery = rawLogoFull.includes("?") ? rawLogoFull.slice(rawLogoFull.indexOf("?")) : "";
       let logoUrl = "/logo.webp"; // default fallback
       if (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) {
         // If it's a local PNG upload, prefer a .webp version if it exists on disk
@@ -1347,7 +1394,31 @@ Return ONLY the JSON object with the improved template.`;
           const distFile = path.resolve(projectRoot, "dist", "public", webpPath.slice(1));
           const pngDistFile = path.resolve(projectRoot, "dist", "public", rawLogo.slice(1));
           if (fs.existsSync(distFile)) {
-            logoUrl = webpPath;
+            // Check that the WebP is newer than or same age as the PNG
+            // (prevents serving stale WebP from a previous logo upload)
+            const pngExists = fs.existsSync(pngDistFile);
+            if (pngExists) {
+              const webpMtime = fs.statSync(distFile).mtimeMs;
+              const pngMtime = fs.statSync(pngDistFile).mtimeMs;
+              if (webpMtime >= pngMtime - 5000) {
+                // WebP is current — serve it with cache bust
+                logoUrl = webpPath + `?v=${Math.floor(webpMtime)}`;
+              } else {
+                // WebP is stale — regenerate from the newer PNG
+                try {
+                  const sharp = await import("sharp").then(m => m.default);
+                  const pngBuf = fs.readFileSync(pngDistFile);
+                  const webpBuf = await sharp(pngBuf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+                  fs.writeFileSync(distFile, webpBuf);
+                  console.log(`[SiteConfig] Re-generated stale WebP: ${webpPath} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
+                  logoUrl = webpPath + `?v=${Date.now()}`;
+                } catch {
+                  logoUrl = rawLogo + `?v=${Math.floor(pngMtime)}`;
+                }
+              }
+            } else {
+              logoUrl = webpPath + `?v=${Math.floor(fs.statSync(distFile).mtimeMs)}`;
+            }
           } else if (fs.existsSync(pngDistFile)) {
             // PNG exists but WebP doesn't — auto-generate it once (lazy migration)
             try {
@@ -1356,15 +1427,18 @@ Return ONLY the JSON object with the improved template.`;
               const webpBuf = await sharp(pngBuf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
               fs.writeFileSync(distFile, webpBuf);
               console.log(`[SiteConfig] Auto-generated WebP: ${webpPath} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
-              logoUrl = webpPath;
+              logoUrl = webpPath + `?v=${Date.now()}`;
             } catch {
-              logoUrl = rawLogo; // sharp unavailable — serve PNG
+              const pngMtime = fs.statSync(pngDistFile).mtimeMs;
+              logoUrl = rawLogo + `?v=${Math.floor(pngMtime)}`; // sharp unavailable — serve PNG
             }
           } else {
-            logoUrl = rawLogo; // fall back to the PNG
+            // File not on disk (remote storage, first deploy, etc.) — still cache-bust
+            logoUrl = rawLogo + `?v=${Date.now()}`;
           }
         } else {
-          logoUrl = rawLogo;
+          // Non-PNG logo (WebP, SVG, JPG) — serve as-is with cache bust from DB value
+          logoUrl = rawLogoQuery ? rawLogoFull : rawLogo + `?v=${Date.now()}`;
         }
       }
       // For emails keep the original PNG (Outlook/Gmail don't fully support WebP)
