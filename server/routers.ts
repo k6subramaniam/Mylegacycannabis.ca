@@ -28,7 +28,7 @@ import {
   getResolvedCommonVars,
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
-import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
+import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured, getKeywordRules, clearKeywordRulesCache, DEFAULT_ETRANSFER_INDICATORS_FOR_TEST, type KeywordRule } from "./etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
 import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
@@ -2426,6 +2426,63 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
         details: `Cleared all payment history (${deleted} records deleted)`,
       });
       return { success: true, deleted };
+    }),
+
+    // ─── KEYWORD RULES (admin-configurable AND/OR e-Transfer detection) ───
+    getKeywordRules: adminProcedure.query(async () => {
+      return getKeywordRules();
+    }),
+
+    saveKeywordRules: adminProcedure.input(z.array(z.object({
+      id: z.string(),
+      name: z.string().min(1).max(100),
+      operator: z.enum(["AND", "OR"]),
+      keywords: z.array(z.string().min(1).max(200)),
+      enabled: z.boolean(),
+    }))).mutation(async ({ input, ctx }) => {
+      await db.setSiteSetting("etransfer_keyword_rules", JSON.stringify(input));
+      clearKeywordRulesCache();
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName: ctx.user?.name || "Admin",
+        action: "update_etransfer_keywords",
+        entityType: "site_setting",
+        entityId: 0,
+        details: `Updated e-Transfer keyword rules (${input.length} rule(s), ${input.filter(r => r.enabled).length} enabled)`,
+      });
+      return { success: true, count: input.length };
+    }),
+
+    testKeywordRules: adminProcedure.input(z.object({
+      subject: z.string(),
+      body: z.string(),
+    })).mutation(async ({ input }) => {
+      const rules = await getKeywordRules();
+      const enabledRules = rules.filter(r => r.enabled);
+      const combined = `${input.subject} ${input.body}`;
+      const lower = combined.toLowerCase();
+
+      // Test each rule individually
+      const ruleResults = enabledRules.map(rule => {
+        const keywordResults = rule.keywords.map(kw => ({
+          keyword: kw,
+          found: lower.includes(kw.toLowerCase()),
+        }));
+        const match = rule.operator === "AND"
+          ? keywordResults.every(r => r.found)
+          : keywordResults.some(r => r.found);
+        return { ruleId: rule.id, ruleName: rule.name, operator: rule.operator, match, keywordResults };
+      });
+
+      // Test defaults too
+      const defaultMatch = DEFAULT_ETRANSFER_INDICATORS_FOR_TEST.some(p => p.test(combined));
+
+      return {
+        overallMatch: ruleResults.some(r => r.match) || defaultMatch,
+        customRulesMatch: ruleResults.some(r => r.match),
+        defaultMatch,
+        ruleResults,
+      };
     }),
   }),
 });

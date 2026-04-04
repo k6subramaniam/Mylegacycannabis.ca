@@ -1,9 +1,10 @@
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
   CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
-  Download, Trash2, AlertTriangle, FileDown, Info
+  Download, Trash2, AlertTriangle, FileDown, Info, ChevronDown, ChevronUp,
+  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -52,6 +53,17 @@ export default function AdminPayments() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [reassignOrderId, setReassignOrderId] = useState<Record<number, string>>({});
   const [reassigningId, setReassigningId] = useState<number | null>(null);
+
+  // ─── Keyword Rules State ───
+  const [showKeywordRules, setShowKeywordRules] = useState(false);
+  const [keywordRules, setKeywordRules] = useState<Array<{
+    id: string; name: string; operator: "AND" | "OR"; keywords: string[]; enabled: boolean;
+  }>>([]);
+  const [rulesLoaded, setRulesLoaded] = useState(false);
+  const [newKeywordInput, setNewKeywordInput] = useState<Record<string, string>>({});
+  const [testSubject, setTestSubject] = useState("");
+  const [testBody, setTestBody] = useState("");
+  const [testResult, setTestResult] = useState<any>(null);
 
   const statusFilter = tab === "all" ? undefined : tab;
 
@@ -136,6 +148,64 @@ export default function AdminPayments() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  // ─── Keyword Rules Queries ───
+  const { data: keywordRulesData } = trpc.etransfer.getKeywordRules.useQuery(undefined, {
+    onSuccess: (data: any) => {
+      if (!rulesLoaded) {
+        setKeywordRules(data || []);
+        setRulesLoaded(true);
+      }
+    },
+  });
+
+  const saveRulesMutation = trpc.etransfer.saveKeywordRules.useMutation({
+    onSuccess: () => {
+      toast.success("Keyword rules saved");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const testRulesMutation = trpc.etransfer.testKeywordRules.useMutation({
+    onSuccess: (result: any) => {
+      setTestResult(result);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Keyword rule helpers
+  const addRule = useCallback(() => {
+    setKeywordRules(prev => [...prev, {
+      id: `rule_${Date.now()}`,
+      name: `Rule ${prev.length + 1}`,
+      operator: "OR" as const,
+      keywords: [],
+      enabled: true,
+    }]);
+  }, []);
+
+  const removeRule = useCallback((ruleId: string) => {
+    setKeywordRules(prev => prev.filter(r => r.id !== ruleId));
+  }, []);
+
+  const updateRule = useCallback((ruleId: string, updates: Partial<typeof keywordRules[0]>) => {
+    setKeywordRules(prev => prev.map(r => r.id === ruleId ? { ...r, ...updates } : r));
+  }, []);
+
+  const addKeywordToRule = useCallback((ruleId: string) => {
+    const kw = (newKeywordInput[ruleId] || "").trim();
+    if (!kw) return;
+    setKeywordRules(prev => prev.map(r =>
+      r.id === ruleId && !r.keywords.includes(kw) ? { ...r, keywords: [...r.keywords, kw] } : r
+    ));
+    setNewKeywordInput(prev => ({ ...prev, [ruleId]: "" }));
+  }, [newKeywordInput]);
+
+  const removeKeywordFromRule = useCallback((ruleId: string, keyword: string) => {
+    setKeywordRules(prev => prev.map(r =>
+      r.id === ruleId ? { ...r, keywords: r.keywords.filter(k => k !== keyword) } : r
+    ));
+  }, []);
 
   // ─── Export CSV ───
   const handleExportCSV = async () => {
@@ -304,6 +374,245 @@ export default function AdminPayments() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ═══ E-Transfer Keyword Rules Configuration ═══ */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+        <button
+          onClick={() => setShowKeywordRules(!showKeywordRules)}
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+              <Settings2 size={18} className="text-orange-600" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-sm font-semibold text-gray-800">E-Transfer Detection Keywords</h3>
+              <p className="text-xs text-gray-400">
+                Configure AND / OR keyword rules to identify Interac e-Transfer emails
+                {keywordRules.filter(r => r.enabled).length > 0 && (
+                  <span className="ml-1.5 text-orange-600 font-medium">
+                    ({keywordRules.filter(r => r.enabled).length} active rule{keywordRules.filter(r => r.enabled).length !== 1 ? "s" : ""})
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          {showKeywordRules ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+        </button>
+
+        {showKeywordRules && (
+          <div className="px-5 pb-5 border-t border-gray-100">
+            {/* Info banner */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mt-4 mb-4">
+              <p className="text-xs text-blue-700">
+                <strong>How it works:</strong> Each rule defines keywords that must be found in the email subject + body.
+                <strong> AND</strong> = all keywords must match. <strong>OR</strong> = any keyword matches.
+                Rules are combined with OR (any rule match triggers detection).
+                Built-in defaults (Interac, e-Transfer, etc.) always apply as a safety net.
+              </p>
+            </div>
+
+            {/* Rules list */}
+            <div className="space-y-4">
+              {keywordRules.map((rule, idx) => (
+                <div
+                  key={rule.id}
+                  className={`border rounded-xl p-4 transition-all ${
+                    rule.enabled ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {/* Enable/Disable toggle */}
+                      <button
+                        onClick={() => updateRule(rule.id, { enabled: !rule.enabled })}
+                        className={`shrink-0 ${rule.enabled ? "text-green-500" : "text-gray-300"}`}
+                        title={rule.enabled ? "Enabled — click to disable" : "Disabled — click to enable"}
+                      >
+                        {rule.enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                      </button>
+                      {/* Rule name (editable) */}
+                      <input
+                        value={rule.name}
+                        onChange={e => updateRule(rule.id, { name: e.target.value })}
+                        className="text-sm font-semibold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#4B2D8E] focus:outline-none px-1 py-0.5 min-w-0 flex-1"
+                        placeholder="Rule name..."
+                      />
+                      {/* AND/OR toggle */}
+                      <div className="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0">
+                        <button
+                          onClick={() => updateRule(rule.id, { operator: "AND" })}
+                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                            rule.operator === "AND"
+                              ? "bg-[#4B2D8E] text-white shadow-sm"
+                              : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        >
+                          AND
+                        </button>
+                        <button
+                          onClick={() => updateRule(rule.id, { operator: "OR" })}
+                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                            rule.operator === "OR"
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        >
+                          OR
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeRule(rule.id)}
+                      className="ml-2 p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                      title="Remove rule"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Keywords */}
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {rule.keywords.map(kw => (
+                      <span
+                        key={kw}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg group hover:bg-red-50 hover:text-red-700 transition-colors"
+                      >
+                        {kw}
+                        <button
+                          onClick={() => removeKeywordFromRule(rule.id, kw)}
+                          className="text-gray-400 group-hover:text-red-500 ml-0.5"
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                    {rule.keywords.length === 0 && (
+                      <span className="text-xs text-gray-400 italic py-1">No keywords yet — add one below</span>
+                    )}
+                  </div>
+
+                  {/* Add keyword input */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={newKeywordInput[rule.id] || ""}
+                      onChange={e => setNewKeywordInput(prev => ({ ...prev, [rule.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeywordToRule(rule.id); } }}
+                      placeholder="Type a keyword or phrase and press Enter..."
+                      className="flex-1 text-xs px-3 py-1.5 border border-gray-200 rounded-lg focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
+                    />
+                    <button
+                      onClick={() => addKeywordToRule(rule.id)}
+                      disabled={!(newKeywordInput[rule.id] || "").trim()}
+                      className="px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-all"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+
+                  {/* Rule description */}
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    {rule.operator === "AND"
+                      ? `Email must contain ALL of: ${rule.keywords.length > 0 ? rule.keywords.map(k => `"${k}"`).join(" + ") : "(none)"}`
+                      : `Email must contain ANY of: ${rule.keywords.length > 0 ? rule.keywords.map(k => `"${k}"`).join(" | ") : "(none)"}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Add rule + Save */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+              <button
+                onClick={addRule}
+                className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-gray-300 text-gray-500 rounded-lg text-xs font-medium hover:border-[#4B2D8E] hover:text-[#4B2D8E] hover:bg-[#4B2D8E]/5 transition-all"
+              >
+                <Plus size={14} />
+                Add Rule
+              </button>
+              <button
+                onClick={() => saveRulesMutation.mutate(keywordRules)}
+                disabled={saveRulesMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
+              >
+                {saveRulesMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                Save Rules
+              </button>
+            </div>
+
+            {/* Test Panel */}
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <FlaskConical size={13} />
+                Test Rules Against Sample Email
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Subject</label>
+                  <input
+                    value={testSubject}
+                    onChange={e => { setTestSubject(e.target.value); setTestResult(null); }}
+                    placeholder='e.g. "INTERAC e-Transfer: John sent you $127.50"'
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg mt-1 focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Body Snippet</label>
+                  <input
+                    value={testBody}
+                    onChange={e => { setTestBody(e.target.value); setTestResult(null); }}
+                    placeholder='e.g. "$127.50 has been automatically deposited"'
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg mt-1 focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => testRulesMutation.mutate({ subject: testSubject, body: testBody })}
+                disabled={testRulesMutation.isPending || (!testSubject && !testBody)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 disabled:opacity-50 transition-all"
+              >
+                {testRulesMutation.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                Test Detection
+              </button>
+
+              {testResult && (
+                <div className={`mt-3 p-3 rounded-lg border text-xs ${
+                  testResult.overallMatch
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                  <p className="font-bold mb-1">
+                    {testResult.overallMatch ? "MATCH — Would be detected as e-Transfer" : "NO MATCH — Would be skipped"}
+                  </p>
+                  <p className="text-[10px] mb-2">
+                    Custom rules: {testResult.customRulesMatch ? "MATCHED" : "no match"} &middot; 
+                    Built-in defaults: {testResult.defaultMatch ? "MATCHED" : "no match"}
+                  </p>
+                  {testResult.ruleResults?.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t border-current/10">
+                      {testResult.ruleResults.map((rr: any) => (
+                        <div key={rr.ruleId} className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold ${rr.match ? "bg-green-500" : "bg-gray-300"}`}>
+                            {rr.match ? "✓" : "×"}
+                          </span>
+                          <span className="font-medium">{rr.ruleName}</span>
+                          <span className="text-[10px] opacity-60">({rr.operator})</span>
+                          <span className="ml-auto text-[10px]">
+                            {rr.keywordResults.map((kr: any) => (
+                              <span key={kr.keyword} className={`mr-1.5 ${kr.found ? "text-green-700 font-medium" : "text-red-600 line-through"}`}>
+                                "{kr.keyword}"
+                              </span>
+                            ))}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Gmail Setup Info (only if not configured) */}
