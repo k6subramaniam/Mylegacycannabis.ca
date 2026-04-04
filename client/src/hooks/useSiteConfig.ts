@@ -34,6 +34,8 @@ export function useSiteConfig() {
     paymentEmail: data?.paymentEmail ?? "payments@mylegacycannabis.ca",
     /** Site logo URL — used globally in header, footer, admin, emails. Falls back to /logo.webp. */
     logoUrl: (data as any)?.logoUrl ?? "/logo.webp",
+    /** Scrolling banner messages — null means use default i18n strings */
+    bannerMessages: (data as any)?.bannerMessages as string[] | null,
     isLoading,
   };
 }

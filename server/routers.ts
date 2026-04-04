@@ -1321,7 +1321,7 @@ Return ONLY the JSON object with the improved template.`;
     }),
 
     siteConfig: publicProcedure.query(async () => {
-      const [idVerificationEnabled, idVerificationMode, maintenance, storeHoursConfig, paymentEmail, siteLogoUrl, emailLogoUrl] = await Promise.all([
+      const [idVerificationEnabled, idVerificationMode, maintenance, storeHoursConfig, paymentEmail, siteLogoUrl, emailLogoUrl, bannerMessagesRaw] = await Promise.all([
         db.isIdVerificationEnabled(),
         db.getIdVerificationMode(),
         db.getMaintenanceConfig(),
@@ -1329,6 +1329,7 @@ Return ONLY the JSON object with the improved template.`;
         db.getSiteSetting("payment_email"),
         db.getSiteSetting("site_logo_url"),
         db.getSiteSetting("email_logo_url"),
+        db.getSiteSetting("banner_messages"),
       ]);
       // Determine the best logo URL:
       //  1. Skip oversized base64 data URLs (legacy storage bug)
@@ -1368,6 +1369,12 @@ Return ONLY the JSON object with the improved template.`;
       }
       // For emails keep the original PNG (Outlook/Gmail don't fully support WebP)
       const emailLogo = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.png";
+      // Parse banner messages — stored as JSON array of strings.
+      // If not set, return null so the frontend falls back to its default i18n strings.
+      let bannerMessages: string[] | null = null;
+      if (bannerMessagesRaw) {
+        try { bannerMessages = JSON.parse(bannerMessagesRaw); } catch {}
+      }
       return {
         idVerificationEnabled,
         idVerificationMode,
@@ -1376,6 +1383,7 @@ Return ONLY the JSON object with the improved template.`;
         paymentEmail: paymentEmail || process.env.GMAIL_PAYMENT_EMAIL || "payments@mylegacycannabis.ca",
         logoUrl,
         emailLogoUrl: emailLogo,
+        bannerMessages,
       };
     }),
     products: publicProcedure.input(z.object({

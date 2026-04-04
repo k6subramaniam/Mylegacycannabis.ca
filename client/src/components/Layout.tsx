@@ -365,7 +365,12 @@ function Header() {
   const { isAuthenticated } = useAuth();
   const [location] = useLocation();
   const { t, locale, setLocale } = useT();
-  const { logoUrl } = useSiteConfig();
+  const { logoUrl, bannerMessages: customBannerMessages } = useSiteConfig();
+
+  // Use admin-configured banner messages if set, otherwise fall back to i18n defaults
+  const bannerMessages = (customBannerMessages && customBannerMessages.length > 0)
+    ? customBannerMessages
+    : t.header.bannerMessages;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -477,7 +482,7 @@ function Header() {
             {/* Duplicate the message set twice for seamless infinite loop */}
             {[0, 1].map(setIndex => (
               <div key={setIndex} className="marquee-content flex items-center shrink-0" aria-hidden={setIndex === 1 ? 'true' : undefined}>
-                {t.header.bannerMessages.map((msg: string, i: number) => (
+                {bannerMessages.map((msg: string, i: number) => (
                   <span key={`${setIndex}-${i}`} className="flex items-center whitespace-nowrap text-xs md:text-sm font-medium font-body mx-8">
                     <Truck size={14} className="inline-block shrink-0 mr-1.5" />
                     {msg}

@@ -5,6 +5,7 @@ import {
   AlertTriangle, CheckCircle, Info, Wrench, WrenchIcon, Clock,
   Eye, EyeOff, Type, MessageSquare, Key, Smartphone,
   Sparkles, Zap, Brain, ImageIcon, Upload, Trash2, RefreshCw,
+  Megaphone, Plus, X, GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
@@ -71,6 +72,16 @@ export default function AdminSettings() {
   const [smtpMissing, setSmtpMissing] = useState<string[]>([]);
   const [authStatusLoading, setAuthStatusLoading] = useState(true);
 
+  // ─── BANNER MESSAGES STATE ───
+  const DEFAULT_BANNER_MESSAGES = [
+    'FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada',
+    'Open 24/7 — 5 Locations Across GTA & Ottawa',
+    'Earn Rewards on Every Purchase — 1 Point per $1 Spent',
+    'No Taxes on Any Orders — Shop & Save Today',
+  ];
+  const [bannerMessages, setBannerMessages] = useState<string[]>(DEFAULT_BANNER_MESSAGES);
+  const [bannerHasChanges, setBannerHasChanges] = useState(false);
+
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/google-available').then(r => r.json()).then(d => setGoogleAvailable(d.available)).catch(() => {}),
@@ -100,6 +111,15 @@ export default function AdminSettings() {
       }
       if (settings.store_hours_note !== undefined) setHoursNote(settings.store_hours_note);
       setHoursHasChanges(false);
+
+      // Banner Messages
+      if (settings.banner_messages) {
+        try {
+          const parsed = JSON.parse(settings.banner_messages);
+          if (Array.isArray(parsed) && parsed.length > 0) setBannerMessages(parsed);
+        } catch {}
+      }
+      setBannerHasChanges(false);
     }
   }, [settings]);
 
@@ -161,6 +181,22 @@ export default function AdminSettings() {
     }
   };
 
+  const handleSaveBannerMessages = async () => {
+    try {
+      // Filter out empty messages
+      const filtered = bannerMessages.filter(m => m.trim().length > 0);
+      await updateSetting.mutateAsync({
+        key: "banner_messages",
+        value: JSON.stringify(filtered),
+      });
+      setBannerMessages(filtered);
+      setBannerHasChanges(false);
+      toast.success(`Banner updated with ${filtered.length} message${filtered.length !== 1 ? 's' : ''}.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save banner messages");
+    }
+  };
+
   // ─── HOURS HELPERS ───
   const updateDayHours = (day: string, field: keyof DayHours, value: string | boolean) => {
     setStoreHours(prev => ({
@@ -202,6 +238,112 @@ export default function AdminSettings() {
           SECTION 0: LOGO MANAGEMENT
           ══════════════════════════════════════════════════════════════ */}
       <LogoManagementSection />
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 0.5: SCROLLING BANNER MESSAGES
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+          <Megaphone size={20} className="text-[#F15929]" />
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">Scrolling Banner</h2>
+            <p className="text-sm text-gray-500">Edit the promotional messages that scroll across the top of every page.</p>
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+
+          {/* Preview */}
+          <div className="rounded-xl overflow-hidden border border-gray-200">
+            <div className="h-8 bg-[#F15929] text-white overflow-hidden relative">
+              <div className="marquee-track flex items-center h-full">
+                {[0, 1].map(setIndex => (
+                  <div key={setIndex} className="marquee-content flex items-center shrink-0">
+                    {bannerMessages.filter(m => m.trim()).map((msg, i) => (
+                      <span key={`${setIndex}-${i}`} className="flex items-center whitespace-nowrap text-xs md:text-sm font-medium mx-8">
+                        {msg}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-gray-50 px-3 py-1.5 text-center">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Live Preview</span>
+            </div>
+          </div>
+
+          {/* Editable message list */}
+          <div className="space-y-2">
+            {bannerMessages.map((msg, index) => (
+              <div key={index} className="flex items-center gap-2 group">
+                <GripVertical size={14} className="text-gray-300 shrink-0" />
+                <span className="text-xs text-gray-400 w-5 shrink-0">{index + 1}.</span>
+                <input
+                  type="text"
+                  value={msg}
+                  onChange={(e) => {
+                    const updated = [...bannerMessages];
+                    updated[index] = e.target.value;
+                    setBannerMessages(updated);
+                    setBannerHasChanges(true);
+                  }}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4B2D8E]/20 focus:border-[#4B2D8E]"
+                  placeholder="Enter banner message..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBannerMessages(bannerMessages.filter((_, i) => i !== index));
+                    setBannerHasChanges(true);
+                  }}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Remove message"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add message button */}
+          <button
+            type="button"
+            onClick={() => {
+              setBannerMessages([...bannerMessages, '']);
+              setBannerHasChanges(true);
+            }}
+            className="flex items-center gap-2 text-sm text-[#4B2D8E] hover:text-[#3a2270] font-medium transition-colors"
+          >
+            <Plus size={14} /> Add Message
+          </button>
+
+          {/* Reset to defaults */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => {
+                setBannerMessages(DEFAULT_BANNER_MESSAGES);
+                setBannerHasChanges(true);
+              }}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Reset to defaults
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveBannerMessages}
+              disabled={!bannerHasChanges || updateSetting.isPending}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors
+                ${bannerHasChanges
+                  ? 'bg-[#4B2D8E] text-white hover:bg-[#3a2270]'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+            >
+              {updateSetting.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save Banner
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════
           SECTION 1: MAINTENANCE MODE
