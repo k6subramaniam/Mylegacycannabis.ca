@@ -44,6 +44,9 @@ const ALL_VARIABLES = [
   { key: "shop_url", label: "Shop Link", group: "Links" },
   { key: "account_url", label: "Account Link", group: "Links" },
   { key: "action_url", label: "CTA Link", group: "Links" },
+  { key: "site_url", label: "Site Link", group: "Links" },
+  { key: "locations_url", label: "Locations Link", group: "Links" },
+  { key: "faq_url", label: "FAQ Link", group: "Links" },
 ];
 
 export default function AdminEmailTemplates() {
@@ -811,22 +814,31 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
   }, [editForm.bodyHtml, setEditForm]);
 
   // Build preview HTML with sample data for variables
+  // Use resolved server-side URLs for link variables
+  const { data: resolvedVars } = trpc.admin.emailTemplates.resolvedVars.useQuery();
+  const rv = resolvedVars || {} as Record<string, string>;
   const previewHtml = editForm.bodyHtml
     .replace(/\{\{customer_name\}\}/g, "Jane Doe")
     .replace(/\{\{order_id\}\}/g, "MLC-2026-0042")
     .replace(/\{\{order_total\}\}/g, "$127.50")
     .replace(/\{\{order_items\}\}/g, "Blue Dream 3.5g x2, Gummy Bears 10pk x1")
     .replace(/\{\{delivery_address\}\}/g, "123 Queen St W, Toronto ON M5H 2N2")
-    .replace(/\{\{payment_email\}\}/g, "payments@mylegacycannabis.ca")
+    .replace(/\{\{payment_email\}\}/g, rv.payment_email || "payments@mylegacycannabis.ca")
     .replace(/\{\{payment_amount\}\}/g, "$127.50")
     .replace(/\{\{payment_reference\}\}/g, "MLC-2026-0042")
     .replace(/\{\{tracking_number\}\}/g, "CP123456789CA")
-    .replace(/\{\{tracking_url\}\}/g, "#")
-    .replace(/\{\{shop_url\}\}/g, "#")
-    .replace(/\{\{account_url\}\}/g, "#")
-    .replace(/\{\{action_url\}\}/g, "#")
+    .replace(/\{\{tracking_url\}\}/g, "https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=CP123456789CA")
+    .replace(/\{\{shop_url\}\}/g, rv.shop_url || "https://mylegacycannabis.ca/shop")
+    .replace(/\{\{account_url\}\}/g, rv.account_url || "https://mylegacycannabis.ca/account")
+    .replace(/\{\{action_url\}\}/g, rv.action_url || "https://mylegacycannabis.ca/shop")
+    .replace(/\{\{site_url\}\}/g, rv.site_url || "https://mylegacycannabis.ca")
+    .replace(/\{\{locations_url\}\}/g, rv.locations_url || "https://mylegacycannabis.ca/locations")
+    .replace(/\{\{faq_url\}\}/g, rv.faq_url || "https://mylegacycannabis.ca/faq")
     .replace(/\{\{rejection_reason\}\}/g, "The submitted ID was blurry. Please resubmit a clear photo.")
-    .replace(/\{\{logo_url\}\}/g, "/logo.webp")
+    .replace(/\{\{logo_url\}\}/g, rv.logo_url || "/logo.webp")
+    .replace(/\{\{unsubscribe_url\}\}/g, rv.unsubscribe_url || "https://mylegacycannabis.ca/unsubscribe")
+    .replace(/\{\{privacy_url\}\}/g, rv.privacy_url || "https://mylegacycannabis.ca/privacy")
+    .replace(/\{\{terms_url\}\}/g, rv.terms_url || "https://mylegacycannabis.ca/terms")
     .replace(/\{\{[a-z_]+\}\}/g, "---");
 
   return (

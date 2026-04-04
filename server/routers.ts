@@ -25,6 +25,7 @@ import {
   triggerIdRejected,
   triggerOrderShipped,
   triggerOrderStatusUpdate,
+  getResolvedCommonVars,
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured } from "./etransferService";
@@ -550,6 +551,10 @@ export const appRouter = router({
       get: adminProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
         return db.getEmailTemplateBySlug(input.slug);
       }),
+      // Returns resolved variable values for admin email preview
+      resolvedVars: adminProcedure.query(async () => {
+        return getResolvedCommonVars();
+      }),
       update: adminProcedure.input(z.object({
         id: z.number(),
         subject: z.string().optional(),
@@ -559,6 +564,8 @@ export const appRouter = router({
         const { id, ...data } = input;
         await db.updateEmailTemplate(id, data as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update", entityType: "email_template", entityId: id, details: `Updated email template #${id}` });
+        // Sync knowledge so AI stays up-to-date with template changes
+        db.syncAllSiteKnowledge().catch(() => {});
         return { success: true };
       }),
       create: adminProcedure.input(z.object({
@@ -571,6 +578,8 @@ export const appRouter = router({
       })).mutation(async ({ input, ctx }) => {
         const id = await db.createEmailTemplate(input as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "email_template", entityId: id, details: `Created email template: ${input.name}` });
+        // Sync knowledge so AI stays up-to-date with template changes
+        db.syncAllSiteKnowledge().catch(() => {});
         return { id };
       }),
 
@@ -584,10 +593,45 @@ export const appRouter = router({
         const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
         const logoUrl = await db.getSiteSetting("email_logo_url") || `${siteBase}/logo.png`;
 
+        // ── Fetch LIVE site knowledge for AI context ──
+        let liveProductsContext = "";
+        let liveLocationsContext = "";
+        let liveCategoryContext = "";
+        try {
+          const productLinksRaw = await db.getSiteKnowledge("product_links");
+          if (productLinksRaw) {
+            const links = JSON.parse(productLinksRaw);
+            // Include top 30 products as context (keep prompt concise)
+            const topProducts = links.slice(0, 30).map((p: any) =>
+              `${p.name} (${p.category}) — $${p.price} — ${siteBase}/product/${p.url.replace("/product/","")}`
+            );
+            liveProductsContext = `\n\nLIVE PRODUCT CATALOG (${links.length} total, showing top 30):\n${topProducts.join("\n")}`;
+          }
+        } catch { /* products not synced yet */ }
+
+        try {
+          const locationsRaw = await db.getSiteKnowledge("store_locations");
+          if (locationsRaw) {
+            const locs = JSON.parse(locationsRaw);
+            liveLocationsContext = `\n\nSTORE LOCATIONS WITH MAP LINKS:\n${locs.map((l: any) =>
+              `- ${l.name}: ${l.address}, ${l.city}, ${l.province} ${l.postalCode} | Phone: ${l.phone} | Hours: ${l.hours}\n  Google Maps: ${l.directionsUrl || "N/A"}`
+            ).join("\n")}`;
+          }
+        } catch { /* locations not synced yet */ }
+
+        try {
+          const catCountsRaw = await db.getSiteKnowledge("category_counts");
+          if (catCountsRaw) {
+            const counts = JSON.parse(catCountsRaw);
+            liveCategoryContext = `\n\nCATEGORY PRODUCT COUNTS: ${JSON.stringify(counts)}`;
+          }
+        } catch { /* category counts not synced yet */ }
+
         const systemPrompt = `You are an email template designer for My Legacy Cannabis.
 
 ${getMlcBusinessContext()}
 - Website: https://mylegacycannabis.ca
+${liveProductsContext}${liveLocationsContext}${liveCategoryContext}
 
 TEMPLATE STRUCTURE — MANDATORY:
 Every email MUST use this exact HTML shell. Do NOT modify the header or footer. Only generate the BODY ROWS that go between the header and footer.
@@ -642,7 +686,21 @@ DESIGN RULES:
 - Always end with: Questions? Contact us at support@mylegacycannabis.ca
 - Do NOT use emoji characters in the HTML
 
-AVAILABLE TEMPLATE VARIABLES (use ONLY these — the engine auto-injects logo_url, unsubscribe_url, privacy_url, terms_url):
+LINK RULES — CRITICAL:
+- When the admin mentions a specific PRODUCT, use the real product URL from the LIVE PRODUCT CATALOG above (e.g., https://mylegacycannabis.ca/product/hydro-kush). If the product is not in the catalog, construct the URL as https://mylegacycannabis.ca/product/{{product_slug}} and add product_slug to the variables list.
+- When the admin mentions a specific LOCATION (e.g., "Hamilton"), use the real Google Maps directions URL from STORE LOCATIONS above. Hardcode it directly in the HTML — do NOT use a placeholder for known location links.
+- For links that should be resolved at send-time, use {{variable_name}} placeholders.
+- {{shop_url}} resolves to https://mylegacycannabis.ca/shop
+- {{action_url}} resolves to a CTA destination (shop or account or custom)
+- {{account_url}} resolves to https://mylegacycannabis.ca/account
+- {{logo_url}} resolves to the brand logo image URL
+- {{site_url}} resolves to https://mylegacycannabis.ca
+- {{locations_url}} resolves to https://mylegacycannabis.ca/locations
+- {{faq_url}} resolves to https://mylegacycannabis.ca/faq
+- {{unsubscribe_url}}, {{privacy_url}}, {{terms_url}} — footer links (auto-injected)
+- NEVER use placeholder URLs like "https://maps.app.goo.gl/YourHamiltonMapLink" — always use the REAL URL from the data above or a resolvable {{variable}}.
+
+AVAILABLE TEMPLATE VARIABLES (the engine auto-injects logo_url, unsubscribe_url, privacy_url, terms_url, shop_url, action_url, account_url, site_url, locations_url, faq_url, payment_email):
 - {{customer_name}} — recipient's name
 - {{order_id}} — order number (e.g. MLC-1042)
 - {{order_total}} — dollar amount with $
@@ -656,10 +714,14 @@ AVAILABLE TEMPLATE VARIABLES (use ONLY these — the engine auto-injects logo_ur
 - {{update_date}} — date/time of status change
 - {{status_message}} — description of what happened
 - {{rejection_reason}} — why ID was rejected
-- {{shop_url}} — link to the shop
-- {{account_url}} — link to user account
-- {{action_url}} — generic CTA link
+- {{shop_url}} — link to the shop (auto-resolved to real URL)
+- {{account_url}} — link to user account (auto-resolved)
+- {{action_url}} — generic CTA link (auto-resolved)
+- {{site_url}} — main website link (auto-resolved)
+- {{locations_url}} — link to locations page (auto-resolved)
+- {{faq_url}} — link to FAQ page (auto-resolved)
 - {{logo_url}} — brand logo image URL (auto-injected)
+- {{payment_email}} — payment email address (auto-injected)
 - {{unsubscribe_url}}, {{privacy_url}}, {{terms_url}} — footer links (auto-injected)
 You may also introduce NEW custom variables using the {{new_variable_name}} format if the admin's request requires information not covered above.
 
@@ -729,9 +791,33 @@ Return ONLY the JSON object, no extra text or markdown fences.`;
         currentVariables: z.array(z.string()),
         instruction: z.string().min(5).max(2000),
       })).mutation(async ({ input }) => {
+        // ── Fetch LIVE site knowledge for AI context ──
+        const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
+        let liveLocationsContext = "";
+        let liveProductsContext = "";
+        try {
+          const locationsRaw = await db.getSiteKnowledge("store_locations");
+          if (locationsRaw) {
+            const locs = JSON.parse(locationsRaw);
+            liveLocationsContext = `\n\nSTORE LOCATIONS WITH MAP LINKS:\n${locs.map((l: any) =>
+              `- ${l.name}: ${l.address}, ${l.city}, ${l.province} ${l.postalCode} | Phone: ${l.phone}\n  Google Maps: ${l.directionsUrl || "N/A"}`
+            ).join("\n")}`;
+          }
+        } catch { /* skip */ }
+        try {
+          const productLinksRaw = await db.getSiteKnowledge("product_links");
+          if (productLinksRaw) {
+            const links = JSON.parse(productLinksRaw);
+            const topProducts = links.slice(0, 20).map((p: any) =>
+              `${p.name} (${p.category}) — $${p.price} — ${siteBase}/product/${p.url.replace("/product/","")}`
+            );
+            liveProductsContext = `\n\nLIVE PRODUCTS (${links.length} total, top 20):\n${topProducts.join("\n")}`;
+          }
+        } catch { /* skip */ }
+
         const systemPrompt = `You are an email template designer for My Legacy Cannabis.
 
-${getMlcBusinessContext()}
+${getMlcBusinessContext()}${liveLocationsContext}${liveProductsContext}
 
 You will be given an EXISTING email template and an instruction to improve it. Return the improved version.
 
@@ -743,6 +829,11 @@ RULES:
 - Brand purple: #4B2DBE (primary), #3A2270 (secondary), Orange: #F19929
 - Do NOT use emoji characters
 - Keep the same slug/name unless the admin asks for a rename
+- When referencing a specific product, use the REAL product URL from LIVE PRODUCTS above (e.g., https://mylegacycannabis.ca/product/hydro-kush)
+- When referencing a specific location, use the REAL Google Maps directions URL from STORE LOCATIONS above
+- NEVER use placeholder URLs like "https://maps.app.goo.gl/YourHamiltonMapLink" — always use REAL URLs
+- {{shop_url}} resolves to https://mylegacycannabis.ca/shop, {{action_url}} is a CTA link, {{site_url}} is the main site
+- Auto-injected variables: logo_url, unsubscribe_url, privacy_url, terms_url, shop_url, action_url, account_url, site_url, locations_url, faq_url, payment_email
 
 RESPONSE FORMAT — return valid JSON only, no markdown:
 {

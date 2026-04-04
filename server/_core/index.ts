@@ -97,13 +97,14 @@ async function startServer() {
 
     // Try to add product pages dynamically from DB
     try {
-      const { db } = await import("../db");
-      const products = db.prepare?.("SELECT slug, updated_at FROM products WHERE active = 1 ORDER BY updated_at DESC")?.all?.() as any[];
-      if (products && products.length > 0) {
+      const dbModule = await import("../db");
+      const siteKnowledge = await dbModule.getSiteKnowledge("product_links");
+      if (siteKnowledge) {
+        const products = JSON.parse(siteKnowledge) as { name: string; url: string; category: string }[];
         for (const p of products) {
-          const lastmod = p.updated_at ? new Date(p.updated_at).toISOString().split("T")[0] : today;
+          const slug = p.url.replace("/product/", "");
           urls.push(
-            `  <url>\n    <loc>${SITE}/product/${p.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+            `  <url>\n    <loc>${SITE}/product/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
           );
         }
       }
