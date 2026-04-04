@@ -69,6 +69,9 @@ const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: str
 function UserMemoryCard({ memory, onViewDetail }: { memory: any; onViewDetail: () => void }) {
   const cats = (memory.preferredCategories || []).slice(0, 3);
   const strains = (memory.preferredStrains || []).slice(0, 3);
+  // Use live order data when available, fall back to cached AI memory data
+  const orders = memory.liveOrders ?? memory.totalOrders ?? 0;
+  const spent = parseFloat(memory.liveSpent || memory.totalSpent || "0");
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer" onClick={onViewDetail}>
       <div className="flex items-start justify-between mb-2">
@@ -77,14 +80,14 @@ function UserMemoryCard({ memory, onViewDetail }: { memory: any; onViewDetail: (
           <p className="text-[10px] text-gray-400">{memory.userEmail || ""}</p>
         </div>
         <div className="flex items-center gap-1.5">
-          {memory.totalOrders > 0 && (
+          {orders > 0 && (
             <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
-              {memory.totalOrders} order{memory.totalOrders !== 1 ? "s" : ""}
+              {orders} order{orders !== 1 ? "s" : ""}
             </span>
           )}
-          {parseFloat(memory.totalSpent || "0") > 0 && (
+          {spent > 0 && (
             <span className="text-[10px] bg-[#4B2D8E]/10 text-[#4B2D8E] px-1.5 py-0.5 rounded-full font-medium">
-              ${parseFloat(memory.totalSpent).toFixed(0)}
+              ${spent.toFixed(0)}
             </span>
           )}
         </div>
@@ -121,6 +124,18 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   const reviewHistory = memory.reviewHistory || [];
   const priceRange = memory.priceRange;
 
+  // Fetch live order stats for this user (real-time, not cached AI memory)
+  const { data: liveStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
+    { userId: memory.userId },
+    { enabled: !!memory.userId }
+  );
+
+  // Use live data when available, fall back to cached AI memory
+  const totalOrders = liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
+  const totalSpent = parseFloat(liveStats?.totalSpent ?? memory.liveSpent ?? memory.totalSpent ?? "0");
+  const avgOrder = parseFloat(liveStats?.avgOrderValue ?? memory.liveAvgOrder ?? memory.avgOrderValue ?? "0");
+  const orders = liveStats?.orders || [];
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
@@ -144,25 +159,65 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
         )}
 
-        {/* Stats row */}
+        {/* Stats row — LIVE DATA */}
         <div className="grid grid-cols-4 gap-3 mb-5">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">{memory.totalOrders || 0}</p>
+            <p className="text-lg font-bold text-gray-800">{totalOrders}</p>
             <p className="text-[10px] text-gray-400 uppercase">Orders</p>
+            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">${parseFloat(memory.totalSpent || "0").toFixed(0)}</p>
+            <p className="text-lg font-bold text-gray-800">${totalSpent.toFixed(0)}</p>
             <p className="text-[10px] text-gray-400 uppercase">Spent</p>
+            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">${parseFloat(memory.avgOrderValue || "0").toFixed(0)}</p>
+            <p className="text-lg font-bold text-gray-800">${avgOrder.toFixed(0)}</p>
             <p className="text-[10px] text-gray-400 uppercase">Avg Order</p>
+            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-lg font-bold text-gray-800">{reviewHistory.length}</p>
             <p className="text-[10px] text-gray-400 uppercase">Reviews</p>
           </div>
         </div>
+
+        {/* Order History — LIVE */}
+        {orders.length > 0 && (
+          <div className="mb-5">
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Package size={13} /> Order History
+              <span className="text-[8px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full font-normal">Real-time</span>
+            </h4>
+            <div className="space-y-1">
+              {orders.map((o: any) => {
+                const statusColors: Record<string, string> = {
+                  pending: "bg-yellow-100 text-yellow-700",
+                  confirmed: "bg-blue-100 text-blue-700",
+                  processing: "bg-indigo-100 text-indigo-700",
+                  shipped: "bg-purple-100 text-purple-700",
+                  delivered: "bg-green-100 text-green-700",
+                  cancelled: "bg-red-100 text-red-700",
+                  refunded: "bg-gray-100 text-gray-600",
+                };
+                return (
+                  <div key={o.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-gray-600">{o.orderNumber}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[o.status] || "bg-gray-100 text-gray-600"}`}>
+                        {o.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-800">${parseFloat(o.total || "0").toFixed(2)}</span>
+                      <span className="text-gray-400">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : ""}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-5">
           {/* Preferred Categories */}
@@ -275,7 +330,7 @@ export default function AdminInsights() {
 
   const isLoading = analyticsLoading || memoriesLoading;
   const sortedMemories = [...(memories || [])].sort((a: any, b: any) =>
-    parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0")
+    parseFloat(b.liveSpent || b.totalSpent || "0") - parseFloat(a.liveSpent || a.totalSpent || "0")
   );
 
   const totalEvents = analytics?.totalEvents ?? 0;

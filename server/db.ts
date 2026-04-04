@@ -2111,6 +2111,81 @@ export async function refreshAllAiUserMemories(): Promise<{ refreshed: number }>
 }
 
 /**
+ * Back-fill orders with null user_id by matching guestEmail → users.email.
+ * Called once on server startup to fix any legacy orders that weren't linked.
+ * Also refreshes AI memory for any users whose orders get linked.
+ */
+export async function backfillOrderUserIds(): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const orphanOrders = await _sql!`
+    SELECT o.id, o.guest_email FROM orders o
+    WHERE o.user_id IS NULL AND o.guest_email IS NOT NULL
+  `;
+  let linked = 0;
+  const refreshSet = new Set<number>();
+  for (const o of orphanOrders) {
+    const user = await getUserByEmail(o.guest_email);
+    if (user) {
+      await _sql!`UPDATE orders SET user_id = ${user.id} WHERE id = ${o.id}`;
+      linked++;
+      refreshSet.add(user.id);
+    }
+  }
+  // Refresh AI memory for all newly-linked users
+  for (const uid of refreshSet) {
+    try {
+      await refreshAiUserMemory(uid);
+    } catch (err) {
+      console.error(`[AiMemory] Backfill refresh failed for user #${uid}:`, err);
+    }
+  }
+  console.log(`[OrderBackfill] Linked ${linked} orders to ${refreshSet.size} user(s)`);
+  return linked;
+}
+
+/**
+ * Get live order statistics for a specific user (real-time, not cached).
+ * Used by the Insights dashboard to show current order data.
+ */
+export async function getUserOrderStats(userId: number): Promise<{
+  totalOrders: number;
+  completedOrders: number;
+  totalSpent: string;
+  avgOrderValue: string;
+  orders: Array<{ id: number; orderNumber: string; status: string; paymentStatus: string; total: string; createdAt: string }>;
+}> {
+  if (!USE_PERSISTENT_DB) return { totalOrders: 0, completedOrders: 0, totalSpent: "0.00", avgOrderValue: "0.00", orders: [] };
+  const db = getDb();
+  const userOrders = await db.select({
+    id: schema.orders.id,
+    orderNumber: schema.orders.orderNumber,
+    status: schema.orders.status,
+    paymentStatus: schema.orders.paymentStatus,
+    total: schema.orders.total,
+    createdAt: schema.orders.createdAt,
+  }).from(schema.orders).where(eq(schema.orders.userId, userId)).orderBy(desc(schema.orders.createdAt));
+
+  const completed = userOrders.filter(o => ['delivered', 'shipped', 'confirmed'].includes(o.status));
+  const totalSpent = completed.reduce((sum, o) => sum + parseFloat(o.total || "0"), 0);
+  const avgOV = completed.length > 0 ? totalSpent / completed.length : 0;
+
+  return {
+    totalOrders: userOrders.length,
+    completedOrders: completed.length,
+    totalSpent: totalSpent.toFixed(2),
+    avgOrderValue: avgOV.toFixed(2),
+    orders: userOrders.map(o => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      status: o.status,
+      paymentStatus: o.paymentStatus,
+      total: o.total,
+      createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : String(o.createdAt || ""),
+    })),
+  };
+}
+
+/**
  * Aggregate behavior analytics across all users.
  * Returns top categories, trending products, popular searches, user segments, and activity stats.
  */
@@ -2189,7 +2264,7 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
 /**
  * Get all AI user memories for the insights dashboard.
  */
-export async function getAllAiUserMemories(): Promise<Array<schema.AiUserMemory & { userName?: string; userEmail?: string }>> {
+export async function getAllAiUserMemories(): Promise<Array<schema.AiUserMemory & { userName?: string; userEmail?: string; liveOrders?: number; liveSpent?: string; liveAvgOrder?: string }>> {
   if (!USE_PERSISTENT_DB) return [];
   const db = getDb();
   const memories = await db.select().from(schema.aiUserMemory);
@@ -2204,12 +2279,36 @@ export async function getAllAiUserMemories(): Promise<Array<schema.AiUserMemory 
     email: schema.users.email,
   }).from(schema.users).where(inArray(schema.users.id, userIds));
 
+  // Fetch live order stats for all users with memories
+  const orderRows = await _sql!`
+    SELECT user_id,
+           count(*)::int as total_orders,
+           COALESCE(SUM(CASE WHEN status IN ('delivered','shipped','confirmed') THEN CAST(total AS NUMERIC) ELSE 0 END), 0) as total_spent,
+           count(*) FILTER (WHERE status IN ('delivered','shipped','confirmed'))::int as completed_orders
+    FROM orders
+    WHERE user_id = ANY(${userIds})
+    GROUP BY user_id
+  `;
+  const orderMap = new Map<number, { total: number; spent: number; completed: number }>();
+  for (const r of orderRows) {
+    orderMap.set(r.user_id, { total: r.total_orders, spent: parseFloat(r.total_spent || "0"), completed: r.completed_orders });
+  }
+
   const userMap = new Map(users.map(u => [u.id, u]));
-  return memories.map(m => ({
-    ...m,
-    userName: userMap.get(m.userId)?.name ?? undefined,
-    userEmail: userMap.get(m.userId)?.email ?? undefined,
-  }));
+  return memories.map(m => {
+    const stats = orderMap.get(m.userId);
+    const liveSpent = stats?.spent ?? 0;
+    const liveCompleted = stats?.completed ?? 0;
+    return {
+      ...m,
+      userName: userMap.get(m.userId)?.name ?? undefined,
+      userEmail: userMap.get(m.userId)?.email ?? undefined,
+      // Live order data (may differ from cached totalOrders/totalSpent if refresh hasn't run)
+      liveOrders: stats?.total ?? 0,
+      liveSpent: liveSpent.toFixed(2),
+      liveAvgOrder: liveCompleted > 0 ? (liveSpent / liveCompleted).toFixed(2) : "0.00",
+    };
+  });
 }
 
 // ========================================================================================

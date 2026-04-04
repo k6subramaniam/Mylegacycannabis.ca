@@ -14,7 +14,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge } from "../db";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 
@@ -367,8 +367,14 @@ async function startServer() {
       }
     }, 2 * 60 * 60 * 1000); // every 2 hours
 
-    // Run initial AI memory refresh 15s after startup
+    // Run initial order back-fill and AI memory refresh 15s after startup
     setTimeout(async () => {
+      try {
+        const linked = await backfillOrderUserIds();
+        if (linked > 0) console.log(`[Startup] Back-filled ${linked} order(s) with user IDs`);
+      } catch (err) {
+        console.error("[Startup] Order back-fill error:", err);
+      }
       try {
         const result = await refreshAllAiUserMemories();
         if (result.refreshed > 0) console.log(`[Startup] AI memory refresh: ${result.refreshed} user(s) updated`);
