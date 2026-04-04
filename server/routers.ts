@@ -263,10 +263,24 @@ export const appRouter = router({
           if (pointsResult) {
             console.log(`[Rewards] Awarded ${pointsResult.points} points for order #${input.id}`);
           }
-          // Refresh AI memory for the user who placed this order
-          if (previousOrder.userId) {
-            db.refreshAiUserMemory(previousOrder.userId).catch(err =>
-              console.error(`[AiMemory] Failed to refresh user #${previousOrder.userId}:`, err)
+        }
+
+        // ─── REFRESH AI MEMORY on meaningful status changes ───
+        const AI_REFRESH_STATUSES = ['confirmed', 'shipped', 'delivered', 'cancelled', 'refunded'];
+        if (AI_REFRESH_STATUSES.includes(input.status)) {
+          let memoryUserId = previousOrder.userId;
+          // Try to resolve userId from guestEmail if not set on the order
+          if (!memoryUserId && previousOrder.guestEmail) {
+            const matchedUser = await db.getUserByEmail(previousOrder.guestEmail);
+            if (matchedUser) {
+              memoryUserId = matchedUser.id;
+              // Back-fill the userId on the order for future lookups
+              await db.updateOrder(input.id, { userId: matchedUser.id } as any);
+            }
+          }
+          if (memoryUserId) {
+            db.refreshAiUserMemory(memoryUserId).catch(err =>
+              console.error(`[AiMemory] Failed to refresh user #${memoryUserId}:`, err)
             );
           }
         }
@@ -1542,6 +1556,15 @@ Return ONLY the JSON object with the improved template.`;
       allMemories: adminProcedure.query(async () => {
         return db.getAllAiUserMemories();
       }),
+      /** Get live order stats for a specific user (real-time, not cached) */
+      getUserOrderStats: adminProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
+        return db.getUserOrderStats(input.userId);
+      }),
+      /** Back-fill orders with null user_id by matching guest email to users */
+      backfillOrders: adminProcedure.mutation(async () => {
+        const linked = await db.backfillOrderUserIds();
+        return { success: true, linked };
+      }),
     }),
 
   }),
@@ -1761,7 +1784,7 @@ Return ONLY the JSON object with the improved template.`;
       shippingZone: z.string().optional(),
       notes: z.string().optional(),
       couponCode: z.string().optional(),
-    })).mutation(async ({ input }) => {
+    })).mutation(async ({ input, ctx }) => {
       // ─── OUT-OF-STOCK GUARD ───
       const stockIssues = await db.checkStock(input.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity })));
       if (stockIssues.length > 0) {
@@ -1780,9 +1803,18 @@ Return ONLY the JSON object with the improved template.`;
         couponCode = input.couponCode.toUpperCase();
       }
 
+      // ─── RESOLVE USER ID ───
+      // If logged in, use their ID directly. Otherwise try to match guest email to a registered user.
+      let resolvedUserId: number | undefined = ctx.user?.id ?? undefined;
+      if (!resolvedUserId && input.guestEmail) {
+        const matchedUser = await db.getUserByEmail(input.guestEmail);
+        if (matchedUser) resolvedUserId = matchedUser.id;
+      }
+
       const orderNumber = `ML-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
       const orderId = await db.createOrder({
         orderNumber,
+        userId: resolvedUserId ?? null,
         guestEmail: input.guestEmail,
         guestName: input.guestName,
         guestPhone: input.guestPhone,
@@ -1835,8 +1867,15 @@ Return ONLY the JSON object with the improved template.`;
         deliveryAddress: addressStr,
         paymentAmount: input.total,
         paymentReference: orderNumber,
-        isGuest: true,
+        isGuest: !resolvedUserId,
       }).catch(err => console.warn("[Order] Confirmation email failed:", err.message));
+
+      // ─── REFRESH AI MEMORY for linked user (fire-and-forget) ───
+      if (resolvedUserId) {
+        db.refreshAiUserMemory(resolvedUserId).catch(err =>
+          console.error(`[AiMemory] Post-order refresh failed for user #${resolvedUserId}:`, err)
+        );
+      }
 
       return { orderNumber, orderId };
     }),
