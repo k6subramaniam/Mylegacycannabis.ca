@@ -14,12 +14,23 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Hashed JS/CSS assets get long-lived cache; everything else gets no-cache
+  // Static asset caching strategy:
+  //   - Hashed JS/CSS (assets/): immutable, 1 year
+  //   - Images (webp/png/jpg/svg/ico): 1 week (content-addressed via upload path)
+  //   - uploads/: 1 week (user-uploaded logos etc.)
+  //   - Everything else (HTML, etc.): no-cache
   app.use(express.static(distPath, {
     setHeaders(res, filePath) {
-      if (filePath.includes('/assets/') && /[-][A-Za-z0-9_-]{6,}\.\w+$/.test(path.basename(filePath))) {
+      const base = path.basename(filePath);
+      if (filePath.includes('/assets/') && /[-][A-Za-z0-9_-]{6,}\.\w+$/.test(base)) {
         // Hashed asset (e.g. index-BGLpvbiN.js) — immutable
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (/\.(webp|png|jpe?g|svg|ico|avif|gif)$/i.test(base)) {
+        // Image files — cache 1 week (logo.webp, logo.png, favicons, etc.)
+        res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+      } else if (filePath.includes('/uploads/')) {
+        // User uploads (admin logo uploads) — cache 1 week
+        res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
       } else {
         // Non-hashed asset or HTML — never cache
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

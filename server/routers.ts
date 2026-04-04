@@ -1329,7 +1329,7 @@ Return ONLY the JSON object with the improved template.`;
       ]);
       // If the stored value is an oversized data URL (legacy), fall back to /logo.png
       const rawLogo = siteLogoUrl || emailLogoUrl || "";
-      const logoUrl = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.png";
+      const logoUrl = (rawLogo && !(rawLogo.startsWith("data:") && rawLogo.length > 50000)) ? rawLogo : "/logo.webp";
       return {
         idVerificationEnabled,
         idVerificationMode,

@@ -239,14 +239,14 @@ export default function Home() {
 
       <WaveDivider color="#ffffff" />
 
-      {/* LOCATIONS — static grid, no opacity-0 */}
+      {/* LOCATIONS — static grid, min-h prevents CLS while data loads */}
       <section className="bg-white py-12 md:py-16 -mt-1">
         <div className="container">
           <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">{t.home.ourLocations}</h2>
             <p className="text-gray-600 font-body max-w-lg mx-auto">{t.home.ourLocationsDesc}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{ minHeight: 240 }}>
             {storeLocations.slice(0, 3).map((loc) => (
               <div key={loc.id} className="bg-[#F5F5F5] rounded-2xl p-5 hover:shadow-lg transition-shadow">
                 <div className="flex items-start gap-3 mb-3">
@@ -277,8 +277,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NEWSLETTER */}
-      <section className="bg-[#F15929] py-12 md:py-16">
+      {/* NEWSLETTER — fixed-height section prevents CLS */}
+      <section className="bg-[#F15929] py-12 md:py-16" style={{ contain: 'layout style' }}>
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
             <Leaf size={32} className="text-white/50 mx-auto mb-4" />

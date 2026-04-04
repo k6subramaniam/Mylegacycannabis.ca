@@ -32,8 +32,8 @@ export function useSiteConfig() {
     },
     /** E-Transfer payment email (configurable from admin) */
     paymentEmail: data?.paymentEmail ?? "payments@mylegacycannabis.ca",
-    /** Site logo URL — used globally in header, footer, admin, emails. Falls back to /logo.png. */
-    logoUrl: (data as any)?.logoUrl ?? "/logo.png",
+    /** Site logo URL — used globally in header, footer, admin, emails. Falls back to /logo.webp. */
+    logoUrl: (data as any)?.logoUrl ?? "/logo.webp",
     isLoading,
   };
 }
