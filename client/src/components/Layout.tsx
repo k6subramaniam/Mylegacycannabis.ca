@@ -574,11 +574,12 @@ function Header() {
 // ============================================================
 function Footer() {
   const { t } = useT();
-  const { logoUrl } = useSiteConfig();
+  const { logoUrl, storeHours } = useSiteConfig();
+  const showStoreHours = storeHours.enabled && !!storeHours.hours;
   return (
     <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8" style={{ minHeight: 480, contain: 'layout style', contentVisibility: 'auto', containIntrinsicSize: 'auto 480px' }}>
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${showStoreHours ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-8`}>
           {/* Brand */}
           <div>
             {/* Explicit width/height prevents layout shift when image loads */}
@@ -642,10 +643,12 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Store Hours (from admin settings) — min-h prevents CLS when data loads */}
-          <div style={{ minHeight: 200 }}>
-            <StoreHoursWidget />
-          </div>
+          {/* Store Hours (from admin settings) — only shown when enabled */}
+          {showStoreHours && (
+            <div>
+              <StoreHoursWidget />
+            </div>
+          )}
 
           {/* Get In Touch */}
           <div>
