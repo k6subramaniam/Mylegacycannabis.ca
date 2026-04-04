@@ -37,6 +37,15 @@ async function startServer() {
     });
   });
 
+  // ─── STEALTH HEADERS: prevent search engines from indexing admin / API routes ───
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/admin") || req.path.startsWith("/api/")) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    }
+    next();
+  });
+
   // ─── ROBOTS.TXT ───
   app.get("/robots.txt", (_req, res) => {
     const SITE = "https://mylegacycannabisca-production.up.railway.app";

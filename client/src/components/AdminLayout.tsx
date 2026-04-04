@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
   Menu, X, Settings, ShieldAlert, ImageUp, MessageSquare, DollarSign, MapPin,
+  Brain,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,7 @@ const menuItems = [
   { icon: DollarSign, label: "Payments", path: "/admin/payments" },
   { icon: MapPin, label: "Locations", path: "/admin/locations" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
+  { icon: Brain, label: "Insights", path: "/admin/a7x" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
