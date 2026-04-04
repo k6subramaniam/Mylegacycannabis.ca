@@ -9,7 +9,8 @@ import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
-const LOGO_URL_FALLBACK = '/logo.png';
+const LOGO_URL_FALLBACK = '/logo.webp';
+const LOGO_URL_FALLBACK_PNG = '/logo.png';
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
@@ -40,15 +41,15 @@ function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: strin
     >
       {/* Card: fixed max-w so it never causes reflow */}
       <div className="bg-white rounded-2xl p-8 w-full max-w-[400px] text-center shadow-2xl">
-        {/* New logo: 731×273, displayed at h-16 (64px) */}
+        {/* Logo: 512×286 WebP, displayed at h-16 (64px) */}
         <img
           src={logoUrl}
           alt="My Legacy Cannabis"
-          width="731"
-          height="273"
+          width="512"
+          height="286"
           className="h-16 w-auto mx-auto mb-6"
           loading="eager"
-          decoding="sync"
+          decoding="async"
         />
         <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">{t.ageGate.welcome}<br />{t.ageGate.myLegacy}</h2>
         <p className="text-[#333] mb-6 font-body text-sm leading-relaxed">
@@ -205,11 +206,11 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
         <img
           src={logoUrl || LOGO_URL_FALLBACK}
           alt="My Legacy Cannabis"
-          width="731"
-          height="273"
+          width="512"
+          height="286"
           className="h-14 sm:h-16 md:h-20 w-auto mb-6"
           loading="eager"
-          decoding="sync"
+          decoding="async"
         />
 
         {/* ── Maintenance card ── */}
@@ -403,15 +404,15 @@ function Header() {
         {/* Nav row: explicit h prevents resize when logo loads */}
         <div className="container flex items-center justify-between h-16 md:h-20">
           <Link href="/" aria-label="My Legacy Cannabis Home">
-            {/* Logo: 1024×572 actual, displayed at h-10 (40px) mobile / h-14 (56px) desktop → ~71px / ~100px wide */}
+            {/* Logo: 512×286 WebP, displayed at h-10 (40px) mobile / h-14 (56px) desktop */}
             <img
               src={logoUrl || LOGO_URL_FALLBACK}
               alt="My Legacy Cannabis"
-              width="1024"
-              height="572"
+              width="512"
+              height="286"
               className="h-10 md:h-14 w-auto"
               loading="eager"
-              decoding="sync"
+              decoding="async"
               fetchPriority="high"
             />
           </Link>
@@ -508,10 +509,11 @@ function Header() {
                 <img
                   src={logoUrl || LOGO_URL_FALLBACK}
                   alt="My Legacy Cannabis"
-                  width="731"
-                  height="273"
+                  width="512"
+                  height="286"
                   className="h-10 w-auto"
                   loading="eager"
+                  decoding="async"
                 />
                 <button
                   onClick={() => setMenuOpen(false)}
@@ -570,7 +572,7 @@ function Footer() {
   const { t } = useT();
   const { logoUrl } = useSiteConfig();
   return (
-    <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8">
+    <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8" style={{ minHeight: 480, contain: 'layout style' }}>
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
@@ -579,10 +581,11 @@ function Footer() {
             <img
               src={logoUrl || LOGO_URL_FALLBACK}
               alt="My Legacy Cannabis"
-              width="731"
-              height="273"
+              width="512"
+              height="286"
               className="h-14 w-auto mb-4"
               loading="lazy"
+              decoding="async"
             />
             <p className="text-white/70 text-sm font-body leading-relaxed">
               {t.footer.brand}
@@ -635,8 +638,10 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Store Hours (from admin settings) */}
-          <StoreHoursWidget />
+          {/* Store Hours (from admin settings) — min-h prevents CLS when data loads */}
+          <div style={{ minHeight: 200 }}>
+            <StoreHoursWidget />
+          </div>
 
           {/* Get In Touch */}
           <div>
