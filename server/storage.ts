@@ -2,10 +2,13 @@
 // Uses Bearer token authentication. Set STORAGE_API_URL and STORAGE_API_KEY in .env to enable.
 // When not configured, files are saved to the local dist/public/uploads/ directory
 // and served via Express static middleware.
+// IMPORTANT: All local uploads are also persisted to the database (file_store table)
+// so they survive container deploys on Railway / Docker.
 
 import { ENV } from './_core/env';
 import fs from 'fs';
 import path from 'path';
+import * as db from './db';
 
 // ─── Image optimization constants ──────────────────────────────────────────────
 // Responsive breakpoints for product images
@@ -116,6 +119,10 @@ async function optimizeImage(
       if (clientUploadsDir) {
         fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
       }
+      // Persist optimized variant to DB
+      db.fileStorePut(`uploads/${webpName}`, webpBuf, 'image/webp').catch(err =>
+        console.warn(`[Storage] DB persist failed for uploads/${webpName}:`, err.message)
+      );
       const publicUrl = `/uploads/${webpName}`;
       if (key === "full")  results.url   = publicUrl;
       if (key === "thumb") results.thumb = publicUrl;
@@ -161,6 +168,11 @@ export async function storagePut(
     const filePath = path.join(uploadsDir, fileName);
     fs.writeFileSync(filePath, buf);
 
+    // ── Persist to database so file survives container deploys ──
+    db.fileStorePut(`uploads/${fileName}`, buf, contentType).catch(err =>
+      console.warn(`[Storage] DB persist failed for uploads/${fileName}:`, err.message)
+    );
+
     // Also write to client/public/uploads/ so Vite dev server serves it too
     const clientPublicDir = path.resolve(projectRoot, "client", "public");
     let clientUploadsDir: string | null = null;
@@ -185,6 +197,10 @@ export async function storagePut(
           const webpBuf = await sharp(buf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
           fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
           if (clientUploadsDir) fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+          // Persist WebP variant to DB
+          db.fileStorePut(`uploads/${webpName}`, webpBuf, 'image/webp').catch(err =>
+            console.warn(`[Storage] DB persist failed for uploads/${webpName}:`, err.message)
+          );
           console.log(`[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
         } catch {
           console.log("[Storage] sharp not available — skipping WebP auto-generation");

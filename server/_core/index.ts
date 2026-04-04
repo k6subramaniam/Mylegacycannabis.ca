@@ -14,7 +14,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses } from "../db";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 
@@ -164,6 +164,70 @@ async function startServer() {
       createContext,
     })
   );
+  // ─── MATERIALIZE UPLOADED FILES FROM DB ───
+  // On container deploy, uploaded files (logo, product images, ID photos) are lost.
+  // This step restores them from the database's file_store table to disk before
+  // the static file server starts, ensuring all /uploads/* URLs work immediately.
+  if (USE_PERSISTENT_DB) {
+    try {
+      const distPublicForUploads = fs.existsSync(path.resolve(import.meta.dirname, "public"))
+        ? path.resolve(import.meta.dirname, "public")
+        : path.resolve(process.cwd(), "dist", "public");
+      const uploadsDir = path.join(distPublicForUploads, "uploads");
+      fs.mkdirSync(uploadsDir, { recursive: true });
+
+      const files = await fileStoreGetAll();
+      let restored = 0;
+      for (const file of files) {
+        try {
+          const fileName = file.key.replace(/^uploads\//, "");
+          const filePath = path.join(uploadsDir, fileName);
+          // Only write if the file doesn't exist or is a different size
+          const exists = fs.existsSync(filePath);
+          if (!exists || (file.sizeBytes && fs.statSync(filePath).size !== file.sizeBytes)) {
+            fs.writeFileSync(filePath, Buffer.from(file.data, 'base64'));
+            restored++;
+          }
+        } catch (fileErr) {
+          console.warn(`[FileStore] Failed to restore ${file.key}:`, (fileErr as Error).message);
+        }
+      }
+      if (files.length > 0) {
+        console.log(`[FileStore] Materialized ${restored} of ${files.length} files from DB to disk`);
+      }
+
+      // ── BACKFILL: persist existing disk files to DB (first deploy after this feature) ──
+      // If the uploads dir has files not yet in the DB, persist them so next deploy is safe.
+      const diskFiles = fs.existsSync(uploadsDir) ? fs.readdirSync(uploadsDir) : [];
+      const dbKeys = new Set(files.map(f => f.key));
+      let backfilled = 0;
+      const MIME_MAP: Record<string, string> = {
+        '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp', '.svg': 'image/svg+xml', '.gif': 'image/gif',
+        '.avif': 'image/avif', '.ico': 'image/x-icon',
+      };
+      for (const diskFile of diskFiles) {
+        const key = `uploads/${diskFile}`;
+        if (!dbKeys.has(key)) {
+          try {
+            const ext = path.extname(diskFile).toLowerCase();
+            const ct = MIME_MAP[ext] || 'application/octet-stream';
+            const buf = fs.readFileSync(path.join(uploadsDir, diskFile));
+            await fileStorePut(key, buf, ct);
+            backfilled++;
+          } catch (bfErr) {
+            console.warn(`[FileStore] Backfill failed for ${diskFile}:`, (bfErr as Error).message);
+          }
+        }
+      }
+      if (backfilled > 0) {
+        console.log(`[FileStore] Backfilled ${backfilled} existing disk files to DB`);
+      }
+    } catch (err) {
+      console.warn("[FileStore] Failed to materialize files:", (err as Error).message);
+    }
+  }
+
   // Use static serving if the dist/public directory exists (production build available),
   // otherwise fall back to Vite dev server. This allows NODE_ENV=development in .env
   // while still serving the production build in sandbox/Railway.

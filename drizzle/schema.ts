@@ -388,3 +388,19 @@ export const paymentRecords = pgTable("payment_records", {
 
 export type PaymentRecord = typeof paymentRecords.$inferSelect;
 export type InsertPaymentRecord = typeof paymentRecords.$inferInsert;
+
+// ─── PERSISTENT FILE STORE ───
+// Stores uploaded file data in the database so files survive container deploys.
+// On server startup, files are materialized to dist/public/uploads/ from DB.
+export const fileStore = pgTable("file_store", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 512 }).notNull().unique(),     // e.g. "uploads/site-logo.png"
+  contentType: varchar("content_type", { length: 100 }).notNull(),
+  data: text("data").notNull(),                                  // base64-encoded file contents
+  sizeBytes: integer("size_bytes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type FileStoreEntry = typeof fileStore.$inferSelect;
+export type InsertFileStoreEntry = typeof fileStore.$inferInsert;

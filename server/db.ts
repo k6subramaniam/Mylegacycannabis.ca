@@ -419,6 +419,21 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── Persistent File Store ───
+  // Stores uploaded files (logo, product images, ID photos) as base64 in the DB.
+  // Files are materialized to disk on server startup so they survive container deploys.
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS file_store (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(512) NOT NULL UNIQUE,
+      content_type VARCHAR(100) NOT NULL,
+      data TEXT NOT NULL,
+      size_bytes INTEGER,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -1684,6 +1699,59 @@ export async function getPendingETransferOrders() {
   return getDb().select().from(schema.orders)
     .where(and(eq(schema.orders.paymentStatus, 'pending'), or(eq(schema.orders.status, 'pending'), eq(schema.orders.status, 'confirmed'))))
     .orderBy(desc(schema.orders.createdAt));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERSISTENT FILE STORE
+// Stores uploaded files (logo, product images, ID verification photos) as base64
+// in the database so they survive container deploys on Railway / Docker.
+// On server startup, all files are materialized to dist/public/uploads/.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Save or update a file in the persistent file store */
+export async function fileStorePut(key: string, data: Buffer, contentType: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return; // in-memory mode: disk writes are sufficient
+  const base64 = data.toString('base64');
+  const sizeBytes = data.length;
+  // Upsert: insert or update on conflict
+  await getDb().insert(schema.fileStore).values({
+    key,
+    contentType,
+    data: base64,
+    sizeBytes,
+    updatedAt: new Date(),
+  }).onConflictDoUpdate({
+    target: schema.fileStore.key,
+    set: { data: base64, contentType, sizeBytes, updatedAt: new Date() },
+  });
+  console.log(`[FileStore] Saved: ${key} (${(sizeBytes / 1024).toFixed(1)} KB)`);
+}
+
+/** Get a single file from the store */
+export async function fileStoreGet(key: string): Promise<{ data: Buffer; contentType: string } | null> {
+  if (!USE_PERSISTENT_DB) return null;
+  const rows = await getDb().select().from(schema.fileStore)
+    .where(eq(schema.fileStore.key, key))
+    .limit(1);
+  if (rows.length === 0) return null;
+  return { data: Buffer.from(rows[0].data, 'base64'), contentType: rows[0].contentType };
+}
+
+/** Delete a file from the store */
+export async function fileStoreDelete(key: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().delete(schema.fileStore).where(eq(schema.fileStore.key, key));
+}
+
+/** Get ALL files from the store (for startup materialization) */
+export async function fileStoreGetAll(): Promise<Array<{ key: string; data: string; contentType: string; sizeBytes: number | null }>> {
+  if (!USE_PERSISTENT_DB) return [];
+  return getDb().select({
+    key: schema.fileStore.key,
+    data: schema.fileStore.data,
+    contentType: schema.fileStore.contentType,
+    sizeBytes: schema.fileStore.sizeBytes,
+  }).from(schema.fileStore);
 }
 
 // ========================================================================================
