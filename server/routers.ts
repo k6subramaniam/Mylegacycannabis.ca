@@ -1534,6 +1534,14 @@ Return ONLY the JSON object with the improved template.`;
       allKnowledge: adminProcedure.query(async () => {
         return db.getAllSiteKnowledge();
       }),
+      /** Aggregate behavior analytics across all users */
+      aggregateAnalytics: adminProcedure.query(async () => {
+        return db.getAggregateBehaviorAnalytics();
+      }),
+      /** Get all AI user memories (enriched with user names) */
+      allMemories: adminProcedure.query(async () => {
+        return db.getAllAiUserMemories();
+      }),
     }),
 
   }),

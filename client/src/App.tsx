@@ -47,6 +47,7 @@ const AdminMenuImport = lazy(() => import("./pages/admin/MenuImport"));
 const AdminReviews = lazy(() => import("./pages/admin/Reviews"));
 const AdminPayments = lazy(() => import("./pages/admin/Payments"));
 const AdminLocations = lazy(() => import("./pages/admin/Locations"));
+const AdminInsights = lazy(() => import("./pages/admin/Insights"));
 
 function PageLoader() {
   return (
@@ -107,6 +108,9 @@ function Router() {
       </Route>
       <Route path="/admin/settings">
         <AdminLayout><S><AdminSettings /></S></AdminLayout>
+      </Route>
+      <Route path="/admin/a7x">
+        <AdminLayout><S><AdminInsights /></S></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><S><AdminDashboard /></S></AdminLayout>

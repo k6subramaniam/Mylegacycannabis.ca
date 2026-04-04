@@ -2110,6 +2110,108 @@ export async function refreshAllAiUserMemories(): Promise<{ refreshed: number }>
   return { refreshed: count };
 }
 
+/**
+ * Aggregate behavior analytics across all users.
+ * Returns top categories, trending products, popular searches, user segments, and activity stats.
+ */
+export async function getAggregateBehaviorAnalytics(): Promise<{
+  topCategories: Array<{ category: string; views: number }>;
+  topProducts: Array<{ slug: string; views: number }>;
+  topSearches: Array<{ query: string; count: number }>;
+  eventCounts: Record<string, number>;
+  activeUsers: number;
+  totalEvents: number;
+  avgEventsPerUser: number;
+  recentActivity: Array<{ date: string; events: number }>;
+}> {
+  if (!USE_PERSISTENT_DB) {
+    return { topCategories: [], topProducts: [], topSearches: [], eventCounts: {}, activeUsers: 0, totalEvents: 0, avgEventsPerUser: 0, recentActivity: [] };
+  }
+
+  // Top categories by views
+  const topCats = await _sql!`
+    SELECT category, count(*)::int as views FROM user_behavior
+    WHERE category IS NOT NULL
+    GROUP BY category ORDER BY views DESC LIMIT 10
+  `;
+
+  // Top products by views
+  const topProds = await _sql!`
+    SELECT product_slug as slug, count(*)::int as views FROM user_behavior
+    WHERE product_slug IS NOT NULL AND event_type = 'product_view'
+    GROUP BY product_slug ORDER BY views DESC LIMIT 15
+  `;
+
+  // Top search queries
+  const topSearches = await _sql!`
+    SELECT search_query as query, count(*)::int as count FROM user_behavior
+    WHERE event_type = 'search' AND search_query IS NOT NULL AND search_query != ''
+    GROUP BY search_query ORDER BY count DESC LIMIT 15
+  `;
+
+  // Event type breakdown
+  const eventBreakdown = await _sql!`
+    SELECT event_type, count(*)::int as cnt FROM user_behavior
+    GROUP BY event_type ORDER BY cnt DESC
+  `;
+  const eventCounts: Record<string, number> = {};
+  for (const r of eventBreakdown) eventCounts[r.event_type] = r.cnt;
+
+  // Active unique users
+  const [activeUsersRow] = await _sql!`
+    SELECT count(DISTINCT user_id)::int as cnt FROM user_behavior WHERE user_id IS NOT NULL
+  `;
+  const activeUsers = activeUsersRow?.cnt ?? 0;
+
+  // Total events
+  const [totalRow] = await _sql!`SELECT count(*)::int as cnt FROM user_behavior`;
+  const totalEvents = totalRow?.cnt ?? 0;
+
+  // Recent daily activity (last 14 days)
+  const recentActivity = await _sql!`
+    SELECT created_at::date::text as date, count(*)::int as events FROM user_behavior
+    WHERE created_at > NOW() - INTERVAL '14 days'
+    GROUP BY created_at::date ORDER BY date ASC
+  `;
+
+  return {
+    topCategories: topCats.map((r: any) => ({ category: r.category, views: r.views })),
+    topProducts: topProds.map((r: any) => ({ slug: r.slug, views: r.views })),
+    topSearches: topSearches.map((r: any) => ({ query: r.query, count: r.count })),
+    eventCounts,
+    activeUsers,
+    totalEvents,
+    avgEventsPerUser: activeUsers > 0 ? Math.round(totalEvents / activeUsers) : 0,
+    recentActivity: recentActivity.map((r: any) => ({ date: r.date, events: r.events })),
+  };
+}
+
+/**
+ * Get all AI user memories for the insights dashboard.
+ */
+export async function getAllAiUserMemories(): Promise<Array<schema.AiUserMemory & { userName?: string; userEmail?: string }>> {
+  if (!USE_PERSISTENT_DB) return [];
+  const db = getDb();
+  const memories = await db.select().from(schema.aiUserMemory);
+
+  // Enrich with user names
+  const userIds = memories.map(m => m.userId).filter(Boolean);
+  if (userIds.length === 0) return memories;
+
+  const users = await db.select({
+    id: schema.users.id,
+    name: schema.users.name,
+    email: schema.users.email,
+  }).from(schema.users).where(inArray(schema.users.id, userIds));
+
+  const userMap = new Map(users.map(u => [u.id, u]));
+  return memories.map(m => ({
+    ...m,
+    userName: userMap.get(m.userId)?.name ?? undefined,
+    userEmail: userMap.get(m.userId)?.email ?? undefined,
+  }));
+}
+
 // ========================================================================================
 // SITE KNOWLEDGE SYNC
 // ========================================================================================
