@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
-const LOGO_URL_FALLBACK = "/logo.png";
+const LOGO_URL_FALLBACK = "/logo.webp";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },

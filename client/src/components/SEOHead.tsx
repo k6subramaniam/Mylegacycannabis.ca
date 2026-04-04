@@ -13,7 +13,7 @@ interface SEOHeadProps {
 
 const SITE_NAME = 'My Legacy Cannabis';
 const SITE_URL = 'https://mylegacycannabisca-production.up.railway.app';
-const DEFAULT_OG_IMAGE = '/logo.png';
+const DEFAULT_OG_IMAGE = '/logo.webp';
 
 export default function SEOHead({
   title,

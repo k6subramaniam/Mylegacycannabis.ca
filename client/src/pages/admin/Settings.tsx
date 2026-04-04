@@ -1313,13 +1313,13 @@ function LogoManagementSection() {
     onSuccess: () => {
       utils.admin.emailLogo.get.invalidate();
       utils.store.siteConfig.invalidate();
-      setPreview("/logo.png");
+      setPreview("/logo.webp");
       toast.success("Logo reset to default.");
     },
     onError: (err: any) => toast.error(err.message || "Failed to reset logo"),
   });
 
-  const [preview, setPreview] = useState<string>("/logo.png");
+  const [preview, setPreview] = useState<string>("/logo.webp");
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -1367,8 +1367,8 @@ function LogoManagementSection() {
     }
   };
 
-  const currentUrl = logoData?.url || "/logo.png";
-  const isDefault = !logoData?.url || logoData.url === "/logo.png" || logoData.url.endsWith("/logo.png");
+  const currentUrl = logoData?.url || "/logo.webp";
+  const isDefault = !logoData?.url || logoData.url === "/logo.webp" || logoData.url.endsWith("/logo.webp");
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1399,7 +1399,7 @@ function LogoManagementSection() {
                       src={preview}
                       alt="Logo on dark background"
                       className="max-h-16 w-auto"
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.webp"; }}
                     />
                   </div>
                   <div className="bg-gray-50 px-3 py-1.5 text-center">
@@ -1413,7 +1413,7 @@ function LogoManagementSection() {
                       src={preview}
                       alt="Logo on light background"
                       className="max-h-16 w-auto"
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/logo.webp"; }}
                     />
                   </div>
                   <div className="bg-gray-50 px-3 py-1.5 text-center">

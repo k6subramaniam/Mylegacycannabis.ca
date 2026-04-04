@@ -168,7 +168,8 @@ async function startServer() {
   // otherwise fall back to Vite dev server. This allows NODE_ENV=development in .env
   // while still serving the production build in sandbox/Railway.
   const distPublicPath = path.resolve(import.meta.dirname, "public");
-  const hasBuild = fs.existsSync(distPublicPath);
+  const distPublicPathAlt = path.resolve(process.cwd(), "dist", "public");
+  const hasBuild = fs.existsSync(distPublicPath) || fs.existsSync(distPublicPathAlt);
   if (!hasBuild && process.env.NODE_ENV === "development") {
     // Dynamic import: vite.ts pulls in "vite" (a devDependency) which
     // doesn't exist in the production Docker image. Importing it lazily

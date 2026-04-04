@@ -109,6 +109,26 @@ export async function storagePut(
       fs.writeFileSync(path.join(clientUploadsDir, fileName), buf);
     }
 
+    // Auto-generate an optimized WebP version for PNG uploads (logos etc.)
+    // This avoids serving 800+ KB PNGs when a 30 KB WebP would suffice.
+    if (/\.png$/i.test(fileName)) {
+      try {
+        const sharp = await import("sharp").then(m => m.default);
+        const webpName = fileName.replace(/\.png$/i, ".webp");
+        const webpBuf = await sharp(buf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+        fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
+        if (fs.existsSync(clientPublicDir)) {
+          const clientUploadsDir = path.join(clientPublicDir, "uploads");
+          fs.mkdirSync(clientUploadsDir, { recursive: true });
+          fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+        }
+        console.log(`[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
+      } catch (e) {
+        // sharp not installed — skip WebP generation (the PNG will still be served)
+        console.log("[Storage] sharp not available — skipping WebP auto-generation");
+      }
+    }
+
     const publicUrl = `/uploads/${fileName}`;
     return { key, url: publicUrl };
   }

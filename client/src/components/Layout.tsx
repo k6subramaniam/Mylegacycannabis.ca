@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
 const LOGO_URL_FALLBACK = '/logo.webp';
-const LOGO_URL_FALLBACK_PNG = '/logo.png';
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
@@ -572,7 +571,7 @@ function Footer() {
   const { t } = useT();
   const { logoUrl } = useSiteConfig();
   return (
-    <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8" style={{ minHeight: 480, contain: 'layout style' }}>
+    <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8" style={{ minHeight: 480, contain: 'layout style', contentVisibility: 'auto', containIntrinsicSize: 'auto 480px' }}>
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}

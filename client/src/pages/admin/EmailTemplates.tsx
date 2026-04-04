@@ -826,7 +826,7 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
     .replace(/\{\{account_url\}\}/g, "#")
     .replace(/\{\{action_url\}\}/g, "#")
     .replace(/\{\{rejection_reason\}\}/g, "The submitted ID was blurry. Please resubmit a clear photo.")
-    .replace(/\{\{logo_url\}\}/g, "/logo.png")
+    .replace(/\{\{logo_url\}\}/g, "/logo.webp")
     .replace(/\{\{[a-z_]+\}\}/g, "---");
 
   return (
@@ -993,7 +993,7 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
 // ═══════════════════════════════════════════════════════════
 function EmailLogoCard() {
   const { data: logoData, isLoading } = trpc.admin.emailLogo.get.useQuery();
-  const currentUrl = logoData?.url || "/logo.png";
+  const currentUrl = logoData?.url || "/logo.webp";
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -1015,7 +1015,7 @@ function EmailLogoCard() {
       {/* Current logo preview */}
       {!isLoading && (
         <div className="bg-[#3A2270] rounded-lg p-5 text-center">
-          <img src={currentUrl} alt="Email logo" style={{ maxWidth: 240, height: "auto", margin: "0 auto" }} onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }} />
+          <img src={currentUrl} alt="Email logo" style={{ maxWidth: 240, height: "auto", margin: "0 auto" }} onError={(e) => { (e.target as HTMLImageElement).src = "/logo.webp"; }} />
           <div style={{ height: 5, background: "linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%)", marginTop: 14, borderRadius: 3 }} />
         </div>
       )}
