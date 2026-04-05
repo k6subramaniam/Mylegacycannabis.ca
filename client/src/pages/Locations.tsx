@@ -1,5 +1,6 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs, WaveDivider } from '@/components/Layout';
+import { ROUTE_SEO, SITE_URL, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { trpc } from '@/lib/trpc';
 import { storeLocations as fallbackLocations } from '@/lib/data';
 import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -169,10 +170,14 @@ export default function Locations() {
   return (
     <>
       <SEOHead
-        title="Store Locations — 24/7 Cannabis Dispensary"
-        description={`Visit any of our ${locations.length} My Legacy Cannabis locations across the GTA and Ottawa. Open 24/7.`}
-        canonical="https://mylegacycannabisca-production.up.railway.app/locations"
+        title={ROUTE_SEO['/locations'].title}
+        description={ROUTE_SEO['/locations'].description}
+        canonical={canonical('/locations')}
         ogImage={HERO_IMG}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Store Locations', url: canonical('/locations') },
+        ])}
       />
 
       {/* Hero */}
@@ -276,13 +281,13 @@ export default function Locations() {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'LocalBusiness',
-              '@id': `https://mylegacycannabisca-production.up.railway.app/locations#${loc.id}`,
+              '@id': `${SITE_URL}/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
               image: [
                 '/logo.webp',
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
               ],
-              url: 'https://mylegacycannabisca-production.up.railway.app/locations',
+              url: `${SITE_URL}/locations`,
               telephone: loc.phone,
               email: 'support@mylegacycannabis.ca',
               priceRange: '$$',
@@ -321,9 +326,9 @@ export default function Locations() {
               },
               parentOrganization: {
                 '@type': 'Organization',
-                '@id': 'https://mylegacycannabisca-production.up.railway.app/#organization',
+                '@id': `${SITE_URL}/#organization`,
                 name: 'My Legacy Cannabis',
-                url: 'https://mylegacycannabisca-production.up.railway.app',
+                url: SITE_URL,
               },
             }),
           }}

@@ -1,5 +1,6 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
 import { Truck, Package, Clock, Shield, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { useT } from '@/i18n';
@@ -9,9 +10,13 @@ export default function ShippingPolicy() {
   return (
     <>
       <SEOHead
-        title="Shipping Policy — Nationwide Cannabis Delivery"
-        description="My Legacy Cannabis ships nationwide across Canada. Free shipping on orders over $150. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25."
-        canonical="https://mylegacycannabisca-production.up.railway.app/shipping"
+        title={ROUTE_SEO['/shipping'].title}
+        description={ROUTE_SEO['/shipping'].description}
+        canonical={canonical('/shipping')}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Shipping Policy', url: canonical('/shipping') },
+        ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">

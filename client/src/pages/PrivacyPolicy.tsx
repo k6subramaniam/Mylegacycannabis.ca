@@ -1,13 +1,18 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 
 export default function PrivacyPolicy() {
   return (
     <>
       <SEOHead
-        title="Privacy Policy"
-        description="My Legacy Cannabis privacy policy. Learn how we collect, use, and protect your personal information."
-        canonical="https://mylegacycannabisca-production.up.railway.app/privacy-policy"
+        title={ROUTE_SEO['/privacy-policy'].title}
+        description={ROUTE_SEO['/privacy-policy'].description}
+        canonical={canonical('/privacy-policy')}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Privacy Policy', url: canonical('/privacy-policy') },
+        ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">

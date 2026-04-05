@@ -15,29 +15,29 @@
     <link rel="icon" type="image/webp" href="/logo.webp" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <meta name="description" content="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide." />
+    <!--seo:description--><meta name="description" content="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
-    <link rel="canonical" href="https://mylegacycannabisca-production.up.railway.app/" />
+    <!--seo:canonical--><link rel="canonical" href="__SITE_URL__/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="My Legacy Cannabis" />
-    <meta property="og:title" content="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa" />
-    <meta property="og:description" content="Premium cannabis dispensary with 5 locations across the GTA and Ottawa. Shop flower, pre-rolls, edibles, and more. Free shipping on orders over $150." />
-    <meta property="og:url" content="https://mylegacycannabisca-production.up.railway.app/" />
-    <meta property="og:image" content="/logo.webp" />
+    <!--seo:og:title--><meta property="og:title" content="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa" />
+    <!--seo:og:description--><meta property="og:description" content="Premium cannabis dispensary with 5 locations across the GTA and Ottawa. Shop flower, pre-rolls, edibles, and more. Free shipping on orders over $150." />
+    <!--seo:og:url--><meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:image" content="__SITE_URL__/logo.webp" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_CA" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa" />
-    <meta name="twitter:description" content="Premium cannabis dispensary with 5 locations across the GTA and Ottawa. Shop flower, pre-rolls, edibles, and more." />
-    <meta name="twitter:image" content="/logo.webp" />
+    <!--seo:twitter:title--><meta name="twitter:title" content="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa" />
+    <!--seo:twitter:description--><meta name="twitter:description" content="Premium cannabis dispensary with 5 locations across the GTA and Ottawa. Shop flower, pre-rolls, edibles, and more." />
+    <meta name="twitter:image" content="__SITE_URL__/logo.webp" />
     <meta name="geo.region" content="CA-ON" />
     <meta name="geo.placename" content="Mississauga" />
-    <link rel="alternate" hreflang="en-CA" href="https://mylegacycannabisca-production.up.railway.app/" />
-    <link rel="alternate" hreflang="fr-CA" href="https://mylegacycannabisca-production.up.railway.app/" />
-    <link rel="alternate" hreflang="x-default" href="https://mylegacycannabisca-production.up.railway.app/" />
+    <link rel="alternate" hreflang="en-CA" href="__SITE_URL__/" />
+    <link rel="alternate" hreflang="fr-CA" href="__SITE_URL__/" />
+    <link rel="alternate" hreflang="x-default" href="__SITE_URL__/" />
     <meta name="google-site-verification" content="1tKBuWGG5Jf1KdItmVMBR-LgyNhceCAoizuRJiazj50" />
-    <title>My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa</title>
+    <!--seo:title--><title>My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa</title>
     <!-- Preconnect to critical third-party origins — eliminates connection latency -->
     <link rel="preconnect" href="https://d2xsxph8kpxj0f.cloudfront.net" crossorigin />
     <link rel="dns-prefetch" href="https://d2xsxph8kpxj0f.cloudfront.net" />
@@ -68,18 +68,22 @@
       /* Reserve fixed header height to prevent CLS when React mounts */
       .mlc-header-placeholder { height: 96px; }
       @media (min-width: 768px) { .mlc-header-placeholder { height: 112px; } }
+      /* ── Shop product grid skeleton: reserves CLS-safe space ── */
+      .product-grid-skeleton { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
+      .product-card-skeleton { height: 360px; border-radius: 0.75rem; background: linear-gradient(110deg, #f0f0f0 8%, #e8e8e8 18%, #f0f0f0 33%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+      @keyframes shimmer { to { background-position-x: -200%; } }
     </style>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "@id": "https://mylegacycannabisca-production.up.railway.app/#organization",
+      "@id": "__SITE_URL__/#organization",
       "name": "My Legacy Cannabis",
-      "url": "https://mylegacycannabisca-production.up.railway.app",
+      "url": "__SITE_URL__",
       "logo": {
         "@type": "ImageObject",
-        "@id": "https://mylegacycannabisca-production.up.railway.app/#logo",
-        "url": "/logo.webp",
+        "@id": "__SITE_URL__/#logo",
+        "url": "__SITE_URL__/logo.webp",
         "width": 512,
         "height": 286,
         "caption": "My Legacy Cannabis"
@@ -96,7 +100,7 @@
         "addressCountry": "CA"
       },
       "sameAs": [
-        "https://mylegacycannabisca-production.up.railway.app"
+        "__SITE_URL__"
       ],
       "areaServed": {
         "@type": "Country",
@@ -115,12 +119,12 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "My Legacy Cannabis",
-      "url": "https://mylegacycannabisca-production.up.railway.app",
+      "url": "__SITE_URL__",
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
           "@type": "EntryPoint",
-          "urlTemplate": "https://mylegacycannabisca-production.up.railway.app/shop?q={search_term_string}"
+          "urlTemplate": "__SITE_URL__/shop?q={search_term_string}"
         },
         "query-input": "required name=search_term_string"
       }

@@ -1,5 +1,6 @@
 import { Link, useParams, useSearch } from 'wouter';
 import SEOHead from '@/components/SEOHead';
+import { ROUTE_SEO, CATEGORY_SEO, canonical, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/seo-config';
 import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { categories } from '@/lib/data';
@@ -223,10 +224,15 @@ export default function Shop() {
   return (
     <>
       <SEOHead
-        title={pageTitle}
-        description={activeCat ? activeCat.description : 'Browse our full selection of premium cannabis products — flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.'}
-        canonical={`https://mylegacycannabisca-production.up.railway.app/shop${selectedCategory ? '/' + selectedCategory : ''}`}
+        title={selectedCategory && CATEGORY_SEO[selectedCategory] ? CATEGORY_SEO[selectedCategory].title : pageTitle}
+        description={selectedCategory && CATEGORY_SEO[selectedCategory] ? CATEGORY_SEO[selectedCategory].description : (activeCat ? activeCat.description : ROUTE_SEO['/shop'].description)}
+        canonical={canonical(`/shop${selectedCategory ? '/' + selectedCategory : ''}`)}
         ogImage={HERO_IMG}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Shop', url: canonical('/shop') },
+          ...(activeCat ? [{ name: activeCat.name, url: canonical(`/shop/${selectedCategory}`) }] : []),
+        ])}
       />
 
       {/* Hero */}
@@ -382,10 +388,12 @@ export default function Shop() {
             </div>
           )}
 
-          {/* Loading State */}
+          {/* Loading State — skeleton grid to prevent CLS */}
           {isLoading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader className="animate-spin text-[#4B2D8E]" size={32} />
+            <div className="product-grid-skeleton" role="status" aria-label="Loading products">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="product-card-skeleton rounded-xl" />
+              ))}
             </div>
           )}
 

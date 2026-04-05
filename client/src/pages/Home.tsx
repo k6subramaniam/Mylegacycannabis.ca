@@ -2,6 +2,7 @@ import SEOHead from '@/components/SEOHead';
 import { Link } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
 import { products, categories, storeLocations as fallbackLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/seo-config';
 import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,10 +40,11 @@ export default function Home() {
   return (
     <>
       <SEOHead
-        title="My Legacy Cannabis — 24/7 Cannabis Dispensary | GTA & Ottawa"
-        description="24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide. No taxes on any order."
-        canonical="https://mylegacycannabisca-production.up.railway.app/"
+        title={ROUTE_SEO['/'].title}
+        description={ROUTE_SEO['/'].description}
+        canonical={canonical('/')}
         ogImage="/logo.webp"
+        jsonLd={buildBreadcrumbJsonLd([{ name: 'Home', url: canonical('/') }])}
       />
 
       {/* HERO SECTION — no animations, content immediately visible for LCP */}

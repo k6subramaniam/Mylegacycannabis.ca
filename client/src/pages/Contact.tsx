@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { storeLocations } from '@/lib/data';
 import { Link } from 'wouter';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
@@ -22,9 +23,13 @@ export default function Contact() {
   return (
     <>
       <SEOHead
-        title="Contact Us — My Legacy Cannabis"
-        description="Get in touch with My Legacy Cannabis. Contact us by phone, email, or visit any of our 5 locations. Open 24/7."
-        canonical="https://mylegacycannabisca-production.up.railway.app/contact"
+        title={ROUTE_SEO['/contact'].title}
+        description={ROUTE_SEO['/contact'].description}
+        canonical={canonical('/contact')}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Contact Us', url: canonical('/contact') },
+        ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">
