@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, absoluteOgImage } from '@/lib/seo-config';
 
 interface SEOHeadProps {
   title: string;
@@ -10,10 +11,6 @@ interface SEOHeadProps {
   /** JSON-LD structured data object (will be stringified) */
   jsonLd?: Record<string, any> | Record<string, any>[];
 }
-
-const SITE_NAME = 'My Legacy Cannabis';
-const SITE_URL = 'https://mylegacycannabisca-production.up.railway.app';
-const DEFAULT_OG_IMAGE = '/logo.webp';
 
 export default function SEOHead({
   title,
@@ -49,7 +46,8 @@ export default function SEOHead({
     setMeta('og:site_name', SITE_NAME, 'property');
     setMeta('og:locale', 'en_CA', 'property');
     if (canonical) setMeta('og:url', canonical, 'property');
-    setMeta('og:image', ogImage || DEFAULT_OG_IMAGE, 'property');
+    // Ensure OG image is an absolute URL
+    setMeta('og:image', absoluteOgImage(ogImage), 'property');
     setMeta('og:image:width', '1200', 'property');
     setMeta('og:image:height', '630', 'property');
 
@@ -57,7 +55,7 @@ export default function SEOHead({
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:title', fullTitle);
     setMeta('twitter:description', description);
-    setMeta('twitter:image', ogImage || DEFAULT_OG_IMAGE);
+    setMeta('twitter:image', absoluteOgImage(ogImage));
 
     // Canonical link
     if (canonical) {

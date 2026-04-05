@@ -1,5 +1,6 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function Terms() {
@@ -7,9 +8,13 @@ export default function Terms() {
   return (
     <>
       <SEOHead
-        title="Terms & Conditions"
-        description="My Legacy Cannabis terms and conditions of use. Read our policies on ordering, shipping, returns, and more."
-        canonical="https://mylegacycannabisca-production.up.railway.app/terms"
+        title={ROUTE_SEO['/terms'].title}
+        description={ROUTE_SEO['/terms'].description}
+        canonical={canonical('/terms')}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Terms & Conditions', url: canonical('/terms') },
+        ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">

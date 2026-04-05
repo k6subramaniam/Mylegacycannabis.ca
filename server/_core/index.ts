@@ -48,7 +48,7 @@ async function startServer() {
 
   // ─── ROBOTS.TXT ───
   app.get("/robots.txt", (_req, res) => {
-    const SITE = "https://mylegacycannabisca-production.up.railway.app";
+    const SITE = process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app";
     res.type("text/plain").send(
       `User-agent: *\n` +
       `Allow: /\n` +
@@ -71,7 +71,7 @@ async function startServer() {
 
   // ─── XML SITEMAP ───
   app.get("/sitemap.xml", async (_req, res) => {
-    const SITE = "https://mylegacycannabisca-production.up.railway.app";
+    const SITE = process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app";
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     // Static pages with priority and changefreq

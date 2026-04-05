@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { WaveDivider } from '@/components/Layout';
 import { POINTS_PER_DOLLAR, WELCOME_BONUS, BIRTHDAY_BONUS, REVIEW_BONUS, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFEREE, MIN_REDEMPTION_POINTS, MAX_DISCOUNT_PERCENT } from '@/lib/data';
 import { Gift, Star, Users, Calendar, MessageSquare, ShoppingCart, ArrowRight, Zap } from 'lucide-react';
@@ -12,10 +13,14 @@ export default function Rewards() {
   return (
     <>
       <SEOHead
-        title="My Legacy Rewards — Loyalty Program"
-        description="Earn 1 point for every $1 spent at My Legacy Cannabis. Redeem for discounts up to $150 OFF. Get 25 bonus points just for signing up. Birthday bonuses, referral rewards, and more."
-        canonical="https://mylegacycannabisca-production.up.railway.app/rewards"
+        title={ROUTE_SEO['/rewards'].title}
+        description={ROUTE_SEO['/rewards'].description}
+        canonical={canonical('/rewards')}
         ogImage={HERO_IMG}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'Rewards', url: canonical('/rewards') },
+        ])}
       />
 
       {/* Hero */}
@@ -134,12 +139,7 @@ export default function Rewards() {
         </div>
       </section>
 
-      {/* JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org", "@type": "WebPage", "name": "My Legacy Rewards — Loyalty Program",
-        "description": "Earn points on every purchase at My Legacy Cannabis. Redeem for discounts up to $150 OFF.",
-        "url": "https://mylegacycannabisca-production.up.railway.app/rewards"
-      })}} />
+
     </>
   );
 }

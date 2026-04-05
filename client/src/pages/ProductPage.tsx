@@ -1,6 +1,7 @@
 import { useParams, Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { SITE_URL, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import ProductReviews from '@/components/ProductReviews';
 import { useCart } from '@/contexts/CartContext';
 import { shippingZones, FREE_SHIPPING_THRESHOLD, calculatePointsEarned } from '@/lib/data';
@@ -107,7 +108,7 @@ export default function ProductPage() {
   const baseName = deriveBaseName(product.name);
   const points = calculatePointsEarned(parseFloat(ap.price?.toString() || '0') * quantity);
   const priceNum = parseFloat(ap.price?.toString() || '0').toFixed(2);
-  const canonicalUrl = `https://mylegacycannabisca-production.up.railway.app/product/${product.slug}`;
+  const canonicalUrl = canonical(`/product/${product.slug}`);
   const reviewAgg = reviewsData?.aggregate;
   const hasWeightVariants = sortedVariants.length > 1;
 
@@ -143,7 +144,7 @@ export default function ProductPage() {
           seller: {
             '@type': 'Organization',
             name: 'My Legacy Cannabis',
-            url: 'https://mylegacycannabisca-production.up.railway.app',
+            url: SITE_URL,
           },
         }))
       : {
@@ -159,7 +160,7 @@ export default function ProductPage() {
         seller: {
           '@type': 'Organization',
           name: 'My Legacy Cannabis',
-          url: 'https://mylegacycannabisca-production.up.railway.app',
+          url: SITE_URL,
         },
         shippingDetails: {
           '@type': 'OfferShippingDetails',
@@ -223,17 +224,20 @@ export default function ProductPage() {
   return (
     <>
       <SEOHead
-        title={`${baseName} — ${product.category}`}
+        title={`${baseName} — ${product.category} | My Legacy Cannabis`}
         description={product.shortDescription || product.description || `Shop ${baseName} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`}
         canonical={canonicalUrl}
         ogType="product"
         ogImage={product.image || undefined}
-      />
-
-      {/* Product JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+        jsonLd={[
+          productSchema,
+          buildBreadcrumbJsonLd([
+            { name: 'Home', url: canonical('/') },
+            { name: 'Shop', url: canonical('/shop') },
+            { name: product.category, url: canonical(`/shop/${product.categorySlug || product.category?.toLowerCase().replace(/\s+/g, '-')}`) },
+            { name: baseName, url: canonicalUrl },
+          ]),
+        ]}
       />
 
       <section className="bg-white py-6 md:py-10">

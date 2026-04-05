@@ -1,5 +1,6 @@
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs, WaveDivider } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { Link } from 'wouter';
 import { MapPin, Shield, Heart, Leaf, Award, ArrowRight } from 'lucide-react';
 import { useT } from '@/i18n';
@@ -11,10 +12,14 @@ export default function About() {
   return (
     <>
       <SEOHead
-        title="About Us — My Legacy Cannabis"
-        description="Learn about My Legacy Cannabis — a 24/7 cannabis dispensary serving the GTA and Ottawa since 2020. Our mission, values, and commitment to premium cannabis products."
-        canonical="https://mylegacycannabisca-production.up.railway.app/about"
+        title={ROUTE_SEO['/about'].title}
+        description={ROUTE_SEO['/about'].description}
+        canonical={canonical('/about')}
         ogImage={HERO_IMG}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'About Us', url: canonical('/about') },
+        ])}
       />
 
       {/* Hero */}

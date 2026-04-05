@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import SEOHead from '@/components/SEOHead';
+import { ROUTE_SEO, canonical } from '@/lib/seo-config';
 import { Mail, Phone, ArrowRight, ArrowLeft, Loader2, Shield, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
@@ -130,9 +131,9 @@ export default function Login() {
   return (
     <>
       <SEOHead
-        title="Sign In — My Legacy Cannabis"
-        description="Sign in to your My Legacy Cannabis account to track orders, earn rewards, and shop premium cannabis."
-        canonical="https://mylegacycannabisca-production.up.railway.app/login"
+        title={ROUTE_SEO['/login'].title}
+        description={ROUTE_SEO['/login'].description}
+        canonical={canonical('/login')}
         noindex
       />
 

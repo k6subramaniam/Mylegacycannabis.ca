@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
+import { ROUTE_SEO, canonical } from '@/lib/seo-config';
 import { Phone, Calendar, Loader2, AlertCircle, Gift, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
@@ -78,9 +79,9 @@ export default function CompleteProfile() {
   return (
     <>
       <SEOHead
-        title="Complete Your Profile — My Legacy Cannabis"
-        description="Add your phone number to complete your My Legacy Cannabis account setup."
-        canonical="https://mylegacycannabisca-production.up.railway.app/complete-profile"
+        title={ROUTE_SEO['/complete-profile'].title}
+        description={ROUTE_SEO['/complete-profile'].description}
+        canonical={canonical('/complete-profile')}
         noindex
       />
 

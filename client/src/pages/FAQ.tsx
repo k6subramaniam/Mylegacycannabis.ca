@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { Link } from 'wouter';
 import { ChevronDown, Search, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -106,9 +107,13 @@ export default function FAQ() {
   return (
     <>
       <SEOHead
-        title="FAQ — Frequently Asked Questions"
-        description="Find answers to common questions about ordering, shipping, payment, ID verification, and the My Legacy Rewards program at My Legacy Cannabis."
-        canonical="https://mylegacycannabisca-production.up.railway.app/faq"
+        title={ROUTE_SEO['/faq'].title}
+        description={ROUTE_SEO['/faq'].description}
+        canonical={canonical('/faq')}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', url: canonical('/') },
+          { name: 'FAQ', url: canonical('/faq') },
+        ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">
