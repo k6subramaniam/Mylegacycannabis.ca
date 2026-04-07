@@ -31,7 +31,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(base64);
-  const arr = new Uint8Array(raw.length);
+  const buffer = new ArrayBuffer(raw.length);
+  const arr = new Uint8Array(buffer);
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
 }
@@ -71,25 +72,69 @@ export function usePushNotifications(): PushState {
 
   // ─── Subscribe ───
   const subscribe = useCallback(async (): Promise<boolean> => {
-    if (!isSupported || !pushConfig?.vapidPublicKey || !pushConfig?.enabled) return false;
+    if (!isSupported || !pushConfig?.vapidPublicKey || !pushConfig?.enabled) {
+      console.warn("[Push] Not supported or not configured", {
+        isSupported,
+        hasKey: !!pushConfig?.vapidPublicKey,
+        enabled: pushConfig?.enabled,
+      });
+      return false;
+    }
 
     setLoading(true);
     try {
-      // Register service worker (idempotent if already registered)
-      const reg = await navigator.serviceWorker.ready;
-
-      // Request permission
+      // Request permission FIRST (some mobile browsers need this before SW interaction)
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setIsDenied(permission === "denied");
+        console.warn("[Push] Permission not granted:", permission);
         return false;
+      }
+
+      // Ensure the service worker is registered and ready
+      let reg: ServiceWorkerRegistration;
+      try {
+        reg = await navigator.serviceWorker.ready;
+      } catch {
+        // If ready fails, try re-registering
+        reg = await navigator.serviceWorker.register("/sw.js");
+        // Wait for activation
+        await new Promise<void>((resolve) => {
+          if (reg.active) { resolve(); return; }
+          const sw = reg.installing || reg.waiting;
+          if (sw) {
+            sw.addEventListener("statechange", () => {
+              if (sw.state === "activated") resolve();
+            });
+          } else {
+            resolve();
+          }
+          // Timeout after 10s
+          setTimeout(resolve, 10_000);
+        });
+      }
+
+      // Check if already subscribed
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        // Already have a subscription — just send to server
+        const json = existing.toJSON();
+        await subscribeMut.mutateAsync({
+          endpoint: existing.endpoint,
+          keys: {
+            p256dh: json.keys?.p256dh || "",
+            auth: json.keys?.auth || "",
+          },
+        });
+        setIsSubscribed(true);
+        return true;
       }
 
       // Subscribe with VAPID key
       const sub = await reg.pushManager.subscribe({
-        userVisuallyIndicatesUserIsActive: true,
-        applicationServerKey: urlBase64ToUint8Array(pushConfig.vapidPublicKey),
-      } as PushSubscriptionOptionsInit);
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushConfig.vapidPublicKey) as BufferSource,
+      });
 
       const json = sub.toJSON();
 
@@ -104,8 +149,8 @@ export function usePushNotifications(): PushState {
 
       setIsSubscribed(true);
       return true;
-    } catch (err) {
-      console.warn("[Push] Subscribe failed:", err);
+    } catch (err: any) {
+      console.warn("[Push] Subscribe failed:", err?.message || err);
       return false;
     } finally {
       setLoading(false);

@@ -321,7 +321,11 @@ export default function AdminInsights() {
 
   const refreshAllMut = trpc.admin.aiMemory.refreshAllMemories.useMutation({
     onSuccess: (res: any) => {
-      toast.success(`Refreshed ${res.refreshed} user profile(s)`);
+      if (res.refreshed > 0) {
+        toast.success(`Updated ${res.refreshed} user profile${res.refreshed !== 1 ? 's' : ''} with new data`);
+      } else {
+        toast.info('All profiles are already up to date — no new activity to process');
+      }
       refetchMemories();
       refetchAnalytics();
     },

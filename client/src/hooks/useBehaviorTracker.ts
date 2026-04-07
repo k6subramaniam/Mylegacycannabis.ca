@@ -119,6 +119,9 @@ export function useBehaviorTracker() {
   }, []);
 
   const trackPageView = useCallback((page: string) => {
+    // Skip tracking admin pages — admin browsing shouldn't affect AI user profiles
+    if (page.startsWith('/admin')) return;
+
     // Record dwell time for previous page
     const dwellMs = Date.now() - pageEnteredAt.current;
     if (dwellMs > 1000 && currentPage.current !== page) {

@@ -68,7 +68,7 @@ export default function MobileUpload() {
 
   return (
     <>
-      <SEOHead title="Upload Your ID — My Legacy Cannabis" noindex />
+      <SEOHead title="Upload Your ID — My Legacy Cannabis" description="Upload your government-issued ID for age verification." noindex />
       <div className="min-h-screen bg-[#f4f4f0]">
         {/* Header */}
         <div className="bg-[#4B2D8E] text-white text-center py-4 px-4">

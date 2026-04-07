@@ -1175,6 +1175,7 @@ function AiConfigSection() {
       toast.success("AI configuration saved");
       setHasChanges(false);
       setApiKeyInput("");
+      setFallbackApiKeyInput("");
     },
     onError: (err: any) => toast.error(err.message || "Failed to save"),
   });
@@ -1187,11 +1188,19 @@ function AiConfigSection() {
   const [hasChanges, setHasChanges] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; latency?: number; model?: string; reply?: string; error?: string } | null>(null);
 
+  // Fallback provider state
+  const [fallbackProvider, setFallbackProvider] = useState<"openai" | "gemini" | "">("");
+  const [fallbackApiKeyInput, setFallbackApiKeyInput] = useState("");
+  const [showFallbackApiKey, setShowFallbackApiKey] = useState(false);
+  const [fallbackModel, setFallbackModel] = useState("");
+
   // Sync from server data
   useEffect(() => {
     if (aiConfig) {
       setProvider(aiConfig.provider as "openai" | "gemini");
       setModel(aiConfig.model || "");
+      setFallbackProvider((aiConfig.fallbackProvider || "") as "openai" | "gemini" | "");
+      setFallbackModel(aiConfig.fallbackModel || "");
       setHasChanges(false);
     }
   }, [aiConfig]);
@@ -1201,6 +1210,9 @@ function AiConfigSection() {
       provider,
       apiKey: apiKeyInput || undefined,
       model: model || undefined,
+      fallbackProvider: fallbackProvider || undefined,
+      fallbackApiKey: fallbackApiKeyInput || undefined,
+      fallbackModel: fallbackModel || undefined,
     });
   };
 
@@ -1217,7 +1229,9 @@ function AiConfigSection() {
     { value: "gpt-4o-mini", label: "GPT-4o Mini — fast, affordable" },
     { value: "gpt-4o", label: "GPT-4o — best quality" },
     { value: "gpt-4.1-mini", label: "GPT-4.1 Mini — latest mini" },
-    { value: "gpt-4.1", label: "GPT-4.1 — latest flagship" },
+    { value: "gpt-4.1", label: "GPT-4.1 — flagship" },
+    { value: "gpt-4.5-preview", label: "GPT-4.5 Preview — advanced reasoning" },
+    { value: "gpt-5.4", label: "GPT-5.4 — newest flagship" },
   ];
 
   const GEMINI_MODELS = [
@@ -1225,9 +1239,13 @@ function AiConfigSection() {
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash — fast, affordable" },
     { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro — best quality" },
     { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash — stable" },
+    { value: "gemini-3.0-flash", label: "Gemini 3.0 Flash — next gen fast" },
+    { value: "gemini-3.1", label: "Gemini 3.1 — newest flagship" },
   ];
 
-  const models = provider === "gemini" ? GEMINI_MODELS : OPENAI_MODELS;
+  const getModelsForProvider = (p: string) => p === "gemini" ? GEMINI_MODELS : OPENAI_MODELS;
+  const models = getModelsForProvider(provider);
+  const fallbackModels = fallbackProvider ? getModelsForProvider(fallbackProvider) : [];
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1235,7 +1253,7 @@ function AiConfigSection() {
         <Brain size={20} className="text-violet-600" />
         <div>
           <h2 className="text-lg font-semibold text-gray-800">AI Configuration</h2>
-          <p className="text-sm text-gray-500">Configure the AI provider for email template generation, menu import, and other AI features.</p>
+          <p className="text-sm text-gray-500">Configure primary and fallback AI providers. If the primary fails, the fallback kicks in automatically.</p>
         </div>
       </div>
 
@@ -1247,122 +1265,177 @@ function AiConfigSection() {
           </div>
         ) : (
           <>
-            {/* Provider Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">AI Provider</label>
-              <div className="grid grid-cols-2 gap-4">
-                {/* OpenAI Card */}
+            {/* ─── PRIMARY PROVIDER ─── */}
+            <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-5 border border-violet-100">
+              <h3 className="text-sm font-semibold text-violet-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Zap size={14} /> Primary Provider
+              </h3>
+
+              {/* Provider Selection */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <button
                   type="button"
                   onClick={() => { setProvider("openai"); setModel(""); setHasChanges(true); }}
-                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                  className={`relative rounded-xl border-2 p-3 text-left transition-all ${
                     provider === "openai"
-                      ? "border-emerald-400 bg-emerald-50/50 shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-emerald-400 bg-white shadow-sm"
+                      : "border-gray-200 bg-white/60 hover:border-gray-300"
                   }`}
                 >
-                  {provider === "openai" && (
-                    <div className="absolute top-3 right-3">
-                      <CheckCircle size={18} className="text-emerald-500" />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      provider === "openai" ? "bg-emerald-100" : "bg-gray-100"
-                    }`}>
-                      <Zap size={20} className={provider === "openai" ? "text-emerald-600" : "text-gray-400"} />
-                    </div>
+                  {provider === "openai" && <CheckCircle size={16} className="absolute top-2 right-2 text-emerald-500" />}
+                  <div className="flex items-center gap-2">
+                    <Zap size={16} className={provider === "openai" ? "text-emerald-600" : "text-gray-400"} />
                     <div>
-                      <h3 className="font-semibold text-gray-800">OpenAI</h3>
-                      <p className="text-xs text-gray-500">GPT-4o, GPT-4.1</p>
+                      <h4 className="font-semibold text-gray-800 text-sm">OpenAI / ChatGPT</h4>
+                      <p className="text-[10px] text-gray-500">GPT-4o, GPT-4.1, GPT-5.4</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">Industry-standard AI models. Excellent for email generation and menu parsing.</p>
                 </button>
-
-                {/* Gemini Card */}
                 <button
                   type="button"
                   onClick={() => { setProvider("gemini"); setModel(""); setHasChanges(true); }}
-                  className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                  className={`relative rounded-xl border-2 p-3 text-left transition-all ${
                     provider === "gemini"
-                      ? "border-blue-400 bg-blue-50/50 shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-blue-400 bg-white shadow-sm"
+                      : "border-gray-200 bg-white/60 hover:border-gray-300"
                   }`}
                 >
-                  {provider === "gemini" && (
-                    <div className="absolute top-3 right-3">
-                      <CheckCircle size={18} className="text-blue-500" />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      provider === "gemini" ? "bg-blue-100" : "bg-gray-100"
-                    }`}>
-                      <Sparkles size={20} className={provider === "gemini" ? "text-blue-600" : "text-gray-400"} />
-                    </div>
+                  {provider === "gemini" && <CheckCircle size={16} className="absolute top-2 right-2 text-blue-500" />}
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className={provider === "gemini" ? "text-blue-600" : "text-gray-400"} />
                     <div>
-                      <h3 className="font-semibold text-gray-800">Google Gemini</h3>
-                      <p className="text-xs text-gray-500">Gemini 2.5 Flash / Pro</p>
+                      <h4 className="font-semibold text-gray-800 text-sm">Google Gemini</h4>
+                      <p className="text-[10px] text-gray-500">Gemini 2.5, 3.0, 3.1</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">Google's latest AI. Fast and cost-effective with excellent vision support.</p>
                 </button>
               </div>
-            </div>
 
-            {/* API Key */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Key size={14} />
-                API Key
-              </label>
-              {aiConfig?.apiKeySet && !apiKeyInput && (
-                <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle size={14} className="text-green-500" />
-                  <span className="text-sm text-green-700">Key configured: <code className="bg-green-100 px-1.5 py-0.5 rounded text-xs">{aiConfig.apiKeyPreview}</code></span>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
+              {/* Primary API Key */}
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                  <Key size={12} /> {provider === "openai" ? "OpenAI" : "Gemini"} API Key
+                </label>
+                {aiConfig?.apiKeySet && !apiKeyInput && (
+                  <div className="flex items-center gap-2 mb-1.5 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle size={12} className="text-green-500" />
+                    <span className="text-xs text-green-700">Key set: <code className="bg-green-100 px-1 py-0.5 rounded text-[10px]">{aiConfig.apiKeyPreview}</code></span>
+                  </div>
+                )}
+                <div className="relative">
                   <input
                     type={showApiKey ? "text" : "password"}
                     value={apiKeyInput}
                     onChange={(e) => { setApiKeyInput(e.target.value); setHasChanges(true); }}
-                    placeholder={aiConfig?.apiKeySet ? "Enter new key to replace existing..." : provider === "gemini" ? "AIza..." : "sk-proj-..."}
-                    className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                    placeholder={aiConfig?.apiKeySet ? "Enter new key to replace..." : provider === "gemini" ? "AIza..." : "sk-proj-..."}
+                    className="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <button type="button" onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {provider === "openai" ? (
+                    <>Get key: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">platform.openai.com/api-keys</a></>
+                  ) : (
+                    <>Get key: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">aistudio.google.com/apikey</a></>
+                  )}
+                </p>
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">
-                {provider === "openai" ? (
-                  <>Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">platform.openai.com/api-keys</a></>
-                ) : (
-                  <>Get your key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">aistudio.google.com/apikey</a></>
-                )}
-              </p>
+
+              {/* Primary Model */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Model</label>
+                <select
+                  value={model}
+                  onChange={(e) => { setModel(e.target.value); setHasChanges(true); }}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  {models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
             </div>
 
-            {/* Model Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
-              <select
-                value={model}
-                onChange={(e) => { setModel(e.target.value); setHasChanges(true); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-              >
-                {models.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-400 mt-1.5">Controls which model is used for AI email templates and menu import.</p>
+            {/* ─── FALLBACK / CONTINGENCY PROVIDER ─── */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
+              <h3 className="text-sm font-semibold text-amber-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Shield size={14} /> Fallback / Contingency Provider
+              </h3>
+              <p className="text-xs text-amber-700 mb-4">If the primary provider fails or is unreachable, this provider takes over automatically.</p>
+
+              {/* Fallback Provider Selection */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => { setFallbackProvider(""); setFallbackModel(""); setHasChanges(true); }}
+                  className={`rounded-lg border-2 p-2 text-center text-xs font-medium transition-all ${
+                    !fallbackProvider ? "border-gray-400 bg-white shadow-sm" : "border-gray-200 bg-white/60 hover:border-gray-300"
+                  }`}
+                >
+                  None
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFallbackProvider("openai"); setFallbackModel(""); setHasChanges(true); }}
+                  className={`rounded-lg border-2 p-2 text-center text-xs font-medium transition-all ${
+                    fallbackProvider === "openai" ? "border-emerald-400 bg-white shadow-sm" : "border-gray-200 bg-white/60 hover:border-gray-300"
+                  }`}
+                >
+                  OpenAI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFallbackProvider("gemini"); setFallbackModel(""); setHasChanges(true); }}
+                  className={`rounded-lg border-2 p-2 text-center text-xs font-medium transition-all ${
+                    fallbackProvider === "gemini" ? "border-blue-400 bg-white shadow-sm" : "border-gray-200 bg-white/60 hover:border-gray-300"
+                  }`}
+                >
+                  Gemini
+                </button>
+              </div>
+
+              {fallbackProvider && (
+                <>
+                  {/* Fallback API Key */}
+                  <div className="mb-3">
+                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                      <Key size={12} /> {fallbackProvider === "openai" ? "OpenAI" : "Gemini"} Fallback API Key
+                    </label>
+                    {aiConfig?.fallbackApiKeySet && !fallbackApiKeyInput && (
+                      <div className="flex items-center gap-2 mb-1.5 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                        <CheckCircle size={12} className="text-green-500" />
+                        <span className="text-xs text-green-700">Key set: <code className="bg-green-100 px-1 py-0.5 rounded text-[10px]">{aiConfig?.fallbackApiKeyPreview}</code></span>
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input
+                        type={showFallbackApiKey ? "text" : "password"}
+                        value={fallbackApiKeyInput}
+                        onChange={(e) => { setFallbackApiKeyInput(e.target.value); setHasChanges(true); }}
+                        placeholder={fallbackProvider === "gemini" ? "AIza..." : "sk-proj-..."}
+                        className="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                      <button type="button" onClick={() => setShowFallbackApiKey(!showFallbackApiKey)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showFallbackApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fallback Model */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Fallback Model</label>
+                    <select
+                      value={fallbackModel}
+                      onChange={(e) => { setFallbackModel(e.target.value); setHasChanges(true); }}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                      {fallbackModels.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* What AI powers */}
@@ -1375,6 +1448,8 @@ function AiConfigSection() {
                     <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Email template generation (AI Generate)</li>
                     <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Email template improvement (AI Improve)</li>
                     <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Menu image import (AI Vision)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> Customer insight profiles</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={12} className="text-violet-500" /> AI Chat assistant</li>
                   </ul>
                 </div>
               </div>
@@ -1732,15 +1807,15 @@ function PushBroadcastSection() {
         ) : stats ? (
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-purple-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-[#4B2D8E]">{stats.stats.active}</p>
+              <p className="text-2xl font-bold text-[#4B2D8E]">{stats.active ?? 0}</p>
               <p className="text-xs text-gray-500 mt-1">Active Subscribers</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-gray-700">{stats.stats.total}</p>
+              <p className="text-2xl font-bold text-gray-700">{stats.total ?? 0}</p>
               <p className="text-xs text-gray-500 mt-1">Total (incl. inactive)</p>
             </div>
             <div className="bg-green-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-green-700">{stats.stats.withUsers}</p>
+              <p className="text-2xl font-bold text-green-700">{stats.withUser ?? 0}</p>
               <p className="text-xs text-gray-500 mt-1">Logged-In Users</p>
             </div>
           </div>
@@ -1755,7 +1830,7 @@ function PushBroadcastSection() {
         )}
 
         {/* Broadcast form */}
-        {stats && stats.stats.active > 0 && (
+        {stats && (stats.active ?? 0) > 0 && (
           <div className="border-t border-gray-100 pt-6 space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <Send size={14} />
@@ -1803,7 +1878,7 @@ function PushBroadcastSection() {
               className="flex items-center gap-2 px-5 py-2.5 bg-[#4B2D8E] text-white rounded-xl text-sm font-semibold hover:bg-[#3a1f73] disabled:opacity-50 transition"
             >
               {broadcastMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              Send to {stats.stats.active} subscriber{stats.stats.active !== 1 ? "s" : ""}
+              Send to {stats.active ?? 0} subscriber{(stats.active ?? 0) !== 1 ? "s" : ""}
             </button>
           </div>
         )}

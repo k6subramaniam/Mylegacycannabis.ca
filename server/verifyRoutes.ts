@@ -4,7 +4,8 @@
  * All submissions go into db.createVerification() — the same store
  * the admin panel reads at /admin/verifications (tRPC-based, login required).
  */
-import { Router, Express } from "express";
+import { Router } from "express";
+import type { Request, Response } from "express";
 import multer from "multer";
 import crypto from "crypto";
 import * as db from "./db";
@@ -42,9 +43,9 @@ export const mobileSessions = new Map<string, MobileSession>();
 
 function cleanExpiredSessions() {
   const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const [k, s] of mobileSessions) {
+  mobileSessions.forEach((s, k) => {
     if (s.createdAt < cutoff) mobileSessions.delete(k);
-  }
+  });
 }
 
 // ============================================================
@@ -63,7 +64,7 @@ async function saveImageToStorage(buffer: Buffer, mimetype: string, prefix: stri
 // ROUTER
 // ============================================================
 
-export function registerVerifyRoutes(app: Express | Router) {
+export function registerVerifyRoutes(app: Router) {
 
   // ──────────────────────────────────────────────────────────
   // POST /api/verify/submit

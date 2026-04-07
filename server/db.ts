@@ -2231,7 +2231,7 @@ export async function backfillOrderUserIds(): Promise<number> {
     }
   }
   // Refresh AI memory for all newly-linked users
-  for (const uid of refreshSet) {
+  for (const uid of Array.from(refreshSet)) {
     try {
       await refreshAiUserMemory(uid);
     } catch (err) {

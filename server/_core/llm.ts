@@ -217,6 +217,9 @@ export type AiConfig = {
   apiKey: string;
   baseUrl?: string;
   model?: string;
+  fallbackProvider?: "openai" | "gemini";
+  fallbackApiKey?: string;
+  fallbackModel?: string;
 };
 
 // Cache config for 60s to avoid hammering DB on every LLM call
@@ -228,10 +231,13 @@ export async function getAiConfig(): Promise<AiConfig> {
   const now = Date.now();
   if (_configCache && now - _configCacheTime < CONFIG_CACHE_TTL) return _configCache;
 
-  const [provider, apiKey, model] = await Promise.all([
+  const [provider, apiKey, model, fallbackProvider, fallbackApiKey, fallbackModel] = await Promise.all([
     db.getSiteSetting("ai_provider"),
     db.getSiteSetting("ai_api_key"),
     db.getSiteSetting("ai_model"),
+    db.getSiteSetting("ai_fallback_provider"),
+    db.getSiteSetting("ai_fallback_api_key"),
+    db.getSiteSetting("ai_fallback_model"),
   ]);
 
   const config: AiConfig = {
@@ -239,6 +245,9 @@ export async function getAiConfig(): Promise<AiConfig> {
     apiKey: apiKey || ENV.forgeApiKey || "",
     baseUrl: ENV.forgeApiUrl || undefined,
     model: model || undefined,
+    fallbackProvider: fallbackProvider ? (fallbackProvider as "openai" | "gemini") : undefined,
+    fallbackApiKey: fallbackApiKey || undefined,
+    fallbackModel: fallbackModel || undefined,
   };
 
   // If admin set an API key, use it (and clear the forge base URL so it goes direct)
@@ -393,82 +402,51 @@ async function invokeGeminiNative(params: InvokeParams, config: AiConfig): Promi
   };
 }
 
-// ─── Main invokeLLM function ───
+// ─── Single-provider invoke helper (used for primary + fallback) ───
 
-export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  // Check if admin has configured their own AI settings
-  const config = await getAiConfig();
-
-  // If admin set Gemini as provider with their own API key, use native Gemini API
-  if (config.provider === "gemini" && config.apiKey && !ENV.forgeApiUrl) {
-    return invokeGeminiNative(params, config);
-  }
-  if (config.provider === "gemini" && config.apiKey && config.apiKey !== ENV.forgeApiKey) {
-    return invokeGeminiNative(params, config);
-  }
-
-  // OpenAI-compatible path (Forge proxy, OpenAI direct, or admin's OpenAI key)
-  let apiUrl: string;
-  let apiKey: string;
-  let modelName: string;
-
-  if (config.apiKey && config.apiKey !== ENV.forgeApiKey) {
-    // Admin configured their own OpenAI key
-    apiUrl = `${config.baseUrl || "https://api.openai.com/v1"}/chat/completions`;
-    apiKey = config.apiKey;
-    modelName = config.model || "gpt-4o-mini";
-  } else if (ENV.forgeApiKey) {
-    // Fall back to Forge proxy (built-in)
-    apiUrl = resolveApiUrl();
-    apiKey = ENV.forgeApiKey;
-    modelName = "gemini-2.5-flash";
-  } else {
-    throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
+async function invokeSingleProvider(
+  params: InvokeParams,
+  provider: "openai" | "gemini",
+  apiKey: string,
+  model?: string,
+): Promise<InvokeResult> {
+  if (provider === "gemini") {
+    return invokeGeminiNative(params, {
+      provider: "gemini",
+      apiKey,
+      model: model || "gemini-2.5-flash",
+    });
   }
 
-  const {
-    messages,
-    tools,
-    toolChoice,
-    tool_choice,
-    outputSchema,
-    output_schema,
-    responseFormat,
-    response_format,
-  } = params;
+  // OpenAI path
+  const apiUrl = "https://api.openai.com/v1/chat/completions";
+  const modelName = model || "gpt-4o-mini";
+  const maxTokens = params.maxTokens || params.max_tokens || 32768;
 
   const payload: Record<string, unknown> = {
     model: modelName,
-    messages: messages.map(normalizeMessage),
+    messages: params.messages.map(normalizeMessage),
+    max_tokens: maxTokens,
   };
 
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
+  if (params.tools && params.tools.length > 0) {
+    payload.tools = params.tools;
   }
 
   const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
+    params.toolChoice || params.tool_choice,
+    params.tools,
   );
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  const maxTokens = params.maxTokens || params.max_tokens || 32768;
-  payload.max_tokens = maxTokens;
-
-  // Only add thinking for Forge proxy / Gemini-through-OpenAI-compat
-  if (apiUrl.includes("forge") || modelName.startsWith("gemini")) {
-    payload.thinking = { budget_tokens: 1024 };
-  }
-
   const normalizedResponseFormat = normalizeResponseFormat({
-    responseFormat,
-    response_format,
-    outputSchema,
-    output_schema,
+    responseFormat: params.responseFormat,
+    response_format: params.response_format,
+    outputSchema: params.outputSchema,
+    output_schema: params.output_schema,
   });
-
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
   }
@@ -484,10 +462,97 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`
-    );
+    throw new Error(`LLM invoke failed (${provider}): ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`);
   }
 
   return (await response.json()) as InvokeResult;
+}
+
+// ─── Main invokeLLM function ───
+
+export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  const config = await getAiConfig();
+
+  // Helper: attempt fallback if configured
+  const tryFallback = async (primaryErr: any): Promise<InvokeResult> => {
+    if (config.fallbackApiKey && config.fallbackProvider) {
+      console.warn(`[AI] Primary (${config.provider}) failed: ${primaryErr.message?.slice(0, 100)}. Trying fallback (${config.fallbackProvider})...`);
+      return invokeSingleProvider(params, config.fallbackProvider, config.fallbackApiKey, config.fallbackModel);
+    }
+    throw primaryErr;
+  };
+
+  // If admin set Gemini as provider with their own API key, use native Gemini API
+  if (config.provider === "gemini" && config.apiKey && !ENV.forgeApiUrl) {
+    try {
+      return await invokeGeminiNative(params, config);
+    } catch (err: any) {
+      return tryFallback(err);
+    }
+  }
+  if (config.provider === "gemini" && config.apiKey && config.apiKey !== ENV.forgeApiKey) {
+    try {
+      return await invokeGeminiNative(params, config);
+    } catch (err: any) {
+      return tryFallback(err);
+    }
+  }
+
+  // OpenAI-compatible path (Forge proxy, OpenAI direct, or admin's OpenAI key)
+  let apiUrl: string;
+  let apiKey: string;
+  let modelName: string;
+
+  if (config.apiKey && config.apiKey !== ENV.forgeApiKey) {
+    apiUrl = `${config.baseUrl || "https://api.openai.com/v1"}/chat/completions`;
+    apiKey = config.apiKey;
+    modelName = config.model || "gpt-4o-mini";
+  } else if (ENV.forgeApiKey) {
+    apiUrl = resolveApiUrl();
+    apiKey = ENV.forgeApiKey;
+    modelName = "gemini-2.5-flash";
+  } else {
+    throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
+  }
+
+  const {
+    messages, tools, toolChoice, tool_choice,
+    outputSchema, output_schema, responseFormat, response_format,
+  } = params;
+
+  const payload: Record<string, unknown> = {
+    model: modelName,
+    messages: messages.map(normalizeMessage),
+  };
+
+  if (tools && tools.length > 0) payload.tools = tools;
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
+  if (normalizedToolChoice) payload.tool_choice = normalizedToolChoice;
+
+  const maxTokens = params.maxTokens || params.max_tokens || 32768;
+  payload.max_tokens = maxTokens;
+
+  if (apiUrl.includes("forge") || modelName.startsWith("gemini")) {
+    payload.thinking = { budget_tokens: 1024 };
+  }
+
+  const normalizedResponseFormat = normalizeResponseFormat({ responseFormat, response_format, outputSchema, output_schema });
+  if (normalizedResponseFormat) payload.response_format = normalizedResponseFormat;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`);
+    }
+
+    return (await response.json()) as InvokeResult;
+  } catch (primaryErr: any) {
+    return tryFallback(primaryErr);
+  }
 }

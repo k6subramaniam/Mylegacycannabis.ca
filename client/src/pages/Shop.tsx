@@ -146,7 +146,7 @@ export default function Shop() {
       }
 
       const groups: GroupedProduct[] = [];
-      for (const [key, variants] of groupMap) {
+      for (const [key, variants] of Array.from(groupMap.entries())) {
         // Sort variants by weight ascending
         variants.sort((a: any, b: any) => parseWeight(a.weight) - parseWeight(b.weight));
         const prices = variants.map((v: any) => parseFloat(v.price?.toString() || '0'));
