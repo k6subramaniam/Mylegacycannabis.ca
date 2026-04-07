@@ -1,7 +1,7 @@
 import SEOHead from '@/components/SEOHead';
 import { Link } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
-import { products, categories, storeLocations as fallbackLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
+import { categories, storeLocations as fallbackLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
 import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/seo-config';
 import { WaveDivider } from '@/components/Layout';
 import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
@@ -18,7 +18,8 @@ export default function Home() {
   const { addItem } = useCart();
   const { trackAddToCart } = useBehavior();
   const { t } = useT();
-  const featured = products.filter(p => p.featured).slice(0, 4);
+  const { data: featuredProducts } = trpc.store.featuredProducts.useQuery(undefined, { staleTime: 60_000 });
+  const featured = featuredProducts ?? [];
   const { data: dbLocations } = trpc.store.locations.useQuery();
   const { idVerificationEnabled } = useSiteConfig();
   const storeLocations = dbLocations && dbLocations.length > 0 ? dbLocations : fallbackLocations;
@@ -153,7 +154,12 @@ export default function Home() {
             <p className="text-white/70 font-body max-w-lg mx-auto">{t.home.featuredProductsDesc}</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {featured.map((product) => (
+            {featured.length === 0 && (
+              <div className="col-span-full text-center text-white/50 py-12">
+                <p className="font-body text-sm">Featured products loading...</p>
+              </div>
+            )}
+            {featured.map((product: any) => (
               <div key={product.id} className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-shadow">
                 <Link href={`/product/${product.slug}`} className="block">
                   <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
@@ -187,7 +193,28 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <span className="font-display text-lg text-[#4B2D8E]">${(typeof product.price === 'string' ? parseFloat(product.price) : product.price).toFixed(2)}</span>
                     <button
-                      onClick={(e) => { e.preventDefault(); addItem(product); trackAddToCart(product.slug, undefined, { price: product.price, name: product.name }); toast.success(`${product.name} added to cart`); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const cartProduct = {
+                          ...product,
+                          id: String(product.id),
+                          categorySlug: (product as any).category || '',
+                          strainType: (product as any).strainType || 'N/A',
+                          price: parseFloat(String(product.price || 0)),
+                          inStock: (product as any).stock > 0,
+                          rating: 4.5,
+                          reviewCount: 0,
+                          images: (product as any).images || [],
+                          image: (product as any).image || '',
+                          description: (product as any).description || '',
+                          shortDescription: (product as any).shortDescription || '',
+                          flavor: (product as any).flavor || '',
+                          weight: (product as any).weight || '',
+                        } as any;
+                        addItem(cartProduct);
+                        trackAddToCart(product.slug, product.id, { price: product.price, name: product.name });
+                        toast.success(`${product.name} added to cart`);
+                      }}
                       className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
                       aria-label={`Add ${product.name} to cart`}
                     >

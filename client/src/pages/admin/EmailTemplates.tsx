@@ -65,6 +65,7 @@ export default function AdminEmailTemplates() {
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ slug: "", name: "", subject: "", bodyHtml: "", variables: "", isActive: true });
   const [showAiGenerate, setShowAiGenerate] = useState(false);
+  const [applyDesignSource, setApplyDesignSource] = useState<any>(null); // template whose design to copy
 
   const resetNewForm = () => setNewForm({ slug: "", name: "", subject: "", bodyHtml: "", variables: "", isActive: true });
 
@@ -128,7 +129,7 @@ export default function AdminEmailTemplates() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {catTemplates.map((template: any) => (
-                    <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} accentColor={category.color} />
+                    <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} onApplyDesign={setApplyDesignSource} accentColor={category.color} />
                   ))}
                 </div>
               </div>
@@ -141,7 +142,7 @@ export default function AdminEmailTemplates() {
               <h2 className="text-lg font-bold text-gray-700">Other Templates</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {uncategorized.map((template: any) => (
-                  <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} />
+                  <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} onApplyDesign={setApplyDesignSource} />
                 ))}
               </div>
             </div>
@@ -156,7 +157,7 @@ export default function AdminEmailTemplates() {
               </summary>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                 {inactiveTemplates.map((template: any) => (
-                  <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} inactive />
+                  <TemplateCard key={template.id} template={template} onPreview={setPreviewTemplate} onEdit={startEdit} onApplyDesign={setApplyDesignSource} inactive />
                 ))}
               </div>
             </details>
@@ -264,6 +265,16 @@ export default function AdminEmailTemplates() {
             utils.admin.emailTemplates.list.invalidate();
             setShowAiGenerate(false);
           }}
+        />
+      )}
+
+      {/* Apply Design Modal */}
+      {applyDesignSource && templates && (
+        <ApplyDesignModal
+          source={applyDesignSource}
+          allTemplates={templates}
+          onClose={() => setApplyDesignSource(null)}
+          onApplied={() => { utils.admin.emailTemplates.list.invalidate(); setApplyDesignSource(null); }}
         />
       )}
     </div>
@@ -1001,6 +1012,129 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
 }
 
 // ═══════════════════════════════════════════════════════════
+// APPLY DESIGN MODAL
+// ═══════════════════════════════════════════════════════════
+function ApplyDesignModal({ source, allTemplates, onClose, onApplied }: {
+  source: any; allTemplates: any[]; onClose: () => void; onApplied: () => void;
+}) {
+  const [selectedTargets, setSelectedTargets] = useState<number[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const applyMut = trpc.admin.emailTemplates.aiApplyDesign.useMutation();
+  const updateMut = trpc.admin.emailTemplates.update.useMutation();
+
+  const targets = allTemplates.filter(t => t.id !== source.id && t.isActive);
+
+  const toggleTarget = (id: number) => {
+    setSelectedTargets(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const selectAll = () => {
+    setSelectedTargets(targets.map(t => t.id));
+  };
+
+  const handleApply = async () => {
+    if (selectedTargets.length === 0) { toast.error("Select at least one target template"); return; }
+    setProcessing(true);
+    setProgress(0);
+    let done = 0;
+    for (const targetId of selectedTargets) {
+      const target = allTemplates.find(t => t.id === targetId);
+      if (!target) continue;
+      try {
+        const result = await applyMut.mutateAsync({
+          sourceBodyHtml: source.bodyHtml,
+          targetSlug: target.slug,
+          targetSubject: target.subject,
+          targetBodyHtml: target.bodyHtml,
+          targetVariables: target.variables || [],
+        });
+        await updateMut.mutateAsync({
+          id: targetId,
+          subject: result.subject,
+          bodyHtml: result.bodyHtml,
+          isActive: target.isActive,
+        });
+        done++;
+        setProgress(done);
+      } catch (err: any) {
+        toast.error(`Failed on ${target.name}: ${err.message}`);
+      }
+    }
+    toast.success(`Design applied to ${done} template${done > 1 ? "s" : ""}!`);
+    setProcessing(false);
+    onApplied();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-2xl my-8 shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Palette size={18} className="text-violet-600" /> Apply Design</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Copy the visual design of <strong>{source.name}</strong> to other templates</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" disabled={processing}><X size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Source preview */}
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+            <p className="text-xs text-violet-600 font-medium mb-2">DESIGN SOURCE</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                <LayoutTemplate size={18} className="text-violet-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-gray-800">{source.name}</p>
+                <p className="text-xs text-gray-400 font-mono">{source.slug}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Target selection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-700">Apply design to:</p>
+              <button onClick={selectAll} className="text-xs text-violet-600 hover:underline">Select All ({targets.length})</button>
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1.5 border border-gray-100 rounded-xl p-2">
+              {targets.map(t => (
+                <label key={t.id} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${selectedTargets.includes(t.id) ? "bg-violet-50 border border-violet-200" : "hover:bg-gray-50 border border-transparent"}`}>
+                  <input type="checkbox" checked={selectedTargets.includes(t.id)} onChange={() => toggleTarget(t.id)} className="accent-violet-600 rounded" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{t.name}</p>
+                    <p className="text-xs text-gray-400 font-mono truncate">{t.slug}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Progress */}
+          {processing && (
+            <div className="space-y-2">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-violet-600 rounded-full transition-all" style={{ width: `${(progress / selectedTargets.length) * 100}%` }} />
+              </div>
+              <p className="text-xs text-gray-500 text-center">Processing {progress} of {selectedTargets.length}...</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={onClose} disabled={processing} className="px-5 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button onClick={handleApply} disabled={processing || selectedTargets.length === 0}
+              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+              {processing ? <><Loader2 size={14} className="animate-spin" /> Applying...</> : <><Palette size={14} /> Apply Design to {selectedTargets.length || "0"} Templates</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // EMAIL LOGO CARD
 // ═══════════════════════════════════════════════════════════
 function EmailLogoCard() {
@@ -1038,8 +1172,8 @@ function EmailLogoCard() {
 // ═══════════════════════════════════════════════════════════
 // TEMPLATE CARD
 // ═══════════════════════════════════════════════════════════
-function TemplateCard({ template, onPreview, onEdit, accentColor, inactive }: {
-  template: any; onPreview: (t: any) => void; onEdit: (t: any) => void; accentColor?: string; inactive?: boolean;
+function TemplateCard({ template, onPreview, onEdit, onApplyDesign, accentColor, inactive }: {
+  template: any; onPreview: (t: any) => void; onEdit: (t: any) => void; onApplyDesign?: (t: any) => void; accentColor?: string; inactive?: boolean;
 }) {
   return (
     <div className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow ${inactive ? "border-gray-200 opacity-60" : "border-gray-100"}`}>
@@ -1076,6 +1210,11 @@ function TemplateCard({ template, onPreview, onEdit, accentColor, inactive }: {
           <Edit2 size={14} /> Edit
         </button>
       </div>
+      {onApplyDesign && !inactive && (
+        <button onClick={() => onApplyDesign(template)} className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 text-xs text-violet-600 hover:bg-violet-50 transition-colors">
+          <Palette size={12} /> Apply This Design to Other Emails
+        </button>
+      )}
     </div>
   );
 }

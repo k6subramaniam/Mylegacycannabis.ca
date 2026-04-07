@@ -967,6 +967,47 @@ export async function getAllProducts(opts?: { page?: number; limit?: number; cat
   return { data, total: totalResult[0].cnt };
 }
 
+/** Fetch up to 4 active featured products for the Homepage section */
+export async function getFeaturedProducts(limit = 4): Promise<schema.Product[]> {
+  if (!USE_PERSISTENT_DB) {
+    return _products
+      .filter(p => (p as any).featured && (p as any).isActive !== false)
+      .slice(0, limit) as any;
+  }
+  return getDb()
+    .select()
+    .from(schema.products)
+    .where(and(eq(schema.products.featured, true), eq(schema.products.isActive, true)))
+    .orderBy(desc(schema.products.updatedAt))
+    .limit(limit);
+}
+
+/** Count how many products are currently featured */
+export async function countFeaturedProducts(): Promise<number> {
+  if (!USE_PERSISTENT_DB) return _products.filter(p => (p as any).featured).length;
+  const result = await getDb()
+    .select({ cnt: count() })
+    .from(schema.products)
+    .where(eq(schema.products.featured, true));
+  return result[0]?.cnt ?? 0;
+}
+
+/** Unfeature the oldest featured product (to enforce max 4 limit) */
+export async function unfeatureOldest(): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const oldest = await getDb()
+    .select({ id: schema.products.id })
+    .from(schema.products)
+    .where(eq(schema.products.featured, true))
+    .orderBy(schema.products.updatedAt)
+    .limit(1);
+  if (oldest[0]) {
+    await getDb().update(schema.products)
+      .set({ featured: false, updatedAt: new Date() } as any)
+      .where(eq(schema.products.id, oldest[0].id));
+  }
+}
+
 export async function getProductById(id: number) {
   if (!USE_PERSISTENT_DB) return _mem_getProductById(id);
   const rows = await getDb().select().from(schema.products).where(eq(schema.products.id, id)).limit(1);

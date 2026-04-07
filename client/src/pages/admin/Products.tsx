@@ -155,7 +155,7 @@ export default function AdminProducts() {
   const toggleFeaturedMut = trpc.admin.products.toggleFeatured.useMutation({
     onSuccess: (data) => {
       utils.admin.products.list.invalidate();
-      toast.success(data.featured ? "Added to Featured Products on Homepage" : "Removed from Featured Products");
+      toast.success(data.featured ? "Added to Homepage Featured (max 4 — oldest auto-removed if full)" : "Removed from Featured Products");
     },
   });
 
