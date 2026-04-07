@@ -89,7 +89,7 @@ function getTransporter(): nodemailer.Transporter | null {
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 10_000,
-  });
+  } as any);
 
   return _transporter;
 }

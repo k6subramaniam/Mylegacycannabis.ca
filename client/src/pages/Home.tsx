@@ -4,7 +4,7 @@ import { useCart } from '@/contexts/CartContext';
 import { categories, storeLocations as fallbackLocations, FREE_SHIPPING_THRESHOLD } from '@/lib/data';
 import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/seo-config';
 import { WaveDivider } from '@/components/Layout';
-import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf } from 'lucide-react';
+import { ShoppingCart, MapPin, Phone, Clock, Truck, Shield, Star, Gift, ArrowRight, Leaf, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 import { useT } from '@/i18n';
@@ -113,6 +113,117 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FEATURED PRODUCTS — positioned before categories, styled like Shop/New Arrivals cards */}
+      <section className="bg-[#F5F5F5] py-12 md:py-16">
+        <div className="container">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl text-[#4B2D8E] mb-3">{t.home.featuredProducts}</h2>
+            <p className="text-gray-600 font-body max-w-lg mx-auto">{t.home.featuredProductsDesc}</p>
+          </div>
+          {featured.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-[#4B2D8E]" />
+              <span className="ml-3 text-gray-500 font-body text-sm">Loading featured products...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {featured.map((product: any) => (
+                <div key={product.id}
+                  className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-all border border-gray-100">
+                  <Link href={`/product/${product.slug}`} className="block">
+                    <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                        width="400"
+                        height="400"
+                        decoding="async"
+                      />
+                      {/* Top-left badges */}
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                        {product.isNew && (
+                          <span className="bg-[#F19929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
+                        )}
+                        {product.featured && (
+                          <span className="bg-[#4B2D8E] text-white font-display text-[10px] px-3 py-1 rounded-full flex items-center gap-1">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            STAFF PICK
+                          </span>
+                        )}
+                        {product.stock > 0 && product.stock <= 5 && (
+                          <span className="bg-red-500 text-white font-display text-[10px] px-3 py-1 rounded-full animate-pulse">LOW STOCK</span>
+                        )}
+                        {product.grade && (
+                          <span className="bg-amber-500 text-white font-display text-[10px] px-2.5 py-1 rounded-full">
+                            {product.grade}
+                          </span>
+                        )}
+                      </div>
+                      {/* Top-right strain type */}
+                      {product.strainType && product.strainType !== 'N/A' && (
+                        <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono-legacy text-[10px] px-2 py-1 rounded-full">
+                          {product.strainType}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="p-4">
+                    <Link href={`/product/${product.slug}`}>
+                      <h3 className="font-display text-sm text-[#4B2D8E] mb-1 hover:text-[#F19929] transition-colors line-clamp-2">{product.name.toUpperCase()}</h3>
+                    </Link>
+                    <p className="text-xs text-gray-500 font-body mb-1">
+                      {product.flavor && product.flavor !== product.grade ? `${product.flavor} \u00B7 ` : ''}{product.weight}
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono-legacy mb-3">THC: {product.thc}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-lg text-[#4B2D8E]">${(typeof product.price === 'string' ? parseFloat(product.price) : product.price).toFixed(2)}</span>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const cartProduct = {
+                            ...product,
+                            id: String(product.id),
+                            categorySlug: product.category || '',
+                            strainType: product.strainType || 'N/A',
+                            price: parseFloat(String(product.price || 0)),
+                            inStock: product.stock > 0,
+                            rating: 4.5,
+                            reviewCount: 0,
+                            images: product.images || [],
+                            image: product.image || '',
+                            description: product.description || '',
+                            shortDescription: product.shortDescription || '',
+                            flavor: product.flavor || '',
+                            weight: product.weight || '',
+                          } as any;
+                          addItem(cartProduct);
+                          trackAddToCart(product.slug, product.id, { price: product.price, name: product.name });
+                          toast.success(`${product.name} added to cart`);
+                        }}
+                        className="bg-[#F19929] hover:bg-[#d98520] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
+                        aria-label={`Add ${product.name} to cart`}
+                      >
+                        <ShoppingCart size={16} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#4B2D8E] font-body mt-2 flex items-center gap-1">
+                      <Star size={10} className="text-[#F19929]" /> Earn {Math.floor(typeof product.price === 'string' ? parseFloat(product.price) : product.price)} points
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="text-center mt-8">
+            <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-8 rounded-full transition-all hover:scale-105">
+              {t.home.viewAllProducts} <ArrowRight size={18} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CATEGORY GRID — static headings, lazy-loaded images below fold */}
       <section className="bg-white py-12 md:py-16">
         <div className="container">
@@ -143,100 +254,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <WaveDivider color="#4B2D8E" />
-
-      {/* FEATURED PRODUCTS — static grid, no opacity-0 animations */}
-      <section className="bg-[#4B2D8E] py-12 md:py-16 -mt-1">
-        <div className="container">
-          <div className="text-center mb-10">
-            <h2 className="font-display text-3xl md:text-4xl text-white mb-3">{t.home.featuredProducts}</h2>
-            <p className="text-white/70 font-body max-w-lg mx-auto">{t.home.featuredProductsDesc}</p>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {featured.length === 0 && (
-              <div className="col-span-full text-center text-white/50 py-12">
-                <p className="font-body text-sm">Featured products loading...</p>
-              </div>
-            )}
-            {featured.map((product: any) => (
-              <div key={product.id} className="bg-white rounded-2xl overflow-hidden group hover:shadow-2xl transition-shadow">
-                <Link href={`/product/${product.slug}`} className="block">
-                  <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                      width="400"
-                      height="400"
-                      decoding="async"
-                    />
-                    {product.isNew && (
-                      <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
-                    )}
-                    {!product.isNew && product.featured && (
-                      <span className="absolute top-3 left-3 bg-[#4B2D8E] text-white font-display text-[10px] px-3 py-1 rounded-full">⭐ STAFF PICK</span>
-                    )}
-                    {product.stock > 0 && product.stock <= 5 && (
-                      <span className="absolute bottom-3 left-3 bg-red-500 text-white font-display text-[10px] px-3 py-1 rounded-full animate-pulse">LOW STOCK</span>
-                    )}
-                    <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono-legacy text-xs px-2 py-1 rounded-full">{product.strainType}</span>
-                  </div>
-                </Link>
-                <div className="p-4">
-                  <Link href={`/product/${product.slug}`}>
-                    <h3 className="font-display text-sm text-[#4B2D8E] mb-1 hover:text-[#F15929] transition-colors">{product.name.toUpperCase()}</h3>
-                  </Link>
-                  <p className="text-xs text-gray-500 font-body mb-1">{product.flavor} · {product.weight}</p>
-                  <p className="text-xs text-gray-400 font-mono-legacy mb-3">THC: {product.thc}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-lg text-[#4B2D8E]">${(typeof product.price === 'string' ? parseFloat(product.price) : product.price).toFixed(2)}</span>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const cartProduct = {
-                          ...product,
-                          id: String(product.id),
-                          categorySlug: (product as any).category || '',
-                          strainType: (product as any).strainType || 'N/A',
-                          price: parseFloat(String(product.price || 0)),
-                          inStock: (product as any).stock > 0,
-                          rating: 4.5,
-                          reviewCount: 0,
-                          images: (product as any).images || [],
-                          image: (product as any).image || '',
-                          description: (product as any).description || '',
-                          shortDescription: (product as any).shortDescription || '',
-                          flavor: (product as any).flavor || '',
-                          weight: (product as any).weight || '',
-                        } as any;
-                        addItem(cartProduct);
-                        trackAddToCart(product.slug, product.id, { price: product.price, name: product.name });
-                        toast.success(`${product.name} added to cart`);
-                      }}
-                      className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2.5 rounded-full transition-all hover:scale-110 active:scale-95"
-                      aria-label={`Add ${product.name} to cart`}
-                    >
-                      <ShoppingCart size={16} />
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-[#4B2D8E] font-body mt-2 flex items-center gap-1">
-                    <Star size={10} className="text-[#F15929]" /> Earn {Math.floor(typeof product.price === 'string' ? parseFloat(product.price) : product.price)} points with this purchase
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-8">
-            <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3 px-8 rounded-full transition-all hover:scale-105">
-              {t.home.viewAllProducts} <ArrowRight size={18} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <WaveDivider color="#F5F5F5" />
 
       {/* SHIPPING BANNER — static, no opacity-0 initial state */}
       <section className="bg-[#F5F5F5] py-12 -mt-1">

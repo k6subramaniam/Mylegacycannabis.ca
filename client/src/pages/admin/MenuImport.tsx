@@ -163,7 +163,7 @@ export default function MenuImport() {
 
   // ─── Stats ───
   const includedCount = items.filter(i => i.include).length;
-  const categories = [...new Set(items.map(i => i.category))];
+  const categories = Array.from(new Set(items.map(i => i.category)));
   const priceTierCount = items
     .filter(i => i.include)
     .reduce((sum, item) => sum + Object.values(item.prices).filter(p => p).length, 0);

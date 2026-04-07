@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
   CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
@@ -72,9 +72,7 @@ export default function AdminPayments() {
     { refetchInterval: 30000 }
   );
 
-  const { data: serviceStatus, refetch: refetchStatus } = trpc.etransfer.status.useQuery(undefined, {
-    onSuccess: (d: any) => { if (!emailInput) setEmailInput(d.paymentEmail || ""); },
-  });
+  const { data: serviceStatus, refetch: refetchStatus } = trpc.etransfer.status.useQuery();
   const { data: pendingOrders } = trpc.etransfer.pendingOrders.useQuery();
 
   const updateEmailMutation = trpc.etransfer.updatePaymentEmail.useMutation({
@@ -149,15 +147,23 @@ export default function AdminPayments() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Sync email input from service status (replaces deprecated onSuccess)
+  useEffect(() => {
+    if (serviceStatus && !emailInput) {
+      setEmailInput(serviceStatus.paymentEmail || "");
+    }
+  }, [serviceStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Keyword Rules Queries ───
-  const { data: keywordRulesData } = trpc.etransfer.getKeywordRules.useQuery(undefined, {
-    onSuccess: (data: any) => {
-      if (!rulesLoaded) {
-        setKeywordRules(data || []);
-        setRulesLoaded(true);
-      }
-    },
-  });
+  const { data: keywordRulesData } = trpc.etransfer.getKeywordRules.useQuery();
+
+  // Sync keyword rules from query data (replaces deprecated onSuccess)
+  useEffect(() => {
+    if (keywordRulesData && !rulesLoaded) {
+      setKeywordRules(keywordRulesData as any || []);
+      setRulesLoaded(true);
+    }
+  }, [keywordRulesData, rulesLoaded]);
 
   const saveRulesMutation = trpc.etransfer.saveKeywordRules.useMutation({
     onSuccess: () => {

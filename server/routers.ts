@@ -1540,22 +1540,32 @@ Return ONLY the JSON object.`;
     // ─── AI CONFIGURATION ───
     aiConfig: router({
       get: adminProcedure.query(async () => {
-        const [provider, apiKey, model] = await Promise.all([
+        const [provider, apiKey, model, fallbackProvider, fallbackApiKey, fallbackModel] = await Promise.all([
           db.getSiteSetting("ai_provider"),
           db.getSiteSetting("ai_api_key"),
           db.getSiteSetting("ai_model"),
+          db.getSiteSetting("ai_fallback_provider"),
+          db.getSiteSetting("ai_fallback_api_key"),
+          db.getSiteSetting("ai_fallback_model"),
         ]);
         return {
           provider: provider || "openai",
           apiKeySet: !!apiKey,
           apiKeyPreview: apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : null,
           model: model || "",
+          fallbackProvider: fallbackProvider || "",
+          fallbackApiKeySet: !!fallbackApiKey,
+          fallbackApiKeyPreview: fallbackApiKey ? `${fallbackApiKey.slice(0, 8)}...${fallbackApiKey.slice(-4)}` : null,
+          fallbackModel: fallbackModel || "",
         };
       }),
       update: adminProcedure.input(z.object({
         provider: z.enum(["openai", "gemini"]),
         apiKey: z.string().optional(),
         model: z.string().optional(),
+        fallbackProvider: z.enum(["openai", "gemini", ""]).optional(),
+        fallbackApiKey: z.string().optional(),
+        fallbackModel: z.string().optional(),
       })).mutation(async ({ input, ctx }) => {
         await db.setSiteSetting("ai_provider", input.provider);
         if (input.apiKey !== undefined && input.apiKey !== "") {
@@ -1564,13 +1574,23 @@ Return ONLY the JSON object.`;
         if (input.model !== undefined) {
           await db.setSiteSetting("ai_model", input.model);
         }
+        // Fallback provider config
+        if (input.fallbackProvider !== undefined) {
+          await db.setSiteSetting("ai_fallback_provider", input.fallbackProvider);
+        }
+        if (input.fallbackApiKey !== undefined && input.fallbackApiKey !== "") {
+          await db.setSiteSetting("ai_fallback_api_key", input.fallbackApiKey);
+        }
+        if (input.fallbackModel !== undefined) {
+          await db.setSiteSetting("ai_fallback_model", input.fallbackModel);
+        }
         await db.logAdminActivity({
           adminId: ctx.user?.id || 0,
           adminName: ctx.user?.name || "Admin",
           action: "update_ai_config",
           entityType: "site_setting",
           entityId: 0,
-          details: `Updated AI provider to ${input.provider}${input.model ? ` (model: ${input.model})` : ""}`,
+          details: `Updated AI: primary=${input.provider}${input.model ? ` (${input.model})` : ""}${input.fallbackProvider ? `, fallback=${input.fallbackProvider}` : ""}`,
         });
         clearAiConfigCache();
         return { success: true };
