@@ -141,8 +141,18 @@ async function startServer() {
         return res.json({ province: "", region: "", country: "CA", source: "local" });
       }
 
+      // SECURITY: Validate IP format to prevent SSRF via crafted X-Forwarded-For
+      // Only allow valid IPv4 (1.2.3.4) or IPv6 (::ffff:1.2.3.4, 2001:db8::1) addresses
+      const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+      const IPV6_REGEX = /^[0-9a-fA-F:]+$/;
+      if (!IPV4_REGEX.test(ip) && !IPV6_REGEX.test(ip)) {
+        return res.json({ province: "", region: "", country: "", source: "invalid" });
+      }
+
       // Use free ipapi.co (no key required, 30k/month free)
-      const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, {
+      // IP is validated above — safe to interpolate into URL
+      const geoUrl = `https://ipapi.co/${encodeURIComponent(ip)}/json/`;
+      const geoRes = await fetch(geoUrl, {
         signal: AbortSignal.timeout(3000),
       });
       if (!geoRes.ok) throw new Error(`ipapi returned ${geoRes.status}`);
