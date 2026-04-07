@@ -407,7 +407,7 @@ function Header() {
         style={{ contain: 'layout' }}
       >
         {/* Nav row: explicit h prevents resize when logo loads */}
-        <div className="container flex items-center justify-between h-140 md:h-188">
+        <div className="container flex items-center justify-between h-140 md:h-200">
           <Link href="/" aria-label="My Legacy Cannabis Home">
             {/* Logo: 512×286 WebP, displayed at h-10 (40px) mobile / h-14 (56px) desktop */}
             <img
@@ -415,7 +415,7 @@ function Header() {
               alt="My Legacy Cannabis"
               width="512"
               height="286"
-              className="h-10 md:h-14 w-auto"
+              className="h-120 md:h-168 w-auto"
               loading="eager"
               decoding="async"
               fetchPriority="high"
