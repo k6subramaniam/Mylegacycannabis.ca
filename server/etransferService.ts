@@ -16,30 +16,17 @@
 
 import { google } from "googleapis";
 import * as db from "./db";
+import {
+  isGmailConfigured,
+  isGmailDisabled,
+  getGmailClient,
+  handleGmailError,
+} from "./gmailAuth";
 
-// ─── CONFIG ───
-const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || "";
-const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || "";
-const GMAIL_REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN || "";
 const GMAIL_PAYMENT_EMAIL = process.env.GMAIL_PAYMENT_EMAIL || "";
 
 const PROCESSED_LABEL = "etransfer-processed";
-
-// ─── GMAIL AUTH ───
-function getGmailClient() {
-  if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) {
-    throw new Error("[ETransfer] Missing Gmail API credentials (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)");
-  }
-
-  const oauth2Client = new google.auth.OAuth2(
-    GMAIL_CLIENT_ID,
-    GMAIL_CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground"
-  );
-
-  oauth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
-  return google.gmail({ version: "v1", auth: oauth2Client });
-}
+const SERVICE = "ETransfer";
 
 // ─── ENSURE LABEL EXISTS ───
 async function ensureLabel(gmail: ReturnType<typeof google.gmail>) {
@@ -59,7 +46,7 @@ async function ensureLabel(gmail: ReturnType<typeof google.gmail>) {
     });
     return created.data.id!;
   } catch (err) {
-    console.error("[ETransfer] Failed to create/get label:", err);
+    handleGmailError(SERVICE, err);
     return null;
   }
 }
@@ -433,14 +420,15 @@ async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null
 export async function pollETransferEmails(): Promise<{ processed: number; matched: number; errors: number }> {
   const stats = { processed: 0, matched: 0, errors: 0 };
 
-  if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) {
-    console.log("[ETransfer] Gmail API not configured — skipping poll");
-    return stats;
+  if (!isGmailConfigured() || isGmailDisabled()) {
+    return stats; // silent skip — not configured or circuit-breaker tripped
   }
 
   try {
-    const gmail = getGmailClient();
+    const gmail = getGmailClient(SERVICE);
+    if (!gmail) return stats;
     const labelId = await ensureLabel(gmail);
+    if (isGmailDisabled()) return stats; // ensureLabel may have tripped the breaker
 
     // Search for Interac-related emails not yet labelled as processed
     // The query uses Gmail search operators
@@ -577,17 +565,20 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
         }
 
       } catch (msgErr) {
-        console.error(`[ETransfer] Error processing message ${msg.id}:`, msgErr);
+        if (handleGmailError(SERVICE, msgErr)) break; // auth error — stop processing
+        console.warn(`[${SERVICE}] Error processing message ${msg.id}: ${(msgErr as Error).message}`);
         stats.errors++;
       }
     }
 
   } catch (err) {
-    console.error("[ETransfer] Poll error:", err);
+    handleGmailError(SERVICE, err);
     stats.errors++;
   }
 
-  console.log(`[ETransfer] Poll complete: ${stats.processed} processed, ${stats.matched} matched, ${stats.errors} errors`);
+  if (stats.processed > 0 || stats.matched > 0 || stats.errors > 0) {
+    console.log(`[${SERVICE}] Poll complete: ${stats.processed} processed, ${stats.matched} matched, ${stats.errors} errors`);
+  }
   return stats;
 }
 
@@ -650,5 +641,5 @@ async function sendPaymentReceivedNotification(orderId: number, orderNumber: str
 // ─── STATUS CHECK ───
 
 export function isETransferServiceConfigured(): boolean {
-  return !!(GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN);
+  return isGmailConfigured();
 }
