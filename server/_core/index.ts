@@ -17,6 +17,7 @@ import { serveStatic } from "./static";
 import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
+import { isGmailDisabled, getGmailStatus, resetGmailCircuitBreaker } from "../gmailAuth";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
@@ -33,6 +34,7 @@ async function startServer() {
     res.json({
       status: "ok",
       database: USE_PERSISTENT_DB ? "postgresql" : "in-memory",
+      gmail: getGmailStatus(),
       timestamp: new Date().toISOString(),
     });
   });
@@ -311,7 +313,10 @@ async function startServer() {
       try {
         await pollETransferEmails();
       } catch (err) {
-        console.error("[Cron] E-Transfer poll error:", err);
+        // OAuth errors are already handled cleanly inside pollETransferEmails;
+        // only unexpected errors bubble here.
+        const msg = (err as any)?.message || err;
+        console.error(`[Cron] E-Transfer poll error: ${msg}`);
       }
     }, ETRANSFER_POLL_INTERVAL);
   } else {
@@ -326,7 +331,8 @@ async function startServer() {
       try {
         await pollTrackingEmails();
       } catch (err) {
-        console.error("[Cron] Tracking poll error:", err);
+        const msg = (err as any)?.message || err;
+        console.error(`[Cron] Tracking poll error: ${msg}`);
       }
     }, TRACKING_POLL_INTERVAL);
   }
@@ -351,7 +357,8 @@ async function startServer() {
         }
       }
     } catch (err) {
-      console.error("[Startup] Background job error:", err);
+      const msg = (err as any)?.message || err;
+      console.error(`[Startup] Background job error: ${msg}`);
     }
   }, 5000);
 
