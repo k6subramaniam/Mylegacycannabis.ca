@@ -415,7 +415,7 @@ function Header() {
               alt="My Legacy Cannabis"
               width="512"
               height="286"
-              className="h-14 md:h-72 w-auto relative z-10"
+              className="h-14 md:h-72 w-auto"
               loading="eager"
               decoding="async"
               fetchPriority="high"
