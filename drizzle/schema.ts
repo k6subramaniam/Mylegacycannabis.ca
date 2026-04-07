@@ -466,3 +466,39 @@ export const siteKnowledgeSync = pgTable("site_knowledge_sync", {
 
 export type SiteKnowledgeSync = typeof siteKnowledgeSync.$inferSelect;
 export type InsertSiteKnowledgeSync = typeof siteKnowledgeSync.$inferInsert;
+
+// ─── PWA PUSH SUBSCRIPTIONS ───
+// Stores Web Push subscriptions for each user/device.
+// The circuit-breaker in pushService.ts handles expired subscriptions (410 Gone).
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),                                    // null for anonymous subscribers
+  endpoint: text("endpoint").notNull().unique(),                 // push service endpoint URL
+  keysP256dh: text("keys_p256dh").notNull(),                     // ECDH public key
+  keysAuth: text("keys_auth").notNull(),                         // auth secret
+  active: boolean("active").default(true).notNull(),
+  userAgent: varchar("user_agent", { length: 500 }),             // browser/device fingerprint
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastPushedAt: timestamp("last_pushed_at"),                     // last successful push
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// ─── PUSH NOTIFICATION LOG ───
+// Tracks every push sent for analytics (delivered, clicked, failed).
+export const pushNotificationLog = pgTable("push_notification_log", {
+  id: serial("id").primaryKey(),
+  subscriptionId: integer("subscription_id"),
+  userId: integer("user_id"),
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body"),
+  url: varchar("url", { length: 500 }),
+  tag: varchar("tag", { length: 100 }),                          // e.g. "order-status", "new-drop", "tier-upgrade", "winback"
+  status: varchar("status", { length: 20 }).default("sent").notNull(), // sent, delivered, clicked, failed, expired
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+});
+
+export type PushNotificationLog = typeof pushNotificationLog.$inferSelect;
+export type InsertPushNotificationLog = typeof pushNotificationLog.$inferInsert;

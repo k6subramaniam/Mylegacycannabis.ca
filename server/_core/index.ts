@@ -18,10 +18,14 @@ import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBir
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 import { isGmailDisabled, getGmailStatus, resetGmailCircuitBreaker } from "../gmailAuth";
+import { initPushService, sendWinbackNotifications, isPushServiceConfigured } from "../pushService";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
   await initializeDatabase();
+
+  // Initialize PWA push notification service (requires VAPID env vars)
+  initPushService();
 
   const app = express();
   const server = createServer(app);
@@ -373,6 +377,18 @@ async function startServer() {
         console.error("[Cron] AI memory refresh error:", err);
       }
     }, 30 * 60 * 1000); // every 30 minutes
+
+    // Run push win-back campaign daily (sends to subscribers inactive 30+ days)
+    if (isPushServiceConfigured()) {
+      setInterval(async () => {
+        try {
+          const sent = await sendWinbackNotifications();
+          if (sent > 0) console.log(`[Cron] Push win-back: sent to ${sent} inactive subscriber(s)`);
+        } catch (err) {
+          console.error("[Cron] Push win-back error:", (err as Error).message);
+        }
+      }, 24 * 60 * 60 * 1000); // every 24 hours
+    }
 
     // Re-sync site knowledge every 2 hours (catches any drift)
     setInterval(async () => {

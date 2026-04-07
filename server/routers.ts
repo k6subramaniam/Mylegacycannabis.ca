@@ -10,6 +10,16 @@ import { notifyOwner, notifyOwnerAsync } from "./_core/notification";
 import { eq } from "drizzle-orm";
 import { buildFullUserResponse } from "./userHelpers";
 import {
+  isPushServiceConfigured,
+  getVapidPublicKey,
+  sendPushToUser,
+  broadcastPush,
+  notifyOrderStatusChange,
+  notifyPaymentReceived,
+  notifyTierUpgrade,
+  notifyNewProductDrop,
+} from "./pushService";
+import {
   getHealthDashboard,
   getEmailEvents,
   pingProvider,
@@ -257,6 +267,12 @@ export const appRouter = router({
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "update_status", entityType: "order", entityId: input.id, details: `Changed order #${input.id} status to ${input.status}` });
         await notifyOwner({ title: `Order Status Updated`, content: `Order #${input.id} status changed to ${input.status}` });
 
+        // ─── PUSH NOTIFICATION for order status change ───
+        if (previousOrder.userId) {
+          notifyOrderStatusChange(previousOrder.userId, previousOrder.orderNumber, input.status)
+            .catch(err => console.warn("[Push] Order status notification failed:", (err as Error).message));
+        }
+
         // ─── AUTO-EARN REWARDS on delivered ───
         if (input.status === 'delivered') {
           const pointsResult = await db.awardOrderPoints(input.id);
@@ -353,6 +369,12 @@ export const appRouter = router({
               orderTotal: order.total || "0",
               isGuest: true,
             }).catch(err => console.warn("[Payment] Email failed:", err.message));
+
+            // Push notification for payment received
+            if (order.userId) {
+              notifyPaymentReceived(order.userId, order.orderNumber || String(input.id), parseFloat(order.total) || 0)
+                .catch(err => console.warn("[Push] Payment notification failed:", (err as Error).message));
+            }
           }
         }
 
@@ -1726,6 +1748,84 @@ Return ONLY the JSON object with the improved template.`;
     /** Real-time active product counts per category (for homepage tiles) */
     categoryCounts: publicProcedure.query(async () => {
       return db.getCategoryCounts();
+    }),
+
+    // ═══════════════════════════════════════════════════════════════
+    // PWA PUSH NOTIFICATIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Returns VAPID public key for client-side PushManager.subscribe() */
+    pushConfig: publicProcedure.query(() => ({
+      vapidPublicKey: getVapidPublicKey(),
+      enabled: isPushServiceConfigured(),
+    })),
+
+    /** Save a push subscription from the browser */
+    pushSubscribe: publicProcedure.input(z.object({
+      endpoint: z.string().url(),
+      keys: z.object({
+        p256dh: z.string(),
+        auth: z.string(),
+      }),
+    })).mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id || null;
+      const id = await db.savePushSubscription({
+        userId,
+        endpoint: input.endpoint,
+        keysP256dh: input.keys.p256dh,
+        keysAuth: input.keys.auth,
+        userAgent: ctx.req.headers["user-agent"]?.substring(0, 500),
+      });
+      console.log(`[Push] Subscription saved (id=${id}, userId=${userId || "anon"})`);
+      return { success: true, id };
+    }),
+
+    /** Remove a push subscription */
+    pushUnsubscribe: publicProcedure.input(z.object({
+      endpoint: z.string(),
+    })).mutation(async ({ input }) => {
+      await db.removePushSubscription(input.endpoint);
+      return { success: true };
+    }),
+
+    /** Admin: send a targeted push to a specific user */
+    pushSendToUser: adminProcedure.input(z.object({
+      userId: z.number(),
+      title: z.string().min(1).max(255),
+      body: z.string().min(1).max(1000),
+      url: z.string().optional(),
+      tag: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const result = await sendPushToUser(input.userId, {
+        title: input.title,
+        body: input.body,
+        url: input.url,
+        tag: input.tag || "admin",
+      });
+      return result;
+    }),
+
+    /** Admin: broadcast push to ALL active subscribers */
+    pushBroadcast: adminProcedure.input(z.object({
+      title: z.string().min(1).max(255),
+      body: z.string().min(1).max(1000),
+      url: z.string().optional(),
+      tag: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const result = await broadcastPush({
+        title: input.title,
+        body: input.body,
+        url: input.url,
+        tag: input.tag || "broadcast",
+      });
+      return result;
+    }),
+
+    /** Admin: get push subscription stats */
+    pushStats: adminProcedure.query(async () => {
+      const stats = await db.getPushSubscriptionStats();
+      const logs = await db.getPushNotificationLogs({ limit: 20 });
+      return { ...stats, recentLogs: logs };
     }),
 
     /** Batch record user behavior events (page views, clicks, time-on-page, etc.) */

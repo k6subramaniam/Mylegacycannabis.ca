@@ -10,6 +10,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { BehaviorProvider } from "./contexts/BehaviorContext";
 import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
+import PushOptIn from "./components/PushOptIn";
 import { lazy, Suspense } from "react";
 
 // Lazy load storefront pages
@@ -217,6 +218,7 @@ function App() {
                 <TooltipProvider>
                   <Toaster />
                   <Router />
+                  <PushOptIn />
                 </TooltipProvider>
               </BehaviorProvider>
             </CartProvider>

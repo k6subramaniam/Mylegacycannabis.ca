@@ -489,6 +489,37 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── PWA PUSH SUBSCRIPTIONS ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      endpoint TEXT NOT NULL UNIQUE,
+      keys_p256dh TEXT NOT NULL,
+      keys_auth TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      user_agent VARCHAR(500),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      last_pushed_at TIMESTAMP
+    )
+  `;
+
+  // ─── PUSH NOTIFICATION LOG ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS push_notification_log (
+      id SERIAL PRIMARY KEY,
+      subscription_id INTEGER,
+      user_id INTEGER,
+      title VARCHAR(255) NOT NULL,
+      body TEXT,
+      url VARCHAR(500),
+      tag VARCHAR(100),
+      status VARCHAR(20) NOT NULL DEFAULT 'sent',
+      error_message TEXT,
+      sent_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -2641,6 +2672,116 @@ function getSeedData() {
   return { seedProducts, seedShippingZones, seedEmailTemplates, seedOrders, seedVerifications };
 }
 
+
+// ========================================================================================
+// PWA PUSH SUBSCRIPTIONS
+// ========================================================================================
+
+export async function savePushSubscription(data: {
+  userId?: number | null;
+  endpoint: string;
+  keysP256dh: string;
+  keysAuth: string;
+  userAgent?: string;
+}): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const db = getDb();
+  // Upsert: if endpoint already exists, update keys/userId/active
+  const existing = await db.select({ id: schema.pushSubscriptions.id })
+    .from(schema.pushSubscriptions)
+    .where(eq(schema.pushSubscriptions.endpoint, data.endpoint))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db.update(schema.pushSubscriptions)
+      .set({
+        userId: data.userId ?? undefined,
+        keysP256dh: data.keysP256dh,
+        keysAuth: data.keysAuth,
+        active: true,
+        userAgent: data.userAgent ?? undefined,
+      })
+      .where(eq(schema.pushSubscriptions.id, existing[0].id));
+    return existing[0].id;
+  }
+
+  const result = await db.insert(schema.pushSubscriptions).values({
+    userId: data.userId ?? null,
+    endpoint: data.endpoint,
+    keysP256dh: data.keysP256dh,
+    keysAuth: data.keysAuth,
+    active: true,
+    userAgent: data.userAgent ?? undefined,
+  }).returning({ id: schema.pushSubscriptions.id });
+  return result[0]?.id ?? 0;
+}
+
+export async function removePushSubscription(endpoint: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().update(schema.pushSubscriptions)
+    .set({ active: false })
+    .where(eq(schema.pushSubscriptions.endpoint, endpoint));
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().delete(schema.pushSubscriptions)
+    .where(eq(schema.pushSubscriptions.endpoint, endpoint));
+}
+
+export async function getActivePushSubscriptions(): Promise<schema.PushSubscription[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  return getDb().select().from(schema.pushSubscriptions)
+    .where(eq(schema.pushSubscriptions.active, true));
+}
+
+export async function getUserPushSubscriptions(userId: number): Promise<schema.PushSubscription[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  const db = getDb();
+  return db.select().from(schema.pushSubscriptions)
+    .where(and(
+      eq(schema.pushSubscriptions.userId, userId),
+      eq(schema.pushSubscriptions.active, true),
+    ));
+}
+
+export async function updatePushSubscriptionLastPushed(id: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().update(schema.pushSubscriptions)
+    .set({ lastPushedAt: new Date() })
+    .where(eq(schema.pushSubscriptions.id, id));
+}
+
+export async function getPushSubscriptionStats(): Promise<{
+  total: number;
+  active: number;
+  withUser: number;
+}> {
+  if (!USE_PERSISTENT_DB) return { total: 0, active: 0, withUser: 0 };
+  const all = await getDb().select().from(schema.pushSubscriptions);
+  return {
+    total: all.length,
+    active: all.filter(s => s.active).length,
+    withUser: all.filter(s => s.active && s.userId).length,
+  };
+}
+
+export async function logPushNotification(data: schema.InsertPushNotificationLog): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().insert(schema.pushNotificationLog).values(data);
+}
+
+export async function getPushNotificationLogs(opts?: {
+  limit?: number;
+  tag?: string;
+}): Promise<schema.PushNotificationLog[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  const db = getDb();
+  let q = db.select().from(schema.pushNotificationLog)
+    .orderBy(desc(schema.pushNotificationLog.sentAt))
+    .limit(opts?.limit ?? 50);
+  return q;
+}
 
 // ========================================================================================
 // IN-MEMORY FALLBACK (when DATABASE_URL is not set)
