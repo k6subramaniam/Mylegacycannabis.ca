@@ -2690,7 +2690,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
         matchMethod: null,
         reviewedBy: ctx.user?.id || 0,
         reviewedAt: new Date(),
-        adminNotes: `Unmatched by admin (was: ${oldOrderNumber || oldOrderId || "none"})`,
+        adminNotes: `Unmatched by ${ctx.user?.name || "Admin"} (was: ${oldOrderNumber || oldOrderId || "none"})`,
       } as any);
 
       await db.logAdminActivity({
@@ -2710,13 +2710,55 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       paymentId: z.number(),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
+      const adminName = ctx.user?.name || "Admin";
       await db.updatePaymentRecord(input.paymentId, {
         status: "ignored" as any,
         reviewedBy: ctx.user?.id || 0,
         reviewedAt: new Date(),
-        adminNotes: input.notes || "Ignored by admin",
+        adminNotes: input.notes || `Ignored by ${adminName}`,
       } as any);
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName,
+        action: "etransfer_ignore",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Ignored payment #${input.paymentId}`,
+      });
       return { success: true };
+    }),
+
+    // Admin: change payment status freely (any → any)
+    changeStatus: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      status: z.enum(["auto_matched", "manual_matched", "unmatched", "ignored"]),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const adminName = ctx.user?.name || "Admin";
+      const allRecords = await db.exportAllPaymentRecords();
+      const record = allRecords.find((r: any) => r.id === input.paymentId);
+      if (!record) throw new Error("Payment record not found");
+
+      const oldStatus = record.status;
+      const noteText = input.notes || `Status changed from ${oldStatus} to ${input.status} by ${adminName}`;
+
+      await db.updatePaymentRecord(input.paymentId, {
+        status: input.status as any,
+        reviewedBy: ctx.user?.id || 0,
+        reviewedAt: new Date(),
+        adminNotes: noteText,
+      } as any);
+
+      await db.logAdminActivity({
+        adminId: ctx.user?.id || 0,
+        adminName,
+        action: "etransfer_change_status",
+        entityType: "payment",
+        entityId: input.paymentId,
+        details: `Changed payment #${input.paymentId} status: ${oldStatus} → ${input.status}`,
+      });
+
+      return { success: true, oldStatus, newStatus: input.status };
     }),
 
     // Admin: trigger a manual poll

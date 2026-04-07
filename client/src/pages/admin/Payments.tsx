@@ -4,7 +4,7 @@ import {
   DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
   CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
   Download, Trash2, AlertTriangle, FileDown, Info, ChevronDown, ChevronUp,
-  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2
+  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2, Shield
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -29,6 +29,33 @@ const STATUS_ICONS: Record<string, any> = {
   unmatched: Clock,
   ignored: Ban,
 };
+
+const STATUS_LABELS: Record<string, string> = {
+  auto_matched: "Auto Matched",
+  manual_matched: "Manual Matched",
+  unmatched: "Unmatched",
+  ignored: "Ignored",
+};
+
+const MATCH_METHOD_LABELS: Record<string, string> = {
+  memo_order_number: "Order # in memo",
+  exact_amount_unique: "Exact amount (unique)",
+  amount_plus_name: "Amount + name match",
+  amount_multiple_matches: "Amount (multiple)",
+  name_only: "Name only",
+  manual_admin: "Manual by admin",
+};
+
+/** Built-in default detection patterns (read-only, always active) */
+const DEFAULT_DETECTION_PATTERNS = [
+  "interac e-transfer (regex)",
+  "e-transfer deposit (regex)",
+  "has been automatically deposited",
+  "you've received money",
+  "received interac",
+  "virement interac (French)",
+  "a \u00e9t\u00e9 automatiquement d\u00e9pos\u00e9 (French)",
+];
 
 /** Escape a value for CSV (handles commas, quotes, newlines) */
 function csvEscape(val: string | null | undefined): string {
@@ -123,6 +150,15 @@ export default function AdminPayments() {
     onSuccess: () => {
       toast.success("Payment ignored");
       refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const changeStatusMutation = trpc.etransfer.changeStatus.useMutation({
+    onSuccess: (res: any) => {
+      toast.success(`Status changed: ${STATUS_LABELS[res.oldStatus] || res.oldStatus} \u2192 ${STATUS_LABELS[res.newStatus] || res.newStatus}`);
+      refetch();
+      setExpandedId(null);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -415,7 +451,28 @@ export default function AdminPayments() {
                 <strong>How it works:</strong> Each rule defines keywords that must be found in the email subject + body.
                 <strong> AND</strong> = all keywords must match. <strong>OR</strong> = any keyword matches.
                 Rules are combined with OR (any rule match triggers detection).
-                Built-in defaults (Interac, e-Transfer, etc.) always apply as a safety net.
+              </p>
+              <p className="text-xs text-blue-600 mt-1.5">
+                <strong>Custom rules are additive</strong> — they add to (not replace) the built-in defaults below.
+                If a custom rule uses the same keyword as a default, there's no conflict — it simply matches twice, which has no side effect.
+              </p>
+            </div>
+
+            {/* Built-in Defaults (read-only) */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Shield size={13} />
+                Built-in Default Patterns (always active, cannot be disabled)
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {DEFAULT_DETECTION_PATTERNS.map(pattern => (
+                  <span key={pattern} className="inline-flex items-center px-2.5 py-1 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg">
+                    {pattern}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">
+                These regex-based patterns always run as a safety net. Your custom rules below are checked first — if they match, the email is detected. If not, these defaults still catch standard Interac e-Transfer notifications.
               </p>
             </div>
 
@@ -711,6 +768,7 @@ export default function AdminPayments() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-800">{p.senderName || "Unknown"}</p>
+                      {p.financialInstitution && <p className="text-xs text-purple-500 font-medium">{p.financialInstitution}</p>}
                       <p className="text-xs text-gray-400 truncate max-w-[180px]">{p.senderEmail || ""}</p>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -771,7 +829,7 @@ export default function AdminPayments() {
                             </div>
                           )}
                         </div>
-                      ) : p.status === "unmatched" ? (
+                      ) : (p.status === "unmatched" || p.status === "ignored") ? (
                         <div className="flex items-center gap-1.5">
                           <select
                             value={matchOrderId[p.id] || ""}
@@ -830,6 +888,16 @@ export default function AdminPayments() {
                             <Ban size={14} />
                           </button>
                         )}
+                        {p.status === "ignored" && (
+                          <button
+                            onClick={() => changeStatusMutation.mutate({ paymentId: p.id, status: "unmatched" })}
+                            disabled={changeStatusMutation.isPending}
+                            className="p-1.5 text-gray-400 hover:text-green-500 rounded-lg hover:bg-green-50 transition-colors"
+                            title="Restore to Unmatched"
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setDeletingId(p.id)}
                           className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
@@ -886,10 +954,13 @@ export default function AdminPayments() {
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 gap-3">
-                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p>{p.senderEmail && <p className="text-xs text-gray-400 break-all mt-0.5">{p.senderEmail}</p>}</div>
                       <div><span className="text-gray-400 text-xs uppercase tracking-wide">Amount</span><p className="font-medium">{p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}</p></div>
                       <div><span className="text-gray-400 text-xs uppercase tracking-wide">Date</span><p className="font-medium">{p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-CA") : "\u2014"}</p></div>
-                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{p.matchMethod || "\u2014"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{MATCH_METHOD_LABELS[p.matchMethod] || p.matchMethod || "Not matched"}</p></div>
+                      {p.financialInstitution && (
+                        <div className="col-span-2"><span className="text-gray-400 text-xs uppercase tracking-wide">Financial Institution</span><p className="font-medium">{p.financialInstitution}</p></div>
+                      )}
                     </div>
                     <div><span className="text-gray-400 text-xs uppercase tracking-wide">Subject</span><p className="font-medium break-words">{p.rawSubject || "\u2014"}</p></div>
                     <div><span className="text-gray-400 text-xs uppercase tracking-wide">Memo</span><p className="font-medium break-words">{p.memo || "No memo"}</p></div>
@@ -907,6 +978,31 @@ export default function AdminPayments() {
                         <p className="font-medium text-gray-600">{p.adminNotes}</p>
                       </div>
                     )}
+                    {/* Status Changer */}
+                    <div className="pt-3 border-t">
+                      <span className="text-gray-400 text-xs uppercase tracking-wide block mb-2">Change Status</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["unmatched", "auto_matched", "manual_matched", "ignored"] as const).map(s => {
+                          const Icon = STATUS_ICONS[s] || HelpCircle;
+                          const isActive = p.status === s;
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => { if (!isActive) changeStatusMutation.mutate({ paymentId: p.id, status: s }); }}
+                              disabled={isActive || changeStatusMutation.isPending}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                isActive
+                                  ? `${STATUS_COLORS[s]} ring-2 ring-offset-1 ring-current cursor-default`
+                                  : `border border-gray-200 text-gray-500 hover:${STATUS_COLORS[s].replace("100", "50")} hover:border-current`
+                              }`}
+                            >
+                              <Icon size={12} />
+                              {STATUS_LABELS[s]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                   {/* Delete from modal */}
                   <div className="mt-5 pt-4 border-t border-gray-100 flex justify-end">

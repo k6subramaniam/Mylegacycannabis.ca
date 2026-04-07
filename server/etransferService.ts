@@ -57,6 +57,7 @@ export interface ParsedETransfer {
   senderEmail: string;
   amount: number | null;
   memo: string;
+  financialInstitution: string;
   subject: string;
   bodySnippet: string;
   receivedAt: Date;
@@ -172,6 +173,8 @@ async function matchesKeywordRules(subject: string, body: string): Promise<boole
  * - "You've received an INTERAC e-Transfer from John Smith"
  * - "e-Transfer from John Smith has been automatically deposited"
  * - "INTERAC e-Transfer: John Smith sent you $X"
+ * - "BMO Interac e-Transfer for $55.00"  (bank prefix, extract from subject)
+ * - Gmail "From: notify@payments.interac.ca" (extract display name from body)
  */
 const SENDER_PATTERNS = [
   /(?:from|de)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+(?:has been|a été)/i,
@@ -179,6 +182,12 @@ const SENDER_PATTERNS = [
   /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+sent you/i,
   /e[\-\s]?Transfer:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
   /virement.*?de\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
+  // Subject format: "INTERAC e-Transfer: <Name> sent you $X"
+  /INTERAC.*?:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+sent/i,
+  // Body format: "<Name> sent you a payment"
+  /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+(?:sent you|has sent)/i,
+  // From header display name: "John Smith <notify@...>"
+  /^\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s*</im,
 ];
 
 /**
@@ -196,7 +205,48 @@ const AMOUNT_PATTERNS = [
 const MEMO_PATTERNS = [
   /(?:message|memo|note|reference|remarque|commentaire)\s*[:：]\s*(.+?)(?:\n|$)/i,
   /(?:included this message|a inclus ce message)\s*[:：]?\s*(.+?)(?:\n|$)/i,
+  // Common format: "Message: <text>"
+  /(?:personal message|customer message)\s*[:：]\s*(.+?)(?:\n|$)/i,
+  // Order number standalone in memo area
+  /(?:order\s*#?|commande\s*#?)\s*(ML-[A-Z0-9\-]+)/i,
 ];
+
+/**
+ * Known Canadian financial institutions — detected from From header or email body.
+ */
+const FINANCIAL_INSTITUTIONS: Array<{ pattern: RegExp; name: string }> = [
+  { pattern: /\bBMO\b|Bank of Montreal/i, name: "BMO (Bank of Montreal)" },
+  { pattern: /\bTD\b|TD Canada Trust|TD Bank/i, name: "TD Canada Trust" },
+  { pattern: /\bRBC\b|Royal Bank/i, name: "RBC Royal Bank" },
+  { pattern: /\bScotiabank\b|Bank of Nova Scotia/i, name: "Scotiabank" },
+  { pattern: /\bCIBC\b|Canadian Imperial/i, name: "CIBC" },
+  { pattern: /\bDesjardins\b/i, name: "Desjardins" },
+  { pattern: /\bNational Bank\b|Banque Nationale/i, name: "National Bank" },
+  { pattern: /\bTangerine\b/i, name: "Tangerine" },
+  { pattern: /\bSimplii\b/i, name: "Simplii Financial" },
+  { pattern: /\bEQ Bank\b/i, name: "EQ Bank" },
+  { pattern: /\bWealthsimple\b/i, name: "Wealthsimple" },
+  { pattern: /\bKoho\b/i, name: "KOHO" },
+  { pattern: /\bNeo Financial\b/i, name: "Neo Financial" },
+  { pattern: /\bManulife\b/i, name: "Manulife Bank" },
+  { pattern: /\bHSBC\b/i, name: "HSBC Canada" },
+  { pattern: /\bLaurentian\b|Banque Laurentienne/i, name: "Laurentian Bank" },
+  { pattern: /\bATB\b|ATB Financial/i, name: "ATB Financial" },
+  { pattern: /\bCoast Capital\b/i, name: "Coast Capital Savings" },
+  { pattern: /\bMeridian\b/i, name: "Meridian Credit Union" },
+  { pattern: /payments?\.interac\.ca/i, name: "Interac" },
+];
+
+/**
+ * Detect the financial institution from email headers and body.
+ */
+function extractFinancialInstitution(fromHeader: string, subject: string, body: string): string {
+  const combined = `${fromHeader} ${subject} ${body}`;
+  for (const fi of FINANCIAL_INSTITUTIONS) {
+    if (fi.pattern.test(combined)) return fi.name;
+  }
+  return "";
+}
 
 /**
  * Extract order number (ML-xxx or MLC-xxx or ORD-xxx format).
@@ -229,15 +279,40 @@ async function isETransferEmail(subject: string, body: string): Promise<boolean>
   return isETransferEmailSync(subject, body);
 }
 
-function extractSenderName(subject: string, body: string): string {
+function extractSenderName(subject: string, body: string, fromHeader?: string): string {
+  // First try from the email body and subject
   const combined = `${subject}\n${body}`;
   for (const pattern of SENDER_PATTERNS) {
     const m = combined.match(pattern);
     if (m && m[1]) {
       const name = m[1].trim();
-      // Avoid matching bank names or generic words
-      if (name.length > 2 && !/^(interac|the|your|this|bank|from)$/i.test(name)) {
+      // Avoid matching bank names, Interac, or generic words
+      if (name.length > 2 && !/^(interac|the|your|this|bank|from|bmo|td|rbc|cibc|scotiabank|desjardins)$/i.test(name)) {
         return name;
+      }
+    }
+  }
+  // Fallback: try to extract display name from From header ("John Smith <notify@...>")
+  if (fromHeader) {
+    const displayNameMatch = fromHeader.match(/^"?([^"<]+?)"?\s*</);
+    if (displayNameMatch && displayNameMatch[1]) {
+      const name = displayNameMatch[1].trim();
+      // Only use if it looks like a person name, not an institution
+      if (name.length > 2 && !/^(interac|notify|no-?reply|payment|alert|info|service)/i.test(name) &&
+          !/(bank|financial|credit|trust)/i.test(name)) {
+        return name;
+      }
+    }
+  }
+  // Last resort: if From contains a personal email (not bank domain), use the local part
+  if (fromHeader) {
+    const emailMatch = fromHeader.match(/<?\s*([^@<>]+)@([^>]+)>?\s*$/);
+    if (emailMatch) {
+      const domain = emailMatch[2].toLowerCase();
+      // Only use personal email domains, not bank notification addresses
+      if (!/(interac|bank|bmo|td|rbc|cibc|scotia|desjardins|notify|payment|alert)/i.test(domain)) {
+        const localPart = emailMatch[1].replace(/[._-]/g, " ").trim();
+        if (localPart.length > 2) return localPart.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
       }
     }
   }
@@ -484,17 +559,18 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
 
         // Parse the email
         const parsed: ParsedETransfer = {
-          senderName: extractSenderName(subject, body),
+          senderName: extractSenderName(subject, body, from),
           senderEmail: from,
           amount: extractAmount(subject, body),
           memo: extractMemo(body),
+          financialInstitution: extractFinancialInstitution(from, subject, body),
           subject,
           bodySnippet: body.substring(0, 500),
           receivedAt: dateStr ? new Date(dateStr) : new Date(),
           emailId,
         };
 
-        console.log(`[ETransfer] Parsed: sender="${parsed.senderName}" amount=$${parsed.amount} memo="${parsed.memo}"`);
+        console.log(`[ETransfer] Parsed: sender="${parsed.senderName}" amount=$${parsed.amount} memo="${parsed.memo}" bank="${parsed.financialInstitution}"`);
 
         // Try to match
         const match = await matchToOrder(parsed);
@@ -506,6 +582,7 @@ export async function pollETransferEmails(): Promise<{ processed: number; matche
           senderEmail: parsed.senderEmail || null,
           amount: parsed.amount?.toFixed(2) || null,
           memo: parsed.memo || null,
+          financialInstitution: parsed.financialInstitution || null,
           rawSubject: parsed.subject?.substring(0, 500) || null,
           rawBodySnippet: parsed.bodySnippet || null,
           receivedAt: parsed.receivedAt,
