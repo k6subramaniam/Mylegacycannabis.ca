@@ -1225,22 +1225,22 @@ function AiConfigSection() {
   };
 
   const OPENAI_MODELS = [
-    { value: "", label: "Default (gpt-4o-mini)" },
+    { value: "", label: "Default (gpt-5.4-mini)" },
     { value: "gpt-4o-mini", label: "GPT-4o Mini — fast, affordable" },
     { value: "gpt-4o", label: "GPT-4o — best quality" },
     { value: "gpt-4.1-mini", label: "GPT-4.1 Mini — latest mini" },
     { value: "gpt-4.1", label: "GPT-4.1 — flagship" },
-    { value: "gpt-4.5-preview", label: "GPT-4.5 Preview — advanced reasoning" },
-    { value: "gpt-5.4", label: "GPT-5.4 — newest flagship" },
+    { value: "gpt-5.4-mini", label: "GPT-5.4-mini" },
+    { value: "gpt-5.4", label: "GPT-5.4" },
   ];
 
   const GEMINI_MODELS = [
-    { value: "", label: "Default (gemini-2.5-flash)" },
+    { value: "", label: "Default (gemini-3.1-flash-lite-preview)" },
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash — fast, affordable" },
     { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro — best quality" },
     { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash — stable" },
-    { value: "gemini-3.0-flash", label: "Gemini 3.0 Flash — next gen fast" },
-    { value: "gemini-3.1", label: "Gemini 3.1 — newest flagship" },
+    { value: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite" },
+    { value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro — newest flagship" },
   ];
 
   const getModelsForProvider = (p: string) => p === "gemini" ? GEMINI_MODELS : OPENAI_MODELS;
