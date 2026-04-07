@@ -5,7 +5,7 @@ import {
   AlertTriangle, CheckCircle, Info, Wrench, WrenchIcon, Clock,
   Eye, EyeOff, Type, MessageSquare, Key, Smartphone,
   Sparkles, Zap, Brain, ImageIcon, Upload, Trash2, RefreshCw,
-  Megaphone, Plus, X, GripVertical,
+  Megaphone, Plus, X, GripVertical, Bell, Send, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DayHours, StoreHours } from "@/hooks/useSiteConfig";
@@ -932,7 +932,12 @@ export default function AdminSettings() {
       <EmailHealthMonitor />
 
       {/* ══════════════════════════════════════════════════════════════
-          SECTION 5: AUTHENTICATION PROVIDERS
+          SECTION 6: PUSH NOTIFICATIONS
+          ══════════════════════════════════════════════════════════════ */}
+      <PushBroadcastSection />
+
+      {/* ══════════════════════════════════════════════════════════════
+          SECTION 7: AUTHENTICATION PROVIDERS
           ══════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
@@ -1670,6 +1675,159 @@ function LogoManagementSection() {
               </div>
             )}
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS BROADCAST SECTION
+// ═══════════════════════════════════════════════════════════════
+function PushBroadcastSection() {
+  const { data: stats, isLoading, refetch } = trpc.store.pushStats.useQuery(undefined, {
+    staleTime: 30_000,
+    retry: false,
+  });
+  const broadcastMut = trpc.store.pushBroadcast.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Push sent to ${data.sent} subscriber(s), ${data.failed} failed`);
+      setTitle("");
+      setBody("");
+      setUrl("");
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [url, setUrl] = useState("");
+
+  const handleBroadcast = () => {
+    if (!title.trim() || !body.trim()) {
+      toast.error("Title and body are required");
+      return;
+    }
+    broadcastMut.mutate({ title: title.trim(), body: body.trim(), url: url.trim() || "/" });
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+        <Bell size={20} className="text-[#4B2D8E]" />
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">Push Notifications</h2>
+          <p className="text-sm text-gray-500">Send PWA push notifications to all subscribed devices.</p>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Stats */}
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-gray-400">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Loading push stats...</span>
+          </div>
+        ) : stats ? (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-purple-50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-[#4B2D8E]">{stats.stats.active}</p>
+              <p className="text-xs text-gray-500 mt-1">Active Subscribers</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-gray-700">{stats.stats.total}</p>
+              <p className="text-xs text-gray-500 mt-1">Total (incl. inactive)</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-green-700">{stats.stats.withUsers}</p>
+              <p className="text-xs text-gray-500 mt-1">Logged-In Users</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle size={16} />
+              <span className="text-sm font-medium">VAPID keys not configured — push notifications disabled.</span>
+            </div>
+            <p className="text-xs text-amber-600 mt-1">Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your environment variables.</p>
+          </div>
+        )}
+
+        {/* Broadcast form */}
+        {stats && stats.stats.active > 0 && (
+          <div className="border-t border-gray-100 pt-6 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Send size={14} />
+              Broadcast Notification
+            </h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. New Drop: Pink Kush"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#4B2D8E]/20 focus:border-[#4B2D8E] outline-none"
+                  maxLength={100}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Body</label>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="e.g. Just landed — limited availability."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#4B2D8E]/20 focus:border-[#4B2D8E] outline-none resize-none"
+                  rows={2}
+                  maxLength={300}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Click URL (optional)</label>
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="e.g. /shop or /product/pink-kush"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#4B2D8E]/20 focus:border-[#4B2D8E] outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleBroadcast}
+              disabled={broadcastMut.isPending || !title.trim() || !body.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#4B2D8E] text-white rounded-xl text-sm font-semibold hover:bg-[#3a1f73] disabled:opacity-50 transition"
+            >
+              {broadcastMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Send to {stats.stats.active} subscriber{stats.stats.active !== 1 ? "s" : ""}
+            </button>
+          </div>
+        )}
+
+        {/* Recent logs */}
+        {stats?.recentLogs && stats.recentLogs.length > 0 && (
+          <div className="border-t border-gray-100 pt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Push Logs</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {stats.recentLogs.map((log: any, i: number) => (
+                <div key={log.id || i} className="flex items-center gap-3 text-xs p-2 rounded bg-gray-50">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    log.status === "sent" ? "bg-green-500" :
+                    log.status === "expired" ? "bg-amber-500" : "bg-red-500"
+                  }`} />
+                  <span className="font-medium text-gray-700 truncate flex-1">{log.title}</span>
+                  <span className="text-gray-400 flex-shrink-0">{log.status}</span>
+                  <span className="text-gray-300 flex-shrink-0">
+                    {log.sentAt ? new Date(log.sentAt).toLocaleTimeString() : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
