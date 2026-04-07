@@ -379,7 +379,7 @@ export default function Register() {
                 </div>
 
                 <button
-                  onClick={() => { window.location.href = '/api/auth/google'; }}
+                  onClick={() => { window.location.href = '/api/auth/google?returnTo=/account'; }}
                   disabled={!googleAvailable}
                   className="w-full flex items-center justify-center gap-3 p-3.5 rounded-full border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >

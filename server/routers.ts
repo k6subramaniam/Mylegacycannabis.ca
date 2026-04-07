@@ -44,6 +44,29 @@ import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
 import { getMlcBusinessContext } from "./mlcContext";
 
+/** Corporate Visual Identity / Branding DNA — injected into AI email prompts so the
+ *  AI understands the brand's look, feel, and design language. */
+const MLC_BRAND_DNA = `BRANDING DNA / CORPORATE VISUAL IDENTITY:
+- Brand Name: My Legacy Cannabis
+- Logo: Horizontal wordmark on dark background (#1a1a2e header). Always fetched from {{logo_url}} site setting.
+- Primary Purple: #4B2D8E (buttons, headings, hero sections)
+- Secondary Purple: #3A2270 (hover states, dark accents)
+- Accent Orange: #F15929 (CTAs, highlights, badges, energy)
+- Gold Accent: #F5C518 (premium feel, accent stripe)
+- Background: #F5F5F5 (light gray), #FFFFFF (cards)
+- Dark Background: #0a0a0a or #1a1a2e (headers, hero sections)
+- Typography: Clean sans-serif (Arial/Helvetica fallback). Bold display headings, light body text.
+- Accent Stripe: 4px gradient bar under logo — linear-gradient(90deg, #F5C518 0%, #D4952A 33%, #E8792B 66%, #C42B2B 100%)
+- Button Style: Rounded pill buttons (border-radius: 50px), bold text, 15px 40px padding
+- CTA Primary: bg #F15929, text white, hover darken
+- CTA Secondary: bg #4B2D8E, text white
+- Info Boxes: bg #E3F2FD, left-border 4px solid #2196F3
+- Warning Boxes: bg #FFF59D, left-border 4px solid #FFD700
+- Success Boxes: bg #E8F5E9, left-border 4px solid #4CAF50
+- Tone: Premium but approachable. Cannabis dispensary professionalism. Not clinical — friendly.
+- Footer: Dark background with support email, social links, legal text in small gray type.
+- NO emoji characters in emails.`;
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -207,12 +230,21 @@ export const appRouter = router({
         db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
-      /** Quick-toggle the featured flag (for homepage featured section) */
+      /** Quick-toggle the featured flag (for homepage featured section).
+       *  Enforces a max of 4 featured products — if toggling ON would exceed 4,
+       *  the oldest featured product is automatically unfeatured. */
       toggleFeatured: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
         const product = await db.getProductById(input.id);
         if (!product) throw new Error("Product not found");
         const newVal = !product.featured;
-        await db.updateProduct(input.id, { featured: newVal } as any);
+        if (newVal) {
+          const currentCount = await db.countFeaturedProducts();
+          if (currentCount >= 4) {
+            // Auto-unfeature oldest to make room
+            await db.unfeatureOldest();
+          }
+        }
+        await db.updateProduct(input.id, { featured: newVal, updatedAt: new Date() } as any);
         await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "toggle_featured", entityType: "product", entityId: input.id, details: `${product.name} — featured: ${newVal}` });
         return { success: true, featured: newVal };
       }),
@@ -678,6 +710,8 @@ ${getMlcBusinessContext()}
 - Website: https://mylegacycannabis.ca
 ${liveProductsContext}${liveLocationsContext}${liveCategoryContext}
 
+${MLC_BRAND_DNA}
+
 TEMPLATE STRUCTURE — MANDATORY:
 Every email MUST use this exact HTML shell. Do NOT modify the header or footer. Only generate the BODY ROWS that go between the header and footer.
 
@@ -864,6 +898,8 @@ Return ONLY the JSON object, no extra text or markdown fences.`;
 
 ${getMlcBusinessContext()}${liveLocationsContext}${liveProductsContext}
 
+${MLC_BRAND_DNA}
+
 You will be given an EXISTING email template and an instruction to improve it. Return the improved version.
 
 RULES:
@@ -934,6 +970,79 @@ Return ONLY the JSON object with the improved template.`;
           subject: String(parsed.subject),
           bodyHtml: String(parsed.bodyHtml),
           variables: Array.isArray(parsed.variables) ? parsed.variables.map(String) : input.currentVariables,
+        };
+      }),
+
+      /** Apply the visual design/style of one template to another, keeping the target's content */
+      aiApplyDesign: adminProcedure.input(z.object({
+        sourceBodyHtml: z.string().min(10),
+        targetSlug: z.string(),
+        targetSubject: z.string(),
+        targetBodyHtml: z.string(),
+        targetVariables: z.array(z.string()),
+      })).mutation(async ({ input }) => {
+        const siteBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : (process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app");
+        const logoUrl = await db.getSiteSetting("email_logo_url") || `${siteBase}/logo.png`;
+
+        const systemPrompt = `You are an email template designer for My Legacy Cannabis.
+
+${getMlcBusinessContext()}
+
+${MLC_BRAND_DNA}
+
+TASK: You are given a SOURCE email template (the "design reference") and a TARGET email template.
+Your job is to APPLY the visual design, layout patterns, color scheme, and styling of the SOURCE to the TARGET.
+Keep the TARGET's actual content, text, subject, and {{variables}} — only change the visual presentation.
+
+RULES:
+- Extract the SOURCE's design DNA: color gradients, spacing, button styles, font sizing, box styles, accent patterns, etc.
+- Apply that design to the TARGET's content — same info boxes, CTA buttons, heading styles, etc.
+- Preserve ALL {{variable}} placeholders from the target
+- Use inline CSS only — no <style> blocks
+- Keep the same header/footer shell (logo + accent stripe + footer)
+- The logo URL is: ${logoUrl}
+- Do NOT use emoji characters
+
+RESPONSE FORMAT — return valid JSON only:
+{
+  "subject": "Same or slightly refined subject",
+  "bodyHtml": "COMPLETE HTML document with new design applied",
+  "variables": ["array","of","variable","names","used"]
+}`;
+
+        const userMessage = `SOURCE TEMPLATE (design reference — copy its visual style):
+${input.sourceBodyHtml}
+
+TARGET TEMPLATE (apply the source's design to this content):
+Subject: ${input.targetSubject}
+HTML: ${input.targetBodyHtml}
+Variables: ${input.targetVariables.join(", ")}
+
+Return ONLY the JSON object.`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          responseFormat: { type: "json_object" },
+          maxTokens: 16384,
+        });
+
+        const content = typeof result.choices[0]?.message?.content === "string"
+          ? result.choices[0].message.content
+          : "";
+        if (!content) throw new Error("AI returned empty response");
+
+        const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        let parsed: any;
+        try { parsed = JSON.parse(cleaned); } catch { throw new Error("AI returned invalid JSON"); }
+        if (!parsed.bodyHtml) throw new Error("AI returned incomplete result");
+
+        return {
+          subject: String(parsed.subject || input.targetSubject),
+          bodyHtml: String(parsed.bodyHtml),
+          variables: Array.isArray(parsed.variables) ? parsed.variables.map(String) : input.targetVariables,
         };
       }),
     }),
@@ -1809,6 +1918,11 @@ Return ONLY the JSON object with the improved template.`;
       // Shuffle and take the requested amount
       const shuffled = others.sort(() => 0.5 - Math.random());
       return shuffled.slice(0, input.limit);
+    }),
+
+    /** Homepage featured products — max 4, from DB (not hardcoded data.ts) */
+    featuredProducts: publicProcedure.query(async () => {
+      return db.getFeaturedProducts(4);
     }),
 
     /** Real-time active product counts per category (for homepage tiles) */
