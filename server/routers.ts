@@ -1206,16 +1206,22 @@ Return ONLY the JSON object.`;
         // Check for duplicate email
         const existingEmail = await db.getUserByEmail(input.email.toLowerCase().trim());
         if (existingEmail) throw new Error("A user with this email already exists.");
-        // Check for duplicate phone
-        const normalizedPhone = input.phone.replace(/\D/g, "");
+        // Check for duplicate phone — normalize to final stored form BEFORE lookup
+        let normalizedPhone = input.phone.replace(/\D/g, "");
+        // Strip leading country code "1" for Canadian numbers to get the 10-digit form
+        if (normalizedPhone.length === 11 && normalizedPhone.startsWith("1")) {
+          normalizedPhone = normalizedPhone.substring(1);
+        }
+        // Check BOTH forms to catch any existing records stored with or without leading "1"
         const existingPhone = await db.getUserByPhone(normalizedPhone);
-        if (existingPhone) throw new Error("A user with this phone number already exists.");
+        const existingPhone11 = !existingPhone ? await db.getUserByPhone("1" + normalizedPhone) : null;
+        if (existingPhone || existingPhone11) throw new Error("A user with this phone number already exists.");
 
         const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`;
         const id = await db.adminCreateUser({
           name: fullName,
           email: input.email.toLowerCase().trim(),
-          phone: normalizedPhone.length === 11 && normalizedPhone.startsWith("1") ? normalizedPhone.substring(1) : normalizedPhone,
+          phone: normalizedPhone,
           role: input.role,
           birthday: input.birthday,
         });
@@ -2728,7 +2734,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       return { success: true };
     }),
 
-    // Admin: change payment status freely (any → any)
+    // Admin: change payment status (with guards for data integrity)
     changeStatus: adminProcedure.input(z.object({
       paymentId: z.number(),
       status: z.enum(["auto_matched", "manual_matched", "unmatched", "ignored"]),
@@ -2740,14 +2746,38 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       if (!record) throw new Error("Payment record not found");
 
       const oldStatus = record.status;
-      const noteText = input.notes || `Status changed from ${oldStatus} to ${input.status} by ${adminName}`;
+      const isMatchedTarget = input.status === "auto_matched" || input.status === "manual_matched";
+      const wasMatched = oldStatus === "auto_matched" || oldStatus === "manual_matched";
+      const isUnmatchTarget = input.status === "unmatched" || input.status === "ignored";
 
-      await db.updatePaymentRecord(input.paymentId, {
-        status: input.status as any,
+      // ─── GUARD: Cannot set to "matched" without a linked order ───
+      if (isMatchedTarget && !record.matchedOrderId) {
+        throw new Error(
+          `Cannot set status to "${input.status}" — no order is linked. ` +
+          `Use the "Match to Order" dropdown to link an order first.`
+        );
+      }
+
+      // ─── GUARD: When reverting a matched payment to unmatched/ignored, ───
+      // ─── clear the order link and revert the order's payment status   ───
+      const updateData: Record<string, any> = {
+        status: input.status,
         reviewedBy: ctx.user?.id || 0,
         reviewedAt: new Date(),
-        adminNotes: noteText,
-      } as any);
+        adminNotes: input.notes || `Status changed from ${oldStatus} to ${input.status} by ${adminName}`,
+      };
+
+      if (wasMatched && isUnmatchTarget && record.matchedOrderId) {
+        // Revert the order's payment status to pending
+        await db.updateOrder(record.matchedOrderId, { paymentStatus: "pending" } as any);
+        // Clear the match fields on the payment record
+        updateData.matchedOrderId = null;
+        updateData.matchedOrderNumber = null;
+        updateData.matchConfidence = "none";
+        updateData.matchMethod = null;
+      }
+
+      await db.updatePaymentRecord(input.paymentId, updateData as any);
 
       await db.logAdminActivity({
         adminId: ctx.user?.id || 0,
@@ -2755,7 +2785,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
         action: "etransfer_change_status",
         entityType: "payment",
         entityId: input.paymentId,
-        details: `Changed payment #${input.paymentId} status: ${oldStatus} → ${input.status}`,
+        details: `Changed payment #${input.paymentId} status: ${oldStatus} → ${input.status}${wasMatched && isUnmatchTarget ? ` (order ${record.matchedOrderNumber || record.matchedOrderId} unlinked)` : ""}`,
       });
 
       return { success: true, oldStatus, newStatus: input.status };

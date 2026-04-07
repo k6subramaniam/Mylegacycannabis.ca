@@ -998,7 +998,21 @@ export async function countFeaturedProducts(): Promise<number> {
 
 /** Unfeature the oldest featured product (to enforce max 4 limit) */
 export async function unfeatureOldest(): Promise<void> {
-  if (!USE_PERSISTENT_DB) return;
+  if (!USE_PERSISTENT_DB) {
+    // In-memory mode: find oldest featured product by updatedAt and unfeature it
+    const featured = _products
+      .filter(p => (p as any).featured)
+      .sort((a, b) => {
+        const aTime = (a as any).updatedAt ? new Date((a as any).updatedAt).getTime() : 0;
+        const bTime = (b as any).updatedAt ? new Date((b as any).updatedAt).getTime() : 0;
+        return aTime - bTime; // ascending — oldest first
+      });
+    if (featured[0]) {
+      (featured[0] as any).featured = false;
+      (featured[0] as any).updatedAt = new Date();
+    }
+    return;
+  }
   const oldest = await getDb()
     .select({ id: schema.products.id })
     .from(schema.products)

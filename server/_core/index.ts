@@ -29,6 +29,12 @@ async function startServer() {
 
   const app = express();
   const server = createServer(app);
+
+  // Trust the first proxy hop (Railway, Cloudflare, etc.)
+  // This makes req.ip use the real client IP from X-Forwarded-For
+  // instead of always returning the proxy/load-balancer IP
+  app.set("trust proxy", 1);
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -136,11 +142,9 @@ async function startServer() {
   // Quebec customers get French; everyone else gets English.
   app.get("/api/geo", async (req, res) => {
     try {
-      // Get client IP (behind proxy: x-forwarded-for, or Railway sets x-real-ip)
-      const forwarded = req.headers["x-forwarded-for"];
-      const ip = typeof forwarded === "string"
-        ? forwarded.split(",")[0].trim()
-        : req.socket.remoteAddress || "";
+      // Get client IP — req.ip is trusted because we set "trust proxy" above
+      // Express parses X-Forwarded-For safely, taking only the first untrusted hop
+      const ip = req.ip || req.socket.remoteAddress || "";
 
       // Skip for localhost/private IPs
       if (!ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("192.168.") || ip.startsWith("10.")) {
