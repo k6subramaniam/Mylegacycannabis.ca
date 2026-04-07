@@ -169,6 +169,12 @@ export default function Home() {
                     {product.isNew && (
                       <span className="absolute top-3 left-3 bg-[#F15929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
                     )}
+                    {!product.isNew && product.featured && (
+                      <span className="absolute top-3 left-3 bg-[#4B2D8E] text-white font-display text-[10px] px-3 py-1 rounded-full">⭐ STAFF PICK</span>
+                    )}
+                    {product.stock > 0 && product.stock <= 5 && (
+                      <span className="absolute bottom-3 left-3 bg-red-500 text-white font-display text-[10px] px-3 py-1 rounded-full animate-pulse">LOW STOCK</span>
+                    )}
                     <span className="absolute top-3 right-3 bg-[#4B2D8E] text-white font-mono-legacy text-xs px-2 py-1 rounded-full">{product.strainType}</span>
                   </div>
                 </Link>

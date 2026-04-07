@@ -422,10 +422,21 @@ export default function Shop() {
                               loading="lazy" width="400" height="400"
                             />
 
-                            {/* Top-left badges: Grade + NEW */}
+                            {/* Top-left badges: Grade + NEW + Staff Pick + Low Stock */}
                             <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                               {product.isNew && (
                                 <span className="bg-[#F19929] text-white font-display text-[10px] px-3 py-1 rounded-full">NEW</span>
+                              )}
+                              {product.featured && (
+                                <span className="bg-[#4B2D8E] text-white font-display text-[10px] px-3 py-1 rounded-full flex items-center gap-1">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                  STAFF PICK
+                                </span>
+                              )}
+                              {product.stock > 0 && product.stock <= 5 && (
+                                <span className="bg-red-500 text-white font-display text-[10px] px-3 py-1 rounded-full animate-pulse">
+                                  LOW STOCK
+                                </span>
                               )}
                               {(product as any).grade && (
                                 <span className={`font-display text-[10px] px-2.5 py-1 rounded-full ${GRADE_COLORS[(product as any).grade] || 'bg-gray-400 text-white'}`}>
