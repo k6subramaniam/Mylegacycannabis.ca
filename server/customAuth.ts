@@ -15,11 +15,8 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/** Extract client IP from request, handling Railway/proxy X-Forwarded-For */
+/** Extract client IP from request — uses req.ip which respects Express "trust proxy" setting */
 function getClientIp(req: Request): string {
-  const xff = req.headers["x-forwarded-for"];
-  if (typeof xff === "string") return xff.split(",")[0].trim();
-  if (Array.isArray(xff)) return xff[0]?.split(",")[0]?.trim() || req.ip || "unknown";
   return req.ip || "unknown";
 }
 

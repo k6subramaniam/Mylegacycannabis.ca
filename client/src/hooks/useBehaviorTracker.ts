@@ -119,22 +119,30 @@ export function useBehaviorTracker() {
   }, []);
 
   const trackPageView = useCallback((page: string) => {
-    // Skip tracking admin pages — admin browsing shouldn't affect AI user profiles
-    if (page.startsWith('/admin')) return;
-
-    // Record dwell time for previous page
+    // Record dwell time for previous page (even if new page is admin)
+    // — we must always reset the timer to prevent stale state
     const dwellMs = Date.now() - pageEnteredAt.current;
-    if (dwellMs > 1000 && currentPage.current !== page) {
+    const prevPage = currentPage.current;
+    const isAdminPrev = prevPage.startsWith('/admin');
+
+    // Emit dwell event for the PREVIOUS page only if it wasn't an admin page
+    if (dwellMs > 1000 && prevPage !== page && !isAdminPrev) {
       pushEvent({
         eventType: 'page_view',
-        page: currentPage.current,
+        page: prevPage,
         dwellTimeMs: dwellMs,
         metadata: { type: 'dwell_navigate' },
       });
     }
-    // Start new page timer
+
+    // Always update state refs — keeps currentPage/pageEnteredAt fresh
+    // regardless of whether the new page is admin or not
     pageEnteredAt.current = Date.now();
     currentPage.current = page;
+
+    // Skip emitting page_view event for admin pages
+    if (page.startsWith('/admin')) return;
+
     pushEvent({ eventType: 'page_view', page });
   }, [pushEvent]);
 

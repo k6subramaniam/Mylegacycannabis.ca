@@ -985,15 +985,21 @@ export default function AdminPayments() {
                         {(["unmatched", "auto_matched", "manual_matched", "ignored"] as const).map(s => {
                           const Icon = STATUS_ICONS[s] || HelpCircle;
                           const isActive = p.status === s;
+                          const isMatchedStatus = s === "auto_matched" || s === "manual_matched";
+                          const hasOrder = !!p.matchedOrderId;
+                          const isDisabled = isActive || changeStatusMutation.isPending || (isMatchedStatus && !hasOrder);
                           return (
                             <button
                               key={s}
-                              onClick={() => { if (!isActive) changeStatusMutation.mutate({ paymentId: p.id, status: s }); }}
-                              disabled={isActive || changeStatusMutation.isPending}
+                              onClick={() => { if (!isDisabled) changeStatusMutation.mutate({ paymentId: p.id, status: s }); }}
+                              disabled={isDisabled}
+                              title={isMatchedStatus && !hasOrder ? "Link an order first before marking as matched" : STATUS_LABELS[s]}
                               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                 isActive
                                   ? `${STATUS_COLORS[s]} ring-2 ring-offset-1 ring-current cursor-default`
-                                  : `border border-gray-200 text-gray-500 hover:${STATUS_COLORS[s].replace("100", "50")} hover:border-current`
+                                  : isDisabled
+                                    ? "border border-gray-100 text-gray-300 cursor-not-allowed"
+                                    : `border border-gray-200 text-gray-500 hover:border-current`
                               }`}
                             >
                               <Icon size={12} />
@@ -1002,6 +1008,9 @@ export default function AdminPayments() {
                           );
                         })}
                       </div>
+                      {!p.matchedOrderId && (
+                        <p className="text-[10px] text-amber-500 mt-1.5">Matched statuses require an order link. Use the table&apos;s &quot;Select order&quot; dropdown first.</p>
+                      )}
                     </div>
                   </div>
                   {/* Delete from modal */}
