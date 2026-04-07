@@ -292,19 +292,35 @@ function decodeBase64Url(data: string): string {
 }
 
 function stripHtml(html: string): string {
-  return html
+  // 1) Convert common block-level tags to newlines BEFORE stripping
+  let text = html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<\/div>/gi, "\n");
+
+  // 2) Aggressively strip ALL HTML tags (loop to handle nested/malformed tags
+  //    like "<scr<script>ipt>" that a single pass would miss — fixes CodeQL
+  //    js/incomplete-multi-character-sanitization alert #34)
+  let prev = "";
+  while (prev !== text) {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, "");
+  }
+
+  // 3) Decode HTML entities to plain text AFTER all tags are removed.
+  //    Since there are no HTML tags left, unescaping &lt; etc. is safe
+  //    and won't re-introduce executable HTML (fixes CodeQL
+  //    js/double-escaping alert #33).
+  text = text
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .replace(/\n{3,}/g, "\n\n");
+
+  return text.trim();
 }
 
 function getEmailBody(payload: any): string {
