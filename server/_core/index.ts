@@ -1,7 +1,7 @@
 import "dotenv/config";
 import dns from "dns";
 // Railway blocks outbound IPv6 SMTP (QDISC_DROP). Force IPv4 for all DNS lookups
-// soo nodemailer and any other net connections resolve to IPv4 addresses.
+// so nodemailer and any other net connections resolve to IPv4 addresses.
 dns.setDefaultResultOrder("ipv4first");
 import express from "express";
 import { createServer } from "http";
