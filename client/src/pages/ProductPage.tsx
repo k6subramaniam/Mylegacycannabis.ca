@@ -422,7 +422,7 @@ export default function ProductPage() {
 
 /* ─── Cross-Sell Component ─── */
 function CrossSellSection({ productId, category }: { productId: number; category: string }) {
-  const { data: related, isLoading } = trpc.relatedProducts.useQuery(
+  const { data: related, isLoading } = trpc.store.relatedProducts.useQuery(
     { productId, category, limit: 4 },
     { staleTime: 60_000 }
   );

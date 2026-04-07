@@ -207,6 +207,15 @@ export const appRouter = router({
         db.syncAllSiteKnowledge().catch(() => {}); // async knowledge refresh
         return { success: true };
       }),
+      /** Quick-toggle the featured flag (for homepage featured section) */
+      toggleFeatured: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+        const product = await db.getProductById(input.id);
+        if (!product) throw new Error("Product not found");
+        const newVal = !product.featured;
+        await db.updateProduct(input.id, { featured: newVal } as any);
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "toggle_featured", entityType: "product", entityId: input.id, details: `${product.name} — featured: ${newVal}` });
+        return { success: true, featured: newVal };
+      }),
       bulkUpdate: adminProcedure.input(z.object({
         ids: z.array(z.number()),
         data: z.object({ isActive: z.boolean().optional(), featured: z.boolean().optional(), stock: z.number().optional() }),
@@ -1076,6 +1085,63 @@ Return ONLY the JSON object with the improved template.`;
       orders: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getUserOrders(input.id);
       }),
+      /** Admin: create a new user (customer or admin) */
+      create: adminProcedure.input(z.object({
+        firstName: z.string().min(2),
+        lastName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(10),
+        role: z.enum(["user", "admin"]),
+        birthday: z.string().optional(),
+      })).mutation(async ({ input, ctx }) => {
+        // Check for duplicate email
+        const existingEmail = await db.getUserByEmail(input.email.toLowerCase().trim());
+        if (existingEmail) throw new Error("A user with this email already exists.");
+        // Check for duplicate phone
+        const normalizedPhone = input.phone.replace(/\D/g, "");
+        const existingPhone = await db.getUserByPhone(normalizedPhone);
+        if (existingPhone) throw new Error("A user with this phone number already exists.");
+
+        const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`;
+        const id = await db.adminCreateUser({
+          name: fullName,
+          email: input.email.toLowerCase().trim(),
+          phone: normalizedPhone.length === 11 && normalizedPhone.startsWith("1") ? normalizedPhone.substring(1) : normalizedPhone,
+          role: input.role,
+          birthday: input.birthday,
+        });
+
+        // Welcome bonus history
+        try {
+          await db.addRewardsHistory({ userId: id, points: 25, type: 'earned' as any, description: 'Welcome bonus — account created by admin' } as any);
+        } catch (_) {}
+
+        // Send welcome email
+        if (input.email) {
+          triggerWelcomeEmail({
+            customerName: fullName,
+            customerEmail: input.email.toLowerCase().trim(),
+          }).catch(err => console.warn("[Admin] Welcome email failed:", err.message));
+        }
+
+        await db.logAdminActivity({ adminId: ctx.user?.id || 0, adminName: ctx.user?.name || "Admin", action: "create", entityType: "user", entityId: id, details: `Created ${input.role}: ${fullName} (${input.email})` });
+        await db.logSystem({ level: "info", source: "admin", action: "create_user", message: `Admin created ${input.role}: ${fullName} <${input.email}>` }).catch(() => {});
+
+        return { success: true, id };
+      }),
+    }),
+
+    // ─── SYSTEM LOGS ───
+    systemLogs: router({
+      list: adminProcedure.input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+        level: z.string().optional(),
+        source: z.string().optional(),
+        search: z.string().optional(),
+      })).query(async ({ input }) => {
+        return db.getSystemLogs(input);
+      }),
     }),
 
     // ─── FILE UPLOAD ───
@@ -1739,7 +1805,7 @@ Return ONLY the JSON object with the improved template.`;
     })).query(async ({ input }) => {
       const all = await db.getAllProducts({ category: input.category, activeOnly: true, limit: 50, page: 1 });
       // Filter out current product's base name group, pick random sample
-      const others = (all.products || all).filter((p: any) => p.id !== input.productId);
+      const others = ((all as any).products || all).filter((p: any) => p.id !== input.productId);
       // Shuffle and take the requested amount
       const shuffled = others.sort(() => 0.5 - Math.random());
       return shuffled.slice(0, input.limit);

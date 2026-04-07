@@ -103,6 +103,33 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // Add IP/geo columns to users table (idempotent ALTER)
+  await _sql!`DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_geo_city VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_geo_region VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_geo_country VARCHAR(2);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_ip VARCHAR(45);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_birthday_bonus VARCHAR(4);
+  END $$`;
+
+  // System logs table (emails, API errors, integrations)
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS system_logs (
+      id SERIAL PRIMARY KEY,
+      level VARCHAR(10) NOT NULL,
+      source VARCHAR(50) NOT NULL,
+      action VARCHAR(100) NOT NULL,
+      message TEXT NOT NULL,
+      details TEXT,
+      user_id INTEGER,
+      ip_address VARCHAR(45),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   await _sql!`
     CREATE TABLE IF NOT EXISTS verification_codes (
       id SERIAL PRIMARY KEY,
@@ -2781,6 +2808,109 @@ export async function getPushNotificationLogs(opts?: {
     .orderBy(desc(schema.pushNotificationLog.sentAt))
     .limit(opts?.limit ?? 50);
   return q;
+}
+
+// ─── SYSTEM LOGS ───
+export async function logSystem(data: {
+  level: string;
+  source: string;
+  action: string;
+  message: string;
+  details?: string | null;
+  userId?: number | null;
+  ipAddress?: string | null;
+}): Promise<void> {
+  if (!USE_PERSISTENT_DB) return; // skip in-memory mode
+  try {
+    await getDb().insert(schema.systemLogs).values(data as any);
+  } catch (err) {
+    // Never let logging failures crash the app
+    console.warn("[SystemLog] Write failed:", (err as Error).message);
+  }
+}
+
+export async function getSystemLogs(opts?: {
+  page?: number;
+  limit?: number;
+  level?: string;
+  source?: string;
+  search?: string;
+}): Promise<{ data: schema.SystemLog[]; total: number }> {
+  if (!USE_PERSISTENT_DB) return { data: [], total: 0 };
+  const db = getDb();
+  const page = opts?.page ?? 1;
+  const limit = opts?.limit ?? 50;
+  const conditions: any[] = [];
+  if (opts?.level) conditions.push(eq(schema.systemLogs.level, opts.level));
+  if (opts?.source) conditions.push(eq(schema.systemLogs.source, opts.source));
+  if (opts?.search) {
+    const q = `%${opts.search}%`;
+    conditions.push(or(
+      ilike(schema.systemLogs.message, q),
+      ilike(schema.systemLogs.action, q),
+    ));
+  }
+  const where = conditions.length ? and(...conditions) : undefined;
+  const data = await db.select().from(schema.systemLogs)
+    .where(where)
+    .orderBy(desc(schema.systemLogs.createdAt))
+    .offset((page - 1) * limit).limit(limit);
+  const totalResult = await db.select({ cnt: count() }).from(schema.systemLogs).where(where);
+  return { data, total: totalResult[0]?.cnt ?? 0 };
+}
+
+// ─── IP / GEO TRACKING ───
+export async function updateUserIpGeo(userId: number, ip: string, geo?: {
+  city?: string;
+  region?: string;
+  country?: string;
+}): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().update(schema.users)
+    .set({
+      lastIp: ip,
+      lastGeoCity: geo?.city || null,
+      lastGeoRegion: geo?.region || null,
+      lastGeoCountry: geo?.country || null,
+      lastSignedIn: new Date(),
+    } as any)
+    .where(eq(schema.users.id, userId));
+}
+
+// ─── ADMIN: CREATE USER ───
+export async function adminCreateUser(data: {
+  name: string;
+  email: string;
+  phone: string;
+  role: "user" | "admin";
+  birthday?: string;
+}): Promise<number> {
+  const { nanoid } = await import("nanoid");
+  const openId = `admin_${nanoid(16)}`;
+
+  if (USE_PERSISTENT_DB) {
+    const result = await getDb().insert(schema.users).values({
+      openId,
+      name: data.name,
+      email: data.email.toLowerCase().trim(),
+      phone: data.phone,
+      role: data.role,
+      birthday: data.birthday || null,
+      emailVerified: true,
+      rewardPoints: 25, // welcome bonus
+    } as any).returning({ id: schema.users.id });
+    return result[0].id;
+  } else {
+    const id = nextId();
+    _users.push({
+      id, openId, name: data.name, email: data.email.toLowerCase().trim(),
+      phone: data.phone, role: data.role, birthday: data.birthday || null,
+      emailVerified: true, phoneVerified: false, rewardPoints: 25,
+      idVerified: false, isLocked: false, createdAt: new Date(), updatedAt: new Date(),
+      lastSignedIn: new Date(),
+    });
+    return id;
+  }
 }
 
 // ========================================================================================

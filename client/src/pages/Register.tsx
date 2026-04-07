@@ -11,7 +11,8 @@ type Step = 'info' | 'verify' | 'otp';
 export default function Register() {
   const { logoUrl } = useSiteConfig();
   const [step, setStep] = useState<Step>('info');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
@@ -70,7 +71,8 @@ export default function Register() {
   };
 
   const validateInfo = () => {
-    if (!name.trim()) { setError('Please enter your full name'); return false; }
+    if (!firstName.trim() || firstName.trim().length < 2) { setError('First name must be at least 2 characters'); return false; }
+    if (!lastName.trim() || lastName.trim().length < 2) { setError('Last name must be at least 2 characters'); return false; }
     if (!email.trim() || !email.includes('@')) { setError('Please enter a valid email address'); return false; }
     if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Please enter a valid 10-digit phone number'); return false; }
     if (!birthday) { setError('Date of birth is required. You must be 19 or older to create an account.'); return false; }
@@ -137,7 +139,9 @@ export default function Register() {
           type: verifyMethod,
           purpose: 'register',
           registrationData: {
-            name: name.trim(),
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            name: `${firstName.trim()} ${lastName.trim()}`,
             email: email.trim(),
             phone: phone.trim(),
             birthday: birthday || undefined,
@@ -222,18 +226,33 @@ export default function Register() {
 
                 <p className="text-sm text-gray-600 font-body text-center">Step 1 of 3 — Your Information</p>
 
-                {/* Name */}
-                <div>
-                  <label className="block text-xs font-display text-[#333] mb-1.5">FULL NAME *</label>
-                  <div className="relative">
-                    <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={e => { setName(e.target.value); setError(''); }}
-                      placeholder="John Doe"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
-                    />
+                {/* First Name & Last Name */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-display text-[#333] mb-1.5">FIRST NAME *</label>
+                    <div className="relative">
+                      <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={e => { setFirstName(e.target.value); setError(''); }}
+                        placeholder="John"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-display text-[#333] mb-1.5">LAST NAME *</label>
+                    <div className="relative">
+                      <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={e => { setLastName(e.target.value); setError(''); }}
+                        placeholder="Doe"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none font-body text-sm transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -399,7 +418,7 @@ export default function Register() {
                 <div className="bg-[#F5F5F5] rounded-xl p-4 space-y-1">
                   <div className="flex items-center gap-2 text-sm font-body">
                     <Check size={14} className="text-green-500" />
-                    <span className="text-gray-600">{name}</span>
+                    <span className="text-gray-600">{firstName} {lastName}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-body">
                     <Check size={14} className="text-green-500" />

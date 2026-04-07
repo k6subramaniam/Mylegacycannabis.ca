@@ -52,6 +52,11 @@ export const users = pgTable("users", {
   referredBy: integer("referred_by"),
   referralCode: varchar("referral_code", { length: 20 }),
   lastBirthdayBonus: varchar("last_birthday_bonus", { length: 4 }),
+  lastIp: varchar("last_ip", { length: 45 }),
+  lastGeoCity: varchar("last_geo_city", { length: 100 }),
+  lastGeoRegion: varchar("last_geo_region", { length: 100 }),
+  lastGeoCountry: varchar("last_geo_country", { length: 2 }),
+  registrationIp: varchar("registration_ip", { length: 45 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
@@ -59,6 +64,22 @@ export const users = pgTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+// ─── SYSTEM LOGS (emails, API errors, integrations) ───
+export const systemLogs = pgTable("system_logs", {
+  id: serial("id").primaryKey(),
+  level: varchar("level", { length: 10 }).notNull(), // 'info' | 'warn' | 'error'
+  source: varchar("source", { length: 50 }).notNull(), // 'email', 'api', 'auth', 'payment', 'push', 'ai', 'system'
+  action: varchar("action", { length: 100 }).notNull(),
+  message: text("message").notNull(),
+  details: text("details"), // JSON-encoded extra info
+  userId: integer("user_id"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SystemLog = typeof systemLogs.$inferSelect;
+export type InsertSystemLog = typeof systemLogs.$inferInsert;
 
 // ─── VERIFICATION CODES (OTP) ───
 export const verificationCodes = pgTable("verification_codes", {

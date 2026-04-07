@@ -152,6 +152,12 @@ export default function AdminProducts() {
   const createMutation = trpc.admin.products.create.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product created"); setShowForm(false); resetForm(); } });
   const updateMutation = trpc.admin.products.update.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product updated"); setShowForm(false); setEditingProduct(null); } });
   const deleteMutation = trpc.admin.products.delete.useMutation({ onSuccess: () => { utils.admin.products.list.invalidate(); toast.success("Product deleted"); } });
+  const toggleFeaturedMut = trpc.admin.products.toggleFeatured.useMutation({
+    onSuccess: (data) => {
+      utils.admin.products.list.invalidate();
+      toast.success(data.featured ? "Added to Featured Products on Homepage" : "Removed from Featured Products");
+    },
+  });
 
   const [form, setForm] = useState({
     name: "", slug: "", category: "flower" as typeof CATEGORIES[number], strainType: "Hybrid" as typeof STRAIN_TYPES[number],
@@ -260,7 +266,13 @@ export default function AdminProducts() {
                   <td className="px-4 py-3 text-center hidden lg:table-cell">
                     <div className="flex items-center justify-center gap-1">
                       {product.isActive ? <Eye size={14} className="text-green-500" /> : <EyeOff size={14} className="text-gray-400" />}
-                      {product.featured && <Star size={14} className="text-yellow-500 fill-yellow-500" />}
+                      <button
+                        onClick={() => toggleFeaturedMut.mutate({ id: product.id })}
+                        title={product.featured ? "Remove from Homepage Featured" : "Add to Homepage Featured"}
+                        className="p-0.5 rounded hover:bg-yellow-50 transition-colors"
+                      >
+                        <Star size={14} className={product.featured ? "text-yellow-500 fill-yellow-500" : "text-gray-300 hover:text-yellow-400"} />
+                      </button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
