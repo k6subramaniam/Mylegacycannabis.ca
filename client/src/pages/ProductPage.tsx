@@ -252,9 +252,20 @@ export default function ProductPage() {
 
             {/* Product Details */}
             <div>
-              {/* Strain type + Grade badges */}
+              {/* Strain type + Grade + Staff Pick + Low Stock badges */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {product.featured && (
+                    <span className="inline-flex items-center gap-1 bg-[#4B2D8E] text-white font-display text-xs px-3 py-1 rounded-full">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      STAFF PICK
+                    </span>
+                  )}
+                  {product.stock > 0 && product.stock <= 5 && (
+                    <span className="inline-block bg-red-500 text-white font-display text-xs px-3 py-1 rounded-full animate-pulse">
+                      ONLY {product.stock} LEFT
+                    </span>
+                  )}
                   {product.strainType && product.strainType !== 'N/A' && (
                     <span className="inline-block bg-[#F19929] text-white font-display text-xs px-3 py-1 rounded-full">{product.strainType}</span>
                   )}
@@ -398,8 +409,77 @@ export default function ProductPage() {
 
           {/* Customer Reviews Section */}
           <ProductReviews productId={product.id} isLoggedIn={!!authUser} userId={authUser?.id} />
+
+          {/* ═══════════════════════════════════════════════════
+              CUSTOMERS ALSO BOUGHT — cross-sell section
+             ═══════════════════════════════════════════════════ */}
+          <CrossSellSection productId={product.id} category={product.category} />
         </div>
       </section>
     </>
+  );
+}
+
+/* ─── Cross-Sell Component ─── */
+function CrossSellSection({ productId, category }: { productId: number; category: string }) {
+  const { data: related, isLoading } = trpc.relatedProducts.useQuery(
+    { productId, category, limit: 4 },
+    { staleTime: 60_000 }
+  );
+  const { addItem } = useCart();
+
+  if (isLoading || !related || related.length === 0) return null;
+
+  return (
+    <div className="mt-12 pt-10 border-t border-gray-200">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-2xl text-[#4B2D8E]">CUSTOMERS ALSO BOUGHT</h2>
+        <Link href={`/shop/${category}`} className="text-sm text-[#F15929] hover:underline font-display flex items-center gap-1">
+          VIEW ALL <ArrowRight size={14} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {related.map((p: any) => (
+          <div key={p.id} className="bg-white rounded-2xl overflow-hidden group hover:shadow-xl transition-shadow border border-gray-100">
+            <Link href={`/product/${p.slug}`} className="block">
+              <div className="relative aspect-square bg-[#F5F5F5] overflow-hidden">
+                <img
+                  src={p.image || 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=400'}
+                  alt={p.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy" width="400" height="400"
+                />
+                {p.featured && (
+                  <span className="absolute top-2 left-2 bg-[#4B2D8E] text-white font-display text-[9px] px-2 py-0.5 rounded-full">⭐ STAFF PICK</span>
+                )}
+                {p.stock > 0 && p.stock <= 5 && (
+                  <span className="absolute top-2 right-2 bg-red-500 text-white font-display text-[9px] px-2 py-0.5 rounded-full animate-pulse">LOW STOCK</span>
+                )}
+              </div>
+            </Link>
+            <div className="p-3">
+              <Link href={`/product/${p.slug}`}>
+                <h3 className="font-display text-xs text-[#4B2D8E] mb-1 hover:text-[#F15929] transition-colors line-clamp-2">
+                  {p.name.toUpperCase()}
+                </h3>
+              </Link>
+              <p className="text-[10px] text-gray-500 font-body mb-2">{p.weight} {p.thc ? `• THC: ${p.thc}` : ''}</p>
+              <div className="flex items-center justify-between">
+                <span className="font-display text-base text-[#4B2D8E]">
+                  ${(typeof p.price === 'string' ? parseFloat(p.price) : p.price).toFixed(2)}
+                </span>
+                <button
+                  onClick={(e) => { e.preventDefault(); addItem(p); toast.success(`${p.name} added to cart`); }}
+                  className="bg-[#F15929] hover:bg-[#d94d22] text-white p-2 rounded-full transition-all hover:scale-110 active:scale-95"
+                  aria-label={`Add ${p.name} to cart`}
+                >
+                  <ShoppingCart size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

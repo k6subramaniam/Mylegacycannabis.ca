@@ -4,7 +4,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { storeLocations } from '@/lib/data';
-import { Menu, X, ShoppingCart, Home, Search, User, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe } from 'lucide-react';
+import { Menu, X, ShoppingCart, Home, Search, User, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe, Star } from 'lucide-react';
 import { useT } from '@/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -363,7 +363,7 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { itemCount } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [location] = useLocation();
   const { t, locale, setLocale } = useT();
   const { logoUrl, bannerMessages: customBannerMessages } = useSiteConfig();
@@ -450,6 +450,19 @@ function Header() {
                 </span>
               )}
             </Link>
+            {/* Rewards points badge — visible when logged in */}
+            {isAuthenticated && user && (
+              <Link
+                href="/rewards"
+                className="hidden sm:flex items-center gap-1.5 bg-[#F15929]/20 hover:bg-[#F15929]/30 text-white px-3 py-1.5 rounded-full transition-colors"
+                aria-label={`${user.rewardsPoints?.toLocaleString() || 0} reward points`}
+                title="My Legacy Rewards"
+              >
+                <Star size={14} className="text-[#F15929] fill-[#F15929]" />
+                <span className="text-xs font-display font-bold">{user.rewardsPoints?.toLocaleString() || 0}</span>
+                <span className="text-[10px] text-white/70 font-body hidden md:inline">pts</span>
+              </Link>
+            )}
             {/* Language Toggle */}
             <button
               onClick={() => setLocale(locale === 'en' ? 'fr' : 'en')}
@@ -558,7 +571,13 @@ function Header() {
                     href="/rewards"
                     className="flex items-center gap-3 py-3 px-4 rounded-lg text-lg font-display text-[#F15929] hover:bg-[#F5F5F5]"
                   >
-                    <Gift size={20} /> {t.common.myRewards}
+                    <Gift size={20} />
+                    <span className="flex-1">{t.common.myRewards}</span>
+                    {isAuthenticated && user?.rewardsPoints != null && (
+                      <span className="bg-[#F15929]/10 text-[#F15929] text-xs font-bold px-2 py-0.5 rounded-full">
+                        {user.rewardsPoints.toLocaleString()} pts
+                      </span>
+                    )}
                   </Link>
                 </div>
               </div>

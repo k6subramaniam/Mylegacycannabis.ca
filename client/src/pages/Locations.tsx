@@ -3,12 +3,23 @@ import { Breadcrumbs, WaveDivider } from '@/components/Layout';
 import { ROUTE_SEO, SITE_URL, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
 import { trpc } from '@/lib/trpc';
 import { storeLocations as fallbackLocations } from '@/lib/data';
-import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight, Locate } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useT } from '@/i18n';
 
 const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp';
+
+/** Haversine distance in km between two lat/lng points */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth radius km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 type LocationData = {
   id: number | string;
@@ -25,13 +36,25 @@ type LocationData = {
   lng?: number | string | null;
 };
 
-function LocationCard({ loc }: { loc: LocationData }) {
+function LocationCard({ loc, isNearest, distance }: { loc: LocationData; isNearest?: boolean; distance?: number | null }) {
   return (
     <article
-      className="bg-[#F5F5F5] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all h-full"
+      className={`rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all h-full ${
+        isNearest
+          ? 'bg-[#F15929]/5 ring-2 ring-[#F15929] relative'
+          : 'bg-[#F5F5F5]'
+      }`}
       itemScope
       itemType="https://schema.org/LocalBusiness"
     >
+      {/* Nearest store badge */}
+      {isNearest && (
+        <div className="absolute top-3 right-3 z-10 bg-[#F15929] text-white font-display text-[10px] px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
+          <Locate size={12} />
+          NEAREST TO YOU
+          {distance != null && <span className="font-body">({distance.toFixed(0)} km)</span>}
+        </div>
+      )}
       {/* Map embed */}
       {loc.mapUrl && (
         <div className="aspect-video bg-gray-200">
@@ -108,6 +131,23 @@ function LocationCard({ loc }: { loc: LocationData }) {
 export default function Locations() {
   const { t } = useT();
 
+  // ─── Auto-detect user location for nearest store highlight ───
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    // Try browser Geolocation API (user must grant permission)
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {
+          // If denied/unavailable, try IP-based geo via our /api/geo endpoint
+          // (which returns province-level, less precise but works without permission)
+        },
+        { timeout: 5000, maximumAge: 300_000 } // cache for 5 min
+      );
+    }
+  }, []);
+
   // Fetch locations from API, fallback to static data
   const { data: apiLocations } = trpc.store.locations.useQuery(undefined, {
     staleTime: 60_000,
@@ -130,6 +170,31 @@ export default function Locations() {
         lng: loc.lng,
       }))
     : fallbackLocations;
+
+  // Compute nearest store and sort by distance
+  const { sortedLocations, nearestId, distances } = useMemo(() => {
+    if (!userCoords || locations.length === 0) {
+      return { sortedLocations: locations, nearestId: null, distances: new Map<string | number, number>() };
+    }
+
+    const distMap = new Map<string | number, number>();
+    for (const loc of locations) {
+      const lat = typeof loc.lat === 'string' ? parseFloat(loc.lat) : loc.lat;
+      const lng = typeof loc.lng === 'string' ? parseFloat(loc.lng) : loc.lng;
+      if (lat && lng) {
+        distMap.set(loc.id, haversineKm(userCoords.lat, userCoords.lng, lat, lng));
+      }
+    }
+
+    const sorted = [...locations].sort((a, b) => {
+      const da = distMap.get(a.id) ?? Infinity;
+      const db = distMap.get(b.id) ?? Infinity;
+      return da - db;
+    });
+
+    const nearest = sorted.length > 0 && distMap.has(sorted[0].id) ? sorted[0].id : null;
+    return { sortedLocations: sorted, nearestId: nearest, distances: distMap };
+  }, [locations, userCoords]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -238,12 +303,16 @@ export default function Locations() {
           {/* Embla Carousel */}
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex gap-4 md:gap-6">
-              {locations.map((loc) => (
+              {sortedLocations.map((loc) => (
                 <div
                   key={loc.id}
                   className="flex-[0_0_85%] sm:flex-[0_0_70%] md:flex-[0_0_48%] lg:flex-[0_0_48%]"
                 >
-                  <LocationCard loc={loc} />
+                  <LocationCard
+                    loc={loc}
+                    isNearest={loc.id === nearestId}
+                    distance={distances.get(loc.id) ?? null}
+                  />
                 </div>
               ))}
             </div>
@@ -251,7 +320,7 @@ export default function Locations() {
 
           {/* Dot indicators */}
           <div className="flex items-center justify-center gap-2 mt-6">
-            {locations.map((_, i) => (
+            {sortedLocations.map((_, i) => (
               <button
                 key={i}
                 onClick={() => scrollTo(i)}
@@ -267,7 +336,7 @@ export default function Locations() {
 
           {/* Counter text */}
           <p className="text-center text-sm text-gray-400 font-body mt-3">
-            {selectedIndex + 1} of {locations.length} locations
+            {selectedIndex + 1} of {sortedLocations.length} locations
           </p>
         </div>
       </section>

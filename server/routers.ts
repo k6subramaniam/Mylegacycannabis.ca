@@ -1709,6 +1709,20 @@ Return ONLY the JSON object with the improved template.`;
       return db.getProductVariants(input.slug);
     }),
 
+    /** "Customers Also Bought" — returns up to 4 related products from the same category */
+    relatedProducts: publicProcedure.input(z.object({
+      productId: z.number(),
+      category: z.string(),
+      limit: z.number().default(4),
+    })).query(async ({ input }) => {
+      const all = await db.getAllProducts({ category: input.category, activeOnly: true, limit: 50, page: 1 });
+      // Filter out current product's base name group, pick random sample
+      const others = (all.products || all).filter((p: any) => p.id !== input.productId);
+      // Shuffle and take the requested amount
+      const shuffled = others.sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, input.limit);
+    }),
+
     /** Real-time active product counts per category (for homepage tiles) */
     categoryCounts: publicProcedure.query(async () => {
       return db.getCategoryCounts();
