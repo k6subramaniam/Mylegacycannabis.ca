@@ -409,6 +409,7 @@ export async function initializeDatabase(): Promise<void> {
       sender_email VARCHAR(320),
       amount NUMERIC(10,2),
       memo TEXT,
+      financial_institution VARCHAR(255),
       raw_subject VARCHAR(500),
       raw_body_snippet TEXT,
       received_at TIMESTAMP,
@@ -423,6 +424,9 @@ export async function initializeDatabase(): Promise<void> {
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `;
+
+  // Migration: add financial_institution column to existing payment_records
+  await _sql!`ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS financial_institution VARCHAR(255)`;
 
   // ─── Store Locations (admin-manageable) ───
   await _sql!`

@@ -393,6 +393,7 @@ export const paymentRecords = pgTable("payment_records", {
   senderEmail: varchar("sender_email", { length: 320 }),
   amount: numeric("amount", { precision: 10, scale: 2 }),
   memo: text("memo"),
+  financialInstitution: varchar("financial_institution", { length: 255 }),
   rawSubject: varchar("raw_subject", { length: 500 }),
   rawBodySnippet: text("raw_body_snippet"),       // first 500 chars for debugging
   receivedAt: timestamp("received_at"),
