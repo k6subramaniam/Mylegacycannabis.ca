@@ -4,7 +4,7 @@ import {
   Users, Search, Eye, X, Crown, User, Lock, Unlock, Trash2,
   KeyRound, Star, ShieldCheck, ShieldX, Save, AlertTriangle,
   Package, Phone, Mail, Calendar, Clock, ChevronRight, Plus, Minus,
-  FileText, Edit3,
+  FileText, Edit3, UserPlus, MapPin, Globe, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -245,6 +245,35 @@ function CustomerModal({ userId, onClose }: { userId: number; onClose: () => voi
                   ))}
                 </div>
 
+                {/* IP & Geo Location */}
+                {((user as any).lastIp || (user as any).registrationIp) && (
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-2">
+                    <h4 className="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1.5"><Globe size={12} /> IP & Location</h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      {(user as any).lastIp && (
+                        <div>
+                          <span className="text-gray-400">Last IP:</span>{" "}
+                          <span className="font-mono text-gray-700">{(user as any).lastIp}</span>
+                        </div>
+                      )}
+                      {(user as any).registrationIp && (
+                        <div>
+                          <span className="text-gray-400">Registration IP:</span>{" "}
+                          <span className="font-mono text-gray-700">{(user as any).registrationIp}</span>
+                        </div>
+                      )}
+                      {((user as any).lastGeoCity || (user as any).lastGeoRegion || (user as any).lastGeoCountry) && (
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <MapPin size={12} className="text-blue-500" />
+                          <span className="text-gray-700">
+                            {[(user as any).lastGeoCity, (user as any).lastGeoRegion, (user as any).lastGeoCountry].filter(Boolean).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   disabled={!profileDirty || updateMut.isPending}
                   onClick={() => updateMut.mutate({ id: userId, name: editName, email: editEmail, phone: editPhone, birthday: editBirthday, role: editRole, idVerified: editIdVerified })}
@@ -462,12 +491,108 @@ function CustomerModal({ userId, onClose }: { userId: number; onClose: () => voi
   );
 }
 
+// ─── Add User Modal ──────────────────────────────────────────────────────────
+function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<"user" | "admin">("user");
+  const [birthday, setBirthday] = useState("");
+  const [error, setError] = useState("");
+
+  const createMut = trpc.admin.users.create.useMutation({
+    onSuccess: () => {
+      toast.success(`${role === "admin" ? "Admin" : "Customer"} created! Welcome email sent.`);
+      onSuccess();
+      onClose();
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!firstName.trim() || firstName.trim().length < 2) { setError("First name must be at least 2 characters"); return; }
+    if (!lastName.trim() || lastName.trim().length < 2) { setError("Last name must be at least 2 characters"); return; }
+    if (!email.trim() || !email.includes("@")) { setError("Please enter a valid email"); return; }
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 10) { setError("Please enter a valid 10-digit phone number"); return; }
+    createMut.mutate({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.replace(/\D/g, ""), role, birthday: birthday || undefined });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2"><UserPlus size={18} className="text-[#4B2D8E]" /> Add User</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{error}</div>}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                placeholder="John" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                placeholder="Doe" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="john@example.com" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Phone * (Canadian)</label>
+            <div className="flex gap-2">
+              <span className="px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-500">+1</span>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                placeholder="(416) 555-0123" className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Date of Birth</label>
+            <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" checked={role === "user"} onChange={() => setRole("user")} className="accent-[#4B2D8E]" />
+                <span className="text-sm">Customer</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" checked={role === "admin"} onChange={() => setRole("admin")} className="accent-[#4B2D8E]" />
+                <span className="text-sm">Admin</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" disabled={createMut.isPending}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#4B2D8E] text-white rounded-xl text-sm font-semibold hover:bg-[#3a2270] disabled:opacity-50 transition">
+            {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+            Create {role === "admin" ? "Admin" : "Customer"} & Send Welcome Email
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Customers Page ──────────────────────────────────────────────────────
 export default function AdminCustomers() {
+  const utils = trpc.useUtils();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
 
   const { data, isLoading } = trpc.admin.users.list.useQuery(
     { page, limit: 20, search: search || undefined },
@@ -483,9 +608,15 @@ export default function AdminCustomers() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
-        <p className="text-sm text-gray-500">{data?.total ?? 0} registered customers</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
+          <p className="text-sm text-gray-500">{data?.total ?? 0} registered customers</p>
+        </div>
+        <button onClick={() => setShowAddUser(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#4B2D8E] text-white rounded-xl text-sm font-medium hover:bg-[#3a2270] transition-colors">
+          <UserPlus size={16} /> Add User
+        </button>
       </div>
 
       {/* Search */}
@@ -607,6 +738,11 @@ export default function AdminCustomers() {
       {/* Customer Detail Modal */}
       {selectedId !== null && (
         <CustomerModal userId={selectedId} onClose={() => setSelectedId(null)} />
+      )}
+
+      {/* Add User Modal */}
+      {showAddUser && (
+        <AddUserModal onClose={() => setShowAddUser(false)} onSuccess={() => utils.admin.users.list.invalidate()} />
       )}
     </div>
   );

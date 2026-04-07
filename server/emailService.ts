@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import nodemailer from "nodemailer";
 import { ENV } from "./_core/env";
 import { recordEmailEvent, type EmailProvider } from "./emailHealthMonitor";
+import { logSystem } from "./db";
 
 /**
  * Email service — sends OTP codes and notifications.
@@ -243,6 +244,7 @@ export async function sendMailTracked(options: {
           status: "sent",
           latencyMs: Date.now() - start,
         });
+        logSystem({ level: "info", source: "email", action: "send", message: `Email sent via Resend to ${options.to}: ${options.subject}` }).catch(() => {});
         return { success: true, provider: "resend" };
       }
       recordEmailEvent({
@@ -254,6 +256,7 @@ export async function sendMailTracked(options: {
         error: error.message,
         latencyMs: Date.now() - start,
       });
+      logSystem({ level: "error", source: "email", action: "send_failed", message: `Resend failed for ${options.to}: ${error.message}` }).catch(() => {});
       // Fall through
     } catch (err: any) {
       recordEmailEvent({
@@ -287,6 +290,7 @@ export async function sendMailTracked(options: {
         status: "sent",
         latencyMs: Date.now() - start,
       });
+      logSystem({ level: "info", source: "email", action: "send", message: `Email sent via SMTP to ${options.to}: ${options.subject}` }).catch(() => {});
       return { success: true, provider: "smtp" };
     } catch (err: any) {
       recordEmailEvent({
@@ -298,6 +302,7 @@ export async function sendMailTracked(options: {
         error: err.message,
         latencyMs: Date.now() - start,
       });
+      logSystem({ level: "error", source: "email", action: "send_failed", message: `SMTP failed for ${options.to}: ${err.message}` }).catch(() => {});
       return { success: false, provider: "smtp", error: err.message };
     }
   }

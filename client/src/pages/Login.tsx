@@ -183,23 +183,6 @@ export default function Login() {
                   <ArrowRight size={16} className="ml-auto text-gray-400 group-hover:text-[#4B2D8E]" />
                 </button>
 
-                {/* SMS Login */}
-                <button
-                  onClick={() => { setMethod('sms'); setStep('identifier'); setError(''); }}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#4B2D8E] hover:bg-purple-50 transition-all group"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#F15929]/10 flex items-center justify-center group-hover:bg-[#F15929] transition-colors">
-                    <Phone size={20} className="text-[#F15929] group-hover:text-white transition-colors" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-display text-sm text-[#333]">SIGN IN WITH PHONE</p>
-                    <p className="text-xs text-gray-500 font-body">
-                      {smsAvailable ? "We'll text a 6-digit code to your phone" : "SMS coming soon — code logged for testing"}
-                    </p>
-                  </div>
-                  <ArrowRight size={16} className="ml-auto text-gray-400 group-hover:text-[#F15929]" />
-                </button>
-
                 {/* Google Login */}
                 <button
                   onClick={handleGoogleLogin}

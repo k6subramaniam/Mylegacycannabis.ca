@@ -159,6 +159,7 @@ export async function broadcastPush(payload: PushPayload): Promise<{ sent: numbe
   }
 
   console.log(`[Push] Broadcast: ${stats.sent} sent, ${stats.failed} failed (${subs.length} total subscribers)`);
+  db.logSystem({ level: stats.failed > 0 ? "warn" : "info", source: "push", action: "broadcast", message: `Push broadcast: ${stats.sent} sent, ${stats.failed} failed — "${payload.title}"` }).catch(() => {});
   return stats;
 }
 

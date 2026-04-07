@@ -9,9 +9,18 @@ import { sendOTPEmail, sendOTPSms, getEmailProviderStatus } from "./emailService
 import { triggerWelcomeEmail } from "./emailTemplateEngine";
 import rateLimit from "express-rate-limit";
 import { buildFullUserResponse } from "./userHelpers";
+import { isDisposableEmail, validateCanadianPhone, isValidEmailFormat } from "./validation";
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/** Extract client IP from request, handling Railway/proxy X-Forwarded-For */
+function getClientIp(req: Request): string {
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string") return xff.split(",")[0].trim();
+  if (Array.isArray(xff)) return xff[0]?.split(",")[0]?.trim() || req.ip || "unknown";
+  return req.ip || "unknown";
 }
 
 function isAtLeast19(birthday: string): boolean {
@@ -167,7 +176,9 @@ export function registerCustomAuthRoutes(app: Express) {
         type: "email" | "sms";
         purpose: "login" | "register" | "verify";
         registrationData?: {
-          name: string;
+          name?: string;
+          firstName?: string;
+          lastName?: string;
           email: string;
           phone: string;
           birthday?: string;
@@ -190,8 +201,34 @@ export function registerCustomAuthRoutes(app: Express) {
 
       // Code is valid — handle login vs register
       if (purpose === "register") {
-        if (!registrationData?.name || !registrationData?.phone) {
+        // Accept both old "name" and new "firstName"/"lastName" fields
+        const firstName = registrationData?.firstName || "";
+        const lastName = registrationData?.lastName || "";
+        const fullName = registrationData?.name || `${firstName} ${lastName}`.trim();
+
+        if (!fullName || !registrationData?.phone) {
           res.status(400).json({ error: "Name and phone number are required for registration" });
+          return;
+        }
+
+        // ─── EMAIL VALIDATION ───
+        if (registrationData.email) {
+          if (!isValidEmailFormat(registrationData.email)) {
+            res.status(400).json({ error: "Please enter a valid email address." });
+            return;
+          }
+          if (isDisposableEmail(registrationData.email)) {
+            res.status(400).json({ error: "Temporary or disposable email addresses are not accepted. Please use a permanent email." });
+            await db.logSystem({ level: "warn", source: "auth", action: "register_blocked", message: `Disposable email rejected: ${registrationData.email}`, ipAddress: getClientIp(req) });
+            return;
+          }
+        }
+
+        // ─── PHONE VALIDATION ───
+        const phoneValidation = validateCanadianPhone(registrationData.phone);
+        if (!phoneValidation.valid) {
+          res.status(400).json({ error: phoneValidation.error });
+          await db.logSystem({ level: "warn", source: "auth", action: "register_blocked", message: `Invalid phone rejected: ${registrationData.phone} — ${phoneValidation.error}`, ipAddress: getClientIp(req) });
           return;
         }
 
@@ -205,7 +242,7 @@ export function registerCustomAuthRoutes(app: Express) {
           return;
         }
 
-        const normalizedPhone = normalizePhone(registrationData.phone);
+        const normalizedPhone = phoneValidation.normalized || normalizePhone(registrationData.phone);
 
         // Check if phone already exists
         const existingPhone = await db.getUserByPhone(normalizedPhone);
@@ -218,7 +255,7 @@ export function registerCustomAuthRoutes(app: Express) {
         const openId = `local_${nanoid(16)}`;
         await db.upsertUser({
           openId,
-          name: registrationData.name,
+          name: fullName,
           email: registrationData.email?.toLowerCase().trim() || null,
           phone: normalizedPhone,
           loginMethod: type === "email" ? "email" : "phone",
@@ -226,6 +263,7 @@ export function registerCustomAuthRoutes(app: Express) {
         });
 
         // Update additional fields
+        const clientIp = getClientIp(req);
         const newUser = await db.getUserByOpenId(openId);
         if (newUser) {
           await db.updateUser(newUser.id, {
@@ -234,6 +272,8 @@ export function registerCustomAuthRoutes(app: Express) {
             authMethod: type === "email" ? "email" : "phone",
             birthday: registrationData.birthday || null,
             rewardPoints: 25, // Welcome bonus!
+            registrationIp: clientIp,
+            lastIp: clientIp,
           } as any);
 
           // Log welcome bonus in rewards history
@@ -270,18 +310,20 @@ export function registerCustomAuthRoutes(app: Express) {
           }
         }
 
-        await setSessionCookie(res, req, openId, registrationData.name);
+        await setSessionCookie(res, req, openId, fullName);
 
         // Return full user data
         const createdUser = await db.getUserByOpenId(openId);
-        const fullRegUser = createdUser ? await buildFullUserResponse(createdUser) : { name: registrationData.name, email: registrationData.email, phone: normalizedPhone };
+        const fullRegUser = createdUser ? await buildFullUserResponse(createdUser) : { name: fullName, email: registrationData.email, phone: normalizedPhone };
 
         // Fire-and-forget: send welcome email
         if (registrationData.email) {
           triggerWelcomeEmail({
-            customerName: registrationData.name,
+            customerName: fullName,
             customerEmail: registrationData.email,
           }).catch(err => console.warn("[Register] Welcome email failed:", err.message));
+          // Log registration
+          db.logSystem({ level: "info", source: "auth", action: "register", message: `New user registered: ${registrationData.email}`, userId: newUser?.id, ipAddress: clientIp }).catch(() => {});
         }
 
         res.json({
@@ -319,6 +361,11 @@ export function registerCustomAuthRoutes(app: Express) {
         }
 
         await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
+        // Track IP on login
+        const loginIp = getClientIp(req);
+        await db.updateUser(user.id, { lastIp: loginIp } as any).catch(() => {});
+        await db.logSystem({ level: "info", source: "auth", action: "login", message: `User logged in: ${user.email || user.phone}`, userId: user.id, ipAddress: loginIp }).catch(() => {});
+
         await setSessionCookie(res, req, user.openId, user.name || "");
 
         // Return full user data (orders, verification status, rewards)
