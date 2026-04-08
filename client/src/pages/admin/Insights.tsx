@@ -4,7 +4,7 @@ import {
   Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
   ChevronDown, ChevronUp, BarChart3, Activity, Zap, Star,
   Package, Clock, DollarSign, Heart, Target, X,
-  MapPin, Globe, Shield, ArrowUpDown, Filter,
+  MapPin, Globe, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -97,14 +97,48 @@ const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: str
   review_submit:    { label: "Reviews Posted",  icon: Heart,        color: "bg-pink-500" },
 };
 
-// ─── Province map coordinates (approximate, for Canada dot map) ───
-const PROVINCE_COORDS: Record<string, { x: number; y: number }> = {
-  BC: { x: 70, y: 220 },  AB: { x: 140, y: 230 },  SK: { x: 210, y: 220 },
-  MB: { x: 280, y: 230 }, ON: { x: 380, y: 300 },   QC: { x: 470, y: 260 },
-  NB: { x: 540, y: 280 }, NS: { x: 570, y: 290 },   PE: { x: 555, y: 268 },
-  NL: { x: 580, y: 220 }, NT: { x: 170, y: 120 },   NU: { x: 340, y: 100 },
-  YT: { x: 70, y: 110 },
+// ─── Brand tokens for inline-styled geo components ───
+const BRAND = {
+  purple: "#4B2D8E",
+  purpleLight: "#7c5cbf",
+  orange: "#F15929",
+  green: "#22c55e",
+  yellow: "#eab308",
+  red: "#ef4444",
+  cyan: "#06b6d4",
+  bg: "#f8f8f8",
+  card: "#ffffff",
+  text: "#1a1a2e",
+  textMuted: "#6b7280",
+  border: "#e5e7eb",
 };
+
+// ─── Canada SVG Map — simplified geographic province outlines ───
+const PROVINCE_PATHS: Record<string, { name: string; abbr: string; path: string; labelX: number; labelY: number }> = {
+  BC: { name: "British Columbia", abbr: "BC", path: "M30,195 L30,145 L45,130 L50,100 L55,95 L52,80 L48,75 L50,65 L60,60 L65,75 L70,80 L68,100 L75,120 L80,130 L85,140 L88,160 L80,175 L70,185 L55,195 Z", labelX: 55, labelY: 140 },
+  AB: { name: "Alberta", abbr: "AB", path: "M88,160 L85,140 L80,130 L75,120 L68,100 L70,80 L65,75 L60,60 L80,58 L105,58 L105,160 Z", labelX: 88, labelY: 115 },
+  SK: { name: "Saskatchewan", abbr: "SK", path: "M105,58 L105,160 L140,160 L140,58 Z", labelX: 122, labelY: 115 },
+  MB: { name: "Manitoba", abbr: "MB", path: "M140,58 L140,160 L165,165 L175,155 L180,135 L175,110 L178,90 L175,70 L168,58 Z", labelX: 158, labelY: 115 },
+  ON: { name: "Ontario", abbr: "ON", path: "M168,58 L175,70 L178,90 L175,110 L180,135 L175,155 L165,165 L170,180 L180,195 L195,205 L210,200 L225,195 L235,185 L240,175 L235,165 L225,160 L220,155 L225,145 L230,130 L228,115 L220,105 L210,100 L205,90 L195,80 L188,72 L180,65 L175,58 Z", labelX: 205, labelY: 150 },
+  QC: { name: "Quebec", abbr: "QC", path: "M225,195 L235,185 L240,175 L235,165 L225,160 L220,155 L225,145 L230,130 L228,115 L235,105 L245,95 L255,85 L265,78 L280,72 L295,68 L305,75 L310,85 L305,100 L295,115 L290,125 L285,140 L275,155 L265,165 L255,175 L245,185 L235,195 Z", labelX: 268, labelY: 130 },
+  NB: { name: "New Brunswick", abbr: "NB", path: "M305,170 L310,160 L318,155 L325,160 L328,170 L322,178 L312,180 Z", labelX: 316, labelY: 168 },
+  NS: { name: "Nova Scotia", abbr: "NS", path: "M322,178 L328,170 L340,168 L350,172 L355,180 L348,188 L335,190 L325,186 Z", labelX: 340, labelY: 180 },
+  PE: { name: "Prince Edward Island", abbr: "PE", path: "M332,155 L340,152 L348,155 L345,160 L335,160 Z", labelX: 340, labelY: 157 },
+  NL: { name: "Newfoundland & Labrador", abbr: "NL", path: "M310,85 L320,80 L335,78 L345,85 L350,100 L345,115 L335,120 L320,118 L310,110 L305,100 Z", labelX: 330, labelY: 100 },
+  YT: { name: "Yukon", abbr: "YT", path: "M30,45 L30,10 L60,8 L65,15 L60,30 L55,45 L50,55 L50,65 L48,75 L52,80 L55,95 L50,100 L45,80 L35,60 Z", labelX: 45, labelY: 45 },
+  NT: { name: "Northwest Territories", abbr: "NT", path: "M60,8 L65,15 L60,30 L55,45 L50,55 L60,60 L80,58 L105,58 L140,58 L168,58 L175,58 L180,50 L175,35 L160,20 L140,12 L120,8 L100,5 L80,5 Z", labelX: 120, labelY: 35 },
+  NU: { name: "Nunavut", abbr: "NU", path: "M175,58 L180,50 L175,35 L160,20 L170,15 L185,10 L200,5 L220,3 L245,5 L265,10 L280,20 L290,35 L295,50 L295,68 L280,72 L265,78 L255,85 L245,95 L235,105 L228,115 L220,105 L210,100 L205,90 L195,80 L188,72 L180,65 Z", labelX: 235, labelY: 45 },
+};
+
+function getProvinceColor(value: number, maxValue: number, isSelected: boolean): string {
+  if (isSelected) return BRAND.orange;
+  if (!value || value === 0) return "#e8e6f0";
+  const intensity = Math.max(0.15, Math.min(1, value / maxValue));
+  const r = Math.round(232 - intensity * (232 - 75));
+  const g = Math.round(230 - intensity * (230 - 45));
+  const b = Math.round(240 - intensity * (240 - 142));
+  return `rgb(${r},${g},${b})`;
+}
 
 // ─── Category label + color mapping ───
 const CATEGORY_COLORS: Record<string, string> = {
@@ -338,53 +372,282 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   );
 }
 
-// ─── Canada Map (SVG dot map) ───
-function CanadaMap({ provinceData, selectedProvince, onSelect }: {
-  provinceData: Array<{ province: string; provinceCode: string; events: number }>;
+// ─── Canada Province Map (real SVG geographic shapes with heat-map fill) ───
+function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = "events" }: {
+  data: Array<{ province: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number }>;
   selectedProvince: string | null;
-  onSelect: (code: string | null) => void;
+  onSelectProvince: (code: string | null) => void;
+  metric?: string;
 }) {
-  const maxEvents = Math.max(...provinceData.map(p => p.events), 1);
+  const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
+
+  const dataMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    (data || []).forEach(d => { map[d.provinceCode] = d; });
+    return map;
+  }, [data]);
+
+  const maxValue = useMemo(() => {
+    return Math.max(1, ...Object.values(dataMap).map((d: any) => d[metric] || d.events || 0));
+  }, [dataMap, metric]);
+
   return (
-    <div className="relative">
-      <svg viewBox="0 0 650 400" className="w-full" style={{ maxHeight: 280 }}>
-        {/* Background */}
-        <rect width="650" height="400" fill="transparent" onClick={() => onSelect(null)} />
-        {/* Province dots */}
-        {provinceData.map(p => {
-          const coords = PROVINCE_COORDS[p.provinceCode];
-          if (!coords) return null;
-          const r = Math.max(6, Math.min(30, (p.events / maxEvents) * 30));
-          const isSelected = selectedProvince === p.provinceCode;
+    <div style={{ position: "relative" }}>
+      <svg
+        viewBox="0 0 380 220"
+        style={{ width: "100%", height: "auto", maxHeight: 340 }}
+        role="img"
+        aria-label="Canada province map showing traffic distribution"
+      >
+        <rect x="0" y="0" width="380" height="220" fill="#f0f4ff" rx="8" />
+        {Object.entries(PROVINCE_PATHS).map(([code, prov]) => {
+          const d = dataMap[code];
+          const value = d ? (d[metric] || d.events || 0) : 0;
+          const isSelected = selectedProvince === code;
+          const isHovered = hoveredProvince === code;
           return (
-            <g key={p.provinceCode} onClick={() => onSelect(isSelected ? null : p.provinceCode)} className="cursor-pointer">
-              <circle
-                cx={coords.x} cy={coords.y} r={r}
-                fill={isSelected ? "#4B2D8E" : "#4B2D8E"}
-                fillOpacity={isSelected ? 0.9 : 0.5}
-                stroke={isSelected ? "#fff" : "none"}
-                strokeWidth={isSelected ? 2 : 0}
-                className="transition-all hover:fill-opacity-80"
+            <g key={code}>
+              <path
+                d={prov.path}
+                fill={getProvinceColor(value, maxValue, isSelected)}
+                stroke={isSelected ? BRAND.orange : isHovered ? BRAND.purple : "#c4c0d4"}
+                strokeWidth={isSelected ? 2.5 : isHovered ? 1.8 : 0.8}
+                cursor={value > 0 ? "pointer" : "default"}
+                onClick={() => value > 0 && onSelectProvince(isSelected ? null : code)}
+                onMouseEnter={() => setHoveredProvince(code)}
+                onMouseLeave={() => setHoveredProvince(null)}
+                style={{ transition: "fill 0.3s, stroke-width 0.2s", filter: isSelected ? "drop-shadow(0 2px 6px rgba(241,89,41,0.3))" : "none" }}
               />
               <text
-                x={coords.x} y={coords.y + r + 14}
-                textAnchor="middle" fontSize="10" fontWeight="600"
-                fill={isSelected ? "#4B2D8E" : "#6b7280"}
+                x={prov.labelX} y={prov.labelY}
+                textAnchor="middle" dominantBaseline="central"
+                style={{ fontSize: code === "PE" ? 6 : 8, fontWeight: 700, fill: value > maxValue * 0.5 ? "#fff" : isSelected ? "#fff" : "#4B2D8E", pointerEvents: "none", letterSpacing: 0.5, fontFamily: "system-ui, sans-serif" }}
               >
-                {p.provinceCode}
+                {code}
               </text>
-              {isSelected && (
+              {value > 0 && (
                 <text
-                  x={coords.x} y={coords.y - r - 5}
-                  textAnchor="middle" fontSize="9" fill="#4B2D8E" fontWeight="500"
+                  x={prov.labelX} y={prov.labelY + (code === "PE" ? 7 : 10)}
+                  textAnchor="middle"
+                  style={{ fontSize: 6, fontWeight: 600, fill: value > maxValue * 0.5 ? "rgba(255,255,255,0.85)" : "#6b7280", pointerEvents: "none", fontFamily: "system-ui, sans-serif" }}
                 >
-                  {p.events.toLocaleString()} events
+                  {value.toLocaleString()}
                 </text>
               )}
             </g>
           );
         })}
       </svg>
+
+      {/* Hover tooltip card */}
+      {hoveredProvince && dataMap[hoveredProvince] && (
+        <div style={{
+          position: "absolute", top: 8, right: 8,
+          background: "white", borderRadius: 10, padding: "10px 14px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.12)", border: `1px solid ${BRAND.border}`,
+          minWidth: 160, zIndex: 10,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: BRAND.text, marginBottom: 6 }}>
+            {PROVINCE_PATHS[hoveredProvince]?.name}
+          </div>
+          {(() => {
+            const d = dataMap[hoveredProvince];
+            return (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 11 }}>
+                <span style={{ color: BRAND.textMuted }}>Events</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.events || 0).toLocaleString()}</span>
+                <span style={{ color: BRAND.textMuted }}>Visitors</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.uniqueVisitors || 0).toLocaleString()}</span>
+                <span style={{ color: BRAND.textMuted }}>Orders</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.orders || 0).toLocaleString()}</span>
+                <span style={{ color: BRAND.textMuted }}>Revenue</span>
+                <span style={{ fontWeight: 600, textAlign: "right", color: BRAND.green }}>
+                  ${(d.revenue || 0).toLocaleString()}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Legend */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8, fontSize: 10, color: BRAND.textMuted }}>
+        <span>Less traffic</span>
+        <div style={{ display: "flex", gap: 2 }}>
+          {[0.1, 0.3, 0.5, 0.7, 0.9].map(i => (
+            <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: getProvinceColor(i * 100, 100, false) }} />
+          ))}
+        </div>
+        <span>More traffic</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Conversion Rate Table (sortable with Conv%, AOV, mini-bars) ───
+function ConversionTable({ data, provinceFilter }: {
+  data: Array<{ city: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number }>;
+  provinceFilter: string | null;
+}) {
+  const [sortBy, setSortBy] = useState<string>("conversion");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const enriched = useMemo(() => {
+    return (data || [])
+      .filter(d => !provinceFilter || d.provinceCode === provinceFilter)
+      .map(d => {
+        const events = d.events || 0;
+        const visitors = d.uniqueVisitors || 0;
+        const orders = d.orders || 0;
+        const revenue = d.revenue || 0;
+        const conversion = visitors > 0 ? ((orders / visitors) * 100) : 0;
+        const aov = orders > 0 ? revenue / orders : 0;
+        return { ...d, events, visitors, orders, revenue, conversion, aov };
+      })
+      .sort((a, b) => {
+        const mult = sortDir === "desc" ? -1 : 1;
+        return ((a as any)[sortBy] - (b as any)[sortBy]) * mult;
+      });
+  }, [data, provinceFilter, sortBy, sortDir]);
+
+  const toggleSort = (col: string) => {
+    if (sortBy === col) setSortDir(d => d === "desc" ? "asc" : "desc");
+    else { setSortBy(col); setSortDir("desc"); }
+  };
+
+  const getConversionColor = (rate: number) => {
+    if (rate >= 15) return BRAND.green;
+    if (rate >= 10) return BRAND.yellow;
+    if (rate >= 5) return BRAND.orange;
+    return BRAND.red;
+  };
+
+  const SortHeader = ({ col, label, align = "right" }: { col: string; label: string; align?: string }) => (
+    <th
+      onClick={() => toggleSort(col)}
+      style={{
+        padding: "8px 10px", textAlign: align as any, cursor: "pointer", userSelect: "none",
+        fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" as const,
+        color: sortBy === col ? BRAND.purple : BRAND.textMuted,
+        borderBottom: `2px solid ${sortBy === col ? BRAND.purple : BRAND.border}`,
+        whiteSpace: "nowrap" as const,
+      }}
+    >
+      {label} {sortBy === col ? (sortDir === "desc" ? "\u25BC" : "\u25B2") : ""}
+    </th>
+  );
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead>
+          <tr>
+            <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: BRAND.textMuted, borderBottom: `2px solid ${BRAND.border}` }}>City</th>
+            <SortHeader col="events" label="Events" />
+            <SortHeader col="visitors" label="Visitors" />
+            <SortHeader col="orders" label="Orders" />
+            <SortHeader col="conversion" label="Conv %" />
+            <SortHeader col="revenue" label="Revenue" />
+            <SortHeader col="aov" label="AOV" />
+          </tr>
+        </thead>
+        <tbody>
+          {enriched.map((row, i) => (
+            <tr
+              key={row.city + row.provinceCode}
+              style={{ background: i % 2 === 0 ? "transparent" : "#f9fafb", transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#f3f0ff")}
+              onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "#f9fafb")}
+            >
+              <td style={{ padding: "10px 10px", fontWeight: 600, color: BRAND.text }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>{row.city}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, background: "#f3f0ff", color: BRAND.purple, padding: "1px 5px", borderRadius: 4 }}>{row.provinceCode}</span>
+                </div>
+              </td>
+              <td style={{ padding: "10px", textAlign: "right", color: BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>{row.events.toLocaleString()}</td>
+              <td style={{ padding: "10px", textAlign: "right", color: BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>{row.visitors.toLocaleString()}</td>
+              <td style={{ padding: "10px", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.orders.toLocaleString()}</td>
+              <td style={{ padding: "10px", textAlign: "right" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                  <div style={{ width: 40, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: `${Math.min(100, row.conversion * 3)}%`, height: "100%", borderRadius: 3, background: getConversionColor(row.conversion), transition: "width 0.4s ease" }} />
+                  </div>
+                  <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: getConversionColor(row.conversion) }}>
+                    {row.conversion.toFixed(1)}%
+                  </span>
+                </div>
+              </td>
+              <td style={{ padding: "10px", textAlign: "right", fontWeight: 700, color: row.revenue > 0 ? BRAND.green : BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                ${row.revenue.toLocaleString()}
+              </td>
+              <td style={{ padding: "10px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: row.aov > 0 ? BRAND.text : BRAND.textMuted }}>
+                ${row.aov.toFixed(0)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {enriched.length === 0 && (
+        <div style={{ textAlign: "center", padding: 24, color: BRAND.textMuted, fontSize: 13 }}>
+          No city data for selected period
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Conversion Funnel visualization ───
+function ConversionFunnel({ data }: {
+  data: Array<{ events: number; uniqueVisitors: number; orders: number }>;
+}) {
+  const totals = useMemo(() => {
+    if (!data?.length) return { visitors: 0, events: 0, orders: 0 };
+    return data.reduce((acc, d) => ({
+      visitors: acc.visitors + (d.uniqueVisitors || 0),
+      events: acc.events + (d.events || 0),
+      orders: acc.orders + (d.orders || 0),
+    }), { visitors: 0, events: 0, orders: 0 });
+  }, [data]);
+
+  const steps = [
+    { label: "Visitors", value: totals.visitors, color: BRAND.purple },
+    { label: "Events", value: totals.events, color: BRAND.purpleLight },
+    { label: "Orders", value: totals.orders, color: BRAND.green },
+  ];
+
+  const maxVal = Math.max(1, ...steps.map(s => s.value));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {steps.map((step, i) => {
+        const barWidth = Math.max(8, (step.value / maxVal) * 100);
+        const dropoff = i > 0 ? ((1 - step.value / steps[i - 1].value) * 100) : 0;
+        return (
+          <div key={step.label}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: BRAND.text }}>{step.label}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: step.color, fontVariantNumeric: "tabular-nums" }}>
+                  {step.value.toLocaleString()}
+                </span>
+                {i > 0 && dropoff > 0 && (
+                  <span style={{ fontSize: 9, fontWeight: 600, color: BRAND.red, background: "#fef2f2", padding: "1px 6px", borderRadius: 4 }}>
+                    -{dropoff.toFixed(0)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ width: "100%", height: 12, background: "#f3f4f6", borderRadius: 6, overflow: "hidden" }}>
+              <div style={{
+                width: `${barWidth}%`, height: "100%", borderRadius: 6,
+                background: `linear-gradient(90deg, ${step.color}90, ${step.color})`,
+                transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)",
+              }} />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -401,7 +664,7 @@ export default function AdminInsights() {
   const [geoPeriod, setGeoPeriod] = useState(30);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [trendMetric, setTrendMetric] = useState<"events" | "visitors" | "orders">("visitors");
-  const [citySortBy, setCitySortBy] = useState<"events" | "revenue" | "orders">("events");
+  // citySortBy removed — ConversionTable handles its own sorting
 
   // ─── Existing data fetching ───
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
@@ -454,20 +717,25 @@ export default function AdminInsights() {
   const totalEvents = analytics?.totalEvents ?? 0;
   const maxEventCount = Math.max(...Object.values(analytics?.eventCounts ?? { _: 1 }), 1);
 
-  // ─── Geo computed ───
-  const sortedCities = useMemo(() => {
-    if (!geoCities) return [];
-    return [...geoCities].sort((a, b) => (b as any)[citySortBy] - (a as any)[citySortBy]);
-  }, [geoCities, citySortBy]);
-
-  const cityMax = useMemo(() => {
-    if (!sortedCities.length) return { events: 1, revenue: 1, orders: 1 };
-    return {
-      events: Math.max(...sortedCities.map(c => c.events), 1),
-      revenue: Math.max(...sortedCities.map(c => c.revenue), 1),
-      orders: Math.max(...sortedCities.map(c => c.orders), 1),
-    };
-  }, [sortedCities]);
+  // ─── Geo computed: conversion metrics ───
+  const geoConversionMetrics = useMemo(() => {
+    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0 };
+    const totalVisitors = geoProvinces.reduce((s, p) => s + (p.uniqueVisitors || 0), 0);
+    const totalOrders = geoProvinces.reduce((s, p) => s + (p.orders || 0), 0);
+    const totalRevenue = geoProvinces.reduce((s, p) => s + (p.revenue || 0), 0);
+    const convRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
+    const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    // Best converting and highest traffic city
+    let bestCity = "-", bestCityConv = 0, topCity = "-", topCityEvents = 0;
+    if (geoCities?.length) {
+      for (const c of geoCities) {
+        const cv = c.uniqueVisitors > 0 ? (c.orders / c.uniqueVisitors) * 100 : 0;
+        if (cv > bestCityConv) { bestCityConv = cv; bestCity = c.city; }
+        if (c.events > topCityEvents) { topCityEvents = c.events; topCity = c.city; }
+      }
+    }
+    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue };
+  }, [geoProvinces, geoCities]);
 
   // Group products by province for category breakdown
   const productsByProvince = useMemo(() => {
@@ -859,111 +1127,119 @@ export default function AdminInsights() {
             </div>
           </div>
 
-          {/* Map + City Table (2-col) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Interactive Canada Map */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
-                <Globe size={15} className="text-[#4B2D8E]" />
-                Traffic by Province
-                {selectedProvince && (
-                  <button
-                    onClick={() => setSelectedProvince(null)}
-                    className="ml-2 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full hover:bg-gray-200"
-                  >
-                    Clear filter
-                  </button>
-                )}
-              </h3>
-              {(geoProvinces ?? []).length > 0 ? (
-                <CanadaMap
-                  provinceData={geoProvinces!}
-                  selectedProvince={selectedProvince}
-                  onSelect={setSelectedProvince}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-16">
-                  <div className="text-center">
-                    <Globe size={36} className="mx-auto text-gray-300 mb-3" />
-                    <p className="text-xs text-gray-400">No geo data yet. Events will appear as visitors browse.</p>
-                  </div>
-                </div>
-              )}
-              {/* Province legend */}
-              {(geoProvinces ?? []).length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {geoProvinces!.slice(0, 8).map(p => (
-                    <button
-                      key={p.provinceCode}
-                      onClick={() => setSelectedProvince(selectedProvince === p.provinceCode ? null : p.provinceCode)}
-                      className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
-                        selectedProvince === p.provinceCode
-                          ? "bg-[#4B2D8E] text-white border-[#4B2D8E]"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-[#4B2D8E]/40"
-                      }`}
-                    >
-                      {p.provinceCode} ({p.events.toLocaleString()})
-                    </button>
-                  ))}
-                </div>
+          {/* Canada Province Map (full-width) */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <Globe size={15} className="text-[#4B2D8E]" />
+                  Traffic by Province
+                </h3>
+                <p className="text-[10px] text-gray-400 mt-1">Click a province to filter &middot; Hover for details</p>
+              </div>
+              {selectedProvince && (
+                <button
+                  onClick={() => setSelectedProvince(null)}
+                  className="text-[11px] font-semibold text-[#F15929] bg-orange-50 border border-[#F15929]/20 px-3 py-1 rounded-lg hover:bg-orange-100 transition-all"
+                >
+                  Clear: {selectedProvince} &times;
+                </button>
               )}
             </div>
-
-            {/* City Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-                  <MapPin size={15} className="text-emerald-500" />
-                  Top Cities
-                  {selectedProvince && (
-                    <span className="text-[10px] bg-[#4B2D8E]/10 text-[#4B2D8E] px-2 py-0.5 rounded-full font-normal">
-                      {selectedProvince}
-                    </span>
-                  )}
-                </h3>
-                <div className="flex gap-1">
-                  {(["events", "revenue", "orders"] as const).map(key => (
-                    <button
-                      key={key}
-                      onClick={() => setCitySortBy(key)}
-                      className={`text-[10px] px-2 py-1 rounded ${
-                        citySortBy === key ? "bg-[#4B2D8E] text-white" : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </button>
-                  ))}
+            {(geoProvinces ?? []).length > 0 ? (
+              <CanadaProvinceMap
+                data={geoProvinces!}
+                selectedProvince={selectedProvince}
+                onSelectProvince={setSelectedProvince}
+                metric="events"
+              />
+            ) : (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <Globe size={36} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-xs text-gray-400">No geo data yet. Events will appear as visitors browse.</p>
                 </div>
               </div>
-              {sortedCities.length > 0 ? (
-                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
-                  {sortedCities.map((c, i) => (
-                    <div key={`${c.city}-${c.provinceCode}`} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-[10px] font-mono text-gray-400 w-4 shrink-0">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between text-xs mb-0.5">
-                          <span className="text-gray-700 font-medium truncate">{c.city}</span>
-                          <span className="text-[10px] text-gray-400 ml-2 shrink-0">{c.provinceCode}</span>
-                        </div>
-                        <MiniBar
-                          value={(c as any)[citySortBy]}
-                          max={(cityMax as any)[citySortBy]}
-                          color="bg-[#4B2D8E]"
-                        />
+            )}
+          </div>
+
+          {/* Conversion Funnel + Key Metrics (2-col) */}
+          {(geoProvinces ?? []).length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-4">
+                  <TrendingUp size={15} className="text-[#4B2D8E]" />
+                  Conversion Funnel
+                </h3>
+                <ConversionFunnel data={geoProvinces!} />
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-4">
+                  <Target size={15} className="text-[#4B2D8E]" />
+                  Conversion Metrics
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      label: "Overall Conv. Rate",
+                      value: `${geoConversionMetrics.convRate.toFixed(1)}%`,
+                      sub: `${geoConversionMetrics.totalOrders} orders / ${geoConversionMetrics.totalVisitors} visitors`,
+                      color: geoConversionMetrics.convRate >= 15 ? BRAND.green : geoConversionMetrics.convRate >= 5 ? BRAND.yellow : BRAND.red,
+                    },
+                    {
+                      label: "Avg Order Value",
+                      value: `$${geoConversionMetrics.aov.toFixed(0)}`,
+                      sub: "Across all orders",
+                      color: geoConversionMetrics.aov > 0 ? BRAND.green : BRAND.textMuted,
+                    },
+                    {
+                      label: "Best Converting City",
+                      value: geoConversionMetrics.bestCity,
+                      sub: `${geoConversionMetrics.bestCityConv.toFixed(1)}% conversion`,
+                      color: BRAND.green,
+                    },
+                    {
+                      label: "Highest Traffic",
+                      value: geoConversionMetrics.topCity,
+                      sub: `${geoConversionMetrics.topCityEvents.toLocaleString()} events`,
+                      color: BRAND.purple,
+                    },
+                  ].map((card, i) => (
+                    <div key={i} style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: BRAND.textMuted, marginBottom: 6 }}>
+                        {card.label}
                       </div>
-                      <div className="text-right shrink-0 ml-2">
-                        <p className="text-xs font-mono text-gray-700">
-                          {citySortBy === "revenue" ? `$${c.revenue.toLocaleString()}` : (c as any)[citySortBy].toLocaleString()}
-                        </p>
-                        <p className="text-[9px] text-gray-400">{c.uniqueVisitors} visitors</p>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: card.color }}>
+                        {card.value}
+                      </div>
+                      <div style={{ fontSize: 10, color: BRAND.textMuted, marginTop: 2 }}>
+                        {card.sub}
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-xs text-gray-400 italic py-8 text-center">No city data yet</p>
-              )}
+              </div>
             </div>
+          )}
+
+          {/* City Performance & Conversion Table (full-width) */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                <MapPin size={15} className="text-emerald-500" />
+                City Performance &amp; Conversion
+                {selectedProvince && (
+                  <span className="text-[10px] bg-[#4B2D8E]/10 text-[#4B2D8E] px-2 py-0.5 rounded-full font-normal ml-1">
+                    {selectedProvince}
+                  </span>
+                )}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-1">Click column headers to sort &middot; Conv% = Orders &divide; Visitors &middot; AOV = Revenue &divide; Orders</p>
+            </div>
+            <ConversionTable
+              data={geoCities || []}
+              provinceFilter={selectedProvince}
+            />
           </div>
 
           {/* Daily Trend Chart */}
