@@ -403,8 +403,10 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
               <path
                 d={prov.path}
                 fill={getProvinceColor(value, maxValue, isSelected)}
-                stroke={isSelected ? BRAND.orange : isHovered ? BRAND.purple : "#c4c0d4"}
-                strokeWidth={isSelected ? 3.5 : isHovered ? 2.5 : 1}
+                stroke={isSelected ? BRAND.orange : isHovered ? BRAND.purple : "#b8b0c8"}
+                strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.5}
+                strokeLinejoin="round"
+                paintOrder="stroke fill"
                 cursor={value > 0 ? "pointer" : "default"}
                 onClick={() => value > 0 && onSelectProvince(isSelected ? null : code)}
                 onMouseEnter={() => setHoveredProvince(code)}
