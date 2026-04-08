@@ -1,9 +1,10 @@
 import { trpc } from "@/lib/trpc";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
   ChevronDown, ChevronUp, BarChart3, Activity, Zap, Star,
   Package, Clock, DollarSign, Heart, Target, X,
+  MapPin, Globe, Shield, ArrowUpDown, Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +15,6 @@ function useStealthMeta() {
     meta.name = "robots";
     meta.content = "noindex, nofollow, noarchive, nosnippet";
     document.head.appendChild(meta);
-    // Also set a restrictive title that reveals nothing
     const origTitle = document.title;
     document.title = "Admin";
     return () => {
@@ -51,6 +51,38 @@ function Sparkline({ data, color = "#4B2D8E" }: { data: number[]; color?: string
   );
 }
 
+// ─── Area Chart (for daily trend) ───
+function AreaChart({ data, dataKey, color = "#4B2D8E", height = 120 }: {
+  data: Array<{ date: string; [key: string]: any }>;
+  dataKey: string;
+  color?: string;
+  height?: number;
+}) {
+  if (!data.length) return null;
+  const w = 600, h = height;
+  const values = data.map(d => d[dataKey] as number);
+  const max = Math.max(...values, 1);
+  const pts = values.map((v, i) => {
+    const x = (i / Math.max(data.length - 1, 1)) * w;
+    const y = h - (v / max) * (h - 10);
+    return `${x},${y}`;
+  });
+  const line = pts.join(" ");
+  const area = `0,${h} ${line} ${w},${h}`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height }}>
+      <defs>
+        <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill={`url(#grad-${dataKey})`} />
+      <polyline points={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ─── Event type friendly names ───
 const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: string }> = {
   page_view:        { label: "Page Views",      icon: Eye,          color: "bg-blue-500" },
@@ -65,11 +97,29 @@ const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: str
   review_submit:    { label: "Reviews Posted",  icon: Heart,        color: "bg-pink-500" },
 };
 
+// ─── Province map coordinates (approximate, for Canada dot map) ───
+const PROVINCE_COORDS: Record<string, { x: number; y: number }> = {
+  BC: { x: 70, y: 220 },  AB: { x: 140, y: 230 },  SK: { x: 210, y: 220 },
+  MB: { x: 280, y: 230 }, ON: { x: 380, y: 300 },   QC: { x: 470, y: 260 },
+  NB: { x: 540, y: 280 }, NS: { x: 570, y: 290 },   PE: { x: 555, y: 268 },
+  NL: { x: 580, y: 220 }, NT: { x: 170, y: 120 },   NU: { x: 340, y: 100 },
+  YT: { x: 70, y: 110 },
+};
+
+// ─── Category label + color mapping ───
+const CATEGORY_COLORS: Record<string, string> = {
+  flower: "#4B2D8E", "pre-rolls": "#22c55e", edibles: "#f59e0b",
+  vapes: "#3b82f6", concentrates: "#ef4444", accessories: "#6b7280",
+  "ounce-deals": "#8b5cf6", "shake-n-bake": "#ec4899",
+};
+function catLabel(cat: string): string {
+  return cat.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
 // ─── User Memory Card ───
 function UserMemoryCard({ memory, onViewDetail }: { memory: any; onViewDetail: () => void }) {
   const cats = (memory.preferredCategories || []).slice(0, 3);
   const strains = (memory.preferredStrains || []).slice(0, 3);
-  // Use live order data when available, fall back to cached AI memory data
   const orders = memory.liveOrders ?? memory.totalOrders ?? 0;
   const spent = parseFloat(memory.liveSpent || memory.totalSpent || "0");
   return (
@@ -124,13 +174,11 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   const reviewHistory = memory.reviewHistory || [];
   const priceRange = memory.priceRange;
 
-  // Fetch live order stats for this user (real-time, not cached AI memory)
   const { data: liveStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
     { userId: memory.userId },
     { enabled: !!memory.userId }
   );
 
-  // Use live data when available, fall back to cached AI memory
   const totalOrders = liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
   const totalSpent = parseFloat(liveStats?.totalSpent ?? memory.liveSpent ?? memory.totalSpent ?? "0");
   const avgOrder = parseFloat(liveStats?.avgOrderValue ?? memory.liveAvgOrder ?? memory.avgOrderValue ?? "0");
@@ -149,7 +197,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </button>
         </div>
 
-        {/* AI Summary */}
         {memory.aiSummary && (
           <div className="bg-gradient-to-r from-[#4B2D8E]/5 to-purple-50 rounded-xl p-4 mb-5 border border-[#4B2D8E]/10">
             <h4 className="text-xs font-semibold text-[#4B2D8E] uppercase tracking-wide mb-2 flex items-center gap-1.5">
@@ -159,7 +206,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
         )}
 
-        {/* Stats row — LIVE DATA */}
         <div className="grid grid-cols-4 gap-3 mb-5">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-lg font-bold text-gray-800">{totalOrders}</p>
@@ -182,7 +228,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
         </div>
 
-        {/* Order History — LIVE */}
         {orders.length > 0 && (
           <div className="mb-5">
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
@@ -220,7 +265,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
         )}
 
         <div className="grid grid-cols-2 gap-5">
-          {/* Preferred Categories */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Preferred Categories</h4>
             {cats.length > 0 ? (
@@ -231,8 +275,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
               </div>
             ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
           </div>
-
-          {/* Preferred Strains */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Preferred Strains</h4>
             {strains.length > 0 ? (
@@ -243,16 +285,12 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
               </div>
             ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
           </div>
-
-          {/* Price Range */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Price Range</h4>
             {priceRange ? (
               <p className="text-sm font-medium text-gray-700">${priceRange.min?.toFixed(2)} &ndash; ${priceRange.max?.toFixed(2)}</p>
             ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
           </div>
-
-          {/* Shopping Patterns */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Shopping Patterns</h4>
             {memory.shoppingPatterns ? (
@@ -261,7 +299,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
         </div>
 
-        {/* Recently Viewed Products */}
         {lastProducts.length > 0 && (
           <div className="mt-5">
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Recently Viewed Products</h4>
@@ -276,7 +313,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
         )}
 
-        {/* Review History */}
         {reviewHistory.length > 0 && (
           <div className="mt-5">
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Review History</h4>
@@ -285,7 +321,7 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
                 <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
                   <span className="text-gray-700">Product #{r.productId}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-yellow-500">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span>
+                    <span className="text-yellow-500">{"*".repeat(r.rating)}{"*".repeat(5 - r.rating)}</span>
                     <span className="text-gray-400">{r.date ? new Date(r.date).toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : ""}</span>
                   </div>
                 </div>
@@ -302,6 +338,57 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   );
 }
 
+// ─── Canada Map (SVG dot map) ───
+function CanadaMap({ provinceData, selectedProvince, onSelect }: {
+  provinceData: Array<{ province: string; provinceCode: string; events: number }>;
+  selectedProvince: string | null;
+  onSelect: (code: string | null) => void;
+}) {
+  const maxEvents = Math.max(...provinceData.map(p => p.events), 1);
+  return (
+    <div className="relative">
+      <svg viewBox="0 0 650 400" className="w-full" style={{ maxHeight: 280 }}>
+        {/* Background */}
+        <rect width="650" height="400" fill="transparent" onClick={() => onSelect(null)} />
+        {/* Province dots */}
+        {provinceData.map(p => {
+          const coords = PROVINCE_COORDS[p.provinceCode];
+          if (!coords) return null;
+          const r = Math.max(6, Math.min(30, (p.events / maxEvents) * 30));
+          const isSelected = selectedProvince === p.provinceCode;
+          return (
+            <g key={p.provinceCode} onClick={() => onSelect(isSelected ? null : p.provinceCode)} className="cursor-pointer">
+              <circle
+                cx={coords.x} cy={coords.y} r={r}
+                fill={isSelected ? "#4B2D8E" : "#4B2D8E"}
+                fillOpacity={isSelected ? 0.9 : 0.5}
+                stroke={isSelected ? "#fff" : "none"}
+                strokeWidth={isSelected ? 2 : 0}
+                className="transition-all hover:fill-opacity-80"
+              />
+              <text
+                x={coords.x} y={coords.y + r + 14}
+                textAnchor="middle" fontSize="10" fontWeight="600"
+                fill={isSelected ? "#4B2D8E" : "#6b7280"}
+              >
+                {p.provinceCode}
+              </text>
+              {isSelected && (
+                <text
+                  x={coords.x} y={coords.y - r - 5}
+                  textAnchor="middle" fontSize="9" fill="#4B2D8E" fontWeight="500"
+                >
+                  {p.events.toLocaleString()} events
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -310,14 +397,41 @@ export default function AdminInsights() {
 
   const [detailMemory, setDetailMemory] = useState<any>(null);
   const [showEventBreakdown, setShowEventBreakdown] = useState(false);
+  const [activeTab, setActiveTab] = useState<"behavior" | "geo">("behavior");
+  const [geoPeriod, setGeoPeriod] = useState(30);
+  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const [trendMetric, setTrendMetric] = useState<"events" | "visitors" | "orders">("visitors");
+  const [citySortBy, setCitySortBy] = useState<"events" | "revenue" | "orders">("events");
 
-  // Data fetching
+  // ─── Existing data fetching ───
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
     refetchOnWindowFocus: true,
   });
   const { data: memories, isLoading: memoriesLoading, refetch: refetchMemories } = trpc.admin.aiMemory.allMemories.useQuery(undefined, {
     refetchOnWindowFocus: true,
   });
+
+  // ─── Geo data fetching ───
+  const { data: geoProvinces } = trpc.admin.geoAnalytics.byProvince.useQuery(
+    { days: geoPeriod },
+    { enabled: activeTab === "geo" }
+  );
+  const { data: geoCities } = trpc.admin.geoAnalytics.byCity.useQuery(
+    { days: geoPeriod, province: selectedProvince || undefined },
+    { enabled: activeTab === "geo" }
+  );
+  const { data: geoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
+    { days: geoPeriod },
+    { enabled: activeTab === "geo" }
+  );
+  const { data: proxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
+    { days: geoPeriod },
+    { enabled: activeTab === "geo" }
+  );
+  const { data: dailyTrend } = trpc.admin.geoAnalytics.dailyTrend.useQuery(
+    { days: geoPeriod },
+    { enabled: activeTab === "geo" }
+  );
 
   const refreshAllMut = trpc.admin.aiMemory.refreshAllMemories.useMutation({
     onSuccess: (res: any) => {
@@ -340,6 +454,34 @@ export default function AdminInsights() {
   const totalEvents = analytics?.totalEvents ?? 0;
   const maxEventCount = Math.max(...Object.values(analytics?.eventCounts ?? { _: 1 }), 1);
 
+  // ─── Geo computed ───
+  const sortedCities = useMemo(() => {
+    if (!geoCities) return [];
+    return [...geoCities].sort((a, b) => (b as any)[citySortBy] - (a as any)[citySortBy]);
+  }, [geoCities, citySortBy]);
+
+  const cityMax = useMemo(() => {
+    if (!sortedCities.length) return { events: 1, revenue: 1, orders: 1 };
+    return {
+      events: Math.max(...sortedCities.map(c => c.events), 1),
+      revenue: Math.max(...sortedCities.map(c => c.revenue), 1),
+      orders: Math.max(...sortedCities.map(c => c.orders), 1),
+    };
+  }, [sortedCities]);
+
+  // Group products by province for category breakdown
+  const productsByProvince = useMemo(() => {
+    if (!geoProducts) return new Map<string, Array<{ category: string; orders: number }>>();
+    const map = new Map<string, Array<{ category: string; orders: number }>>();
+    for (const r of geoProducts) {
+      if (!map.has(r.province)) map.set(r.province, []);
+      map.get(r.province)!.push({ category: r.category, orders: r.orders });
+    }
+    return map;
+  }, [geoProducts]);
+
+  const trendColors = { events: "#4B2D8E", visitors: "#0ea5e9", orders: "#22c55e" };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -350,7 +492,7 @@ export default function AdminInsights() {
             Customer Insights
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            AI-powered behavior analytics and user profiles
+            AI-powered behavior analytics, user profiles, and geo-analytics
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -368,13 +510,41 @@ export default function AdminInsights() {
         </div>
       </div>
 
+      {/* ═══ Tab Switcher ═══ */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6 w-fit">
+        <button
+          onClick={() => setActiveTab("behavior")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "behavior"
+              ? "bg-white text-[#4B2D8E] shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Brain size={14} /> Behavior & AI
+        </button>
+        <button
+          onClick={() => setActiveTab("geo")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "geo"
+              ? "bg-white text-[#4B2D8E] shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <MapPin size={14} /> Geo-Analytics
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-32">
           <RefreshCw size={28} className="animate-spin text-[#4B2D8E]" />
         </div>
-      ) : (
+      ) : activeTab === "behavior" ? (
         <>
-          {/* ═══ Overview Stats ═══ */}
+          {/* ═══════════════════════════════════════════════════
+              BEHAVIOR TAB (all existing content)
+              ═══════════════════════════════════════════════════ */}
+
+          {/* Overview Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
@@ -434,10 +604,8 @@ export default function AdminInsights() {
             </div>
           </div>
 
-          {/* ═══ Event Breakdown + Top Categories + Top Searches (3-col) ═══ */}
+          {/* Event Breakdown + Top Categories + Top Searches (3-col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
-            {/* Event Type Breakdown */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <button
                 className="w-full flex items-center justify-between mb-3"
@@ -473,7 +641,6 @@ export default function AdminInsights() {
               )}
             </div>
 
-            {/* Top Categories */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
                 <Target size={15} className="text-purple-500" />
@@ -502,7 +669,6 @@ export default function AdminInsights() {
               )}
             </div>
 
-            {/* Top Searches */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
                 <Search size={15} className="text-orange-500" />
@@ -526,7 +692,7 @@ export default function AdminInsights() {
             </div>
           </div>
 
-          {/* ═══ Top Viewed Products ═══ */}
+          {/* Top Viewed Products */}
           {(analytics?.topProducts ?? []).length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
@@ -551,7 +717,7 @@ export default function AdminInsights() {
             </div>
           )}
 
-          {/* ═══ AI User Profiles ═══ */}
+          {/* AI User Profiles */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -585,7 +751,7 @@ export default function AdminInsights() {
             )}
           </div>
 
-          {/* ═══ Daily Activity Table ═══ */}
+          {/* Daily Activity Table */}
           {(analytics?.recentActivity ?? []).length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
@@ -616,6 +782,290 @@ export default function AdminInsights() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* ═══════════════════════════════════════════════════
+              GEO-ANALYTICS TAB
+              ═══════════════════════════════════════════════════ */}
+
+          {/* Period selector */}
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-xs text-gray-500">Period:</span>
+            {[7, 14, 30, 90].map(d => (
+              <button
+                key={d}
+                onClick={() => setGeoPeriod(d)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  geoPeriod === d
+                    ? "bg-[#4B2D8E] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+
+          {/* Geo KPI cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Events</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{totalEvents.toLocaleString()}</p>
+                </div>
+                <div className="bg-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                  <Activity size={18} className="text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cities Reached</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.uniqueCities ?? 0}</p>
+                </div>
+                <div className="bg-emerald-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                  <MapPin size={18} className="text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Provinces</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.activeProvinces ?? 0}</p>
+                </div>
+                <div className="bg-[#4B2D8E] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                  <Globe size={18} className="text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Proxy / VPN</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{proxyStats?.rate ?? analytics?.proxyRate ?? 0}%</p>
+                </div>
+                <div className="bg-orange-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                  <Shield size={18} className="text-white" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">{proxyStats?.proxy ?? 0} of {proxyStats?.total ?? 0} sessions</p>
+            </div>
+          </div>
+
+          {/* Map + City Table (2-col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Interactive Canada Map */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
+                <Globe size={15} className="text-[#4B2D8E]" />
+                Traffic by Province
+                {selectedProvince && (
+                  <button
+                    onClick={() => setSelectedProvince(null)}
+                    className="ml-2 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full hover:bg-gray-200"
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </h3>
+              {(geoProvinces ?? []).length > 0 ? (
+                <CanadaMap
+                  provinceData={geoProvinces!}
+                  selectedProvince={selectedProvince}
+                  onSelect={setSelectedProvince}
+                />
+              ) : (
+                <div className="flex items-center justify-center py-16">
+                  <div className="text-center">
+                    <Globe size={36} className="mx-auto text-gray-300 mb-3" />
+                    <p className="text-xs text-gray-400">No geo data yet. Events will appear as visitors browse.</p>
+                  </div>
+                </div>
+              )}
+              {/* Province legend */}
+              {(geoProvinces ?? []).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {geoProvinces!.slice(0, 8).map(p => (
+                    <button
+                      key={p.provinceCode}
+                      onClick={() => setSelectedProvince(selectedProvince === p.provinceCode ? null : p.provinceCode)}
+                      className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
+                        selectedProvince === p.provinceCode
+                          ? "bg-[#4B2D8E] text-white border-[#4B2D8E]"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-[#4B2D8E]/40"
+                      }`}
+                    >
+                      {p.provinceCode} ({p.events.toLocaleString()})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* City Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <MapPin size={15} className="text-emerald-500" />
+                  Top Cities
+                  {selectedProvince && (
+                    <span className="text-[10px] bg-[#4B2D8E]/10 text-[#4B2D8E] px-2 py-0.5 rounded-full font-normal">
+                      {selectedProvince}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex gap-1">
+                  {(["events", "revenue", "orders"] as const).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setCitySortBy(key)}
+                      className={`text-[10px] px-2 py-1 rounded ${
+                        citySortBy === key ? "bg-[#4B2D8E] text-white" : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {sortedCities.length > 0 ? (
+                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                  {sortedCities.map((c, i) => (
+                    <div key={`${c.city}-${c.provinceCode}`} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <span className="text-[10px] font-mono text-gray-400 w-4 shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between text-xs mb-0.5">
+                          <span className="text-gray-700 font-medium truncate">{c.city}</span>
+                          <span className="text-[10px] text-gray-400 ml-2 shrink-0">{c.provinceCode}</span>
+                        </div>
+                        <MiniBar
+                          value={(c as any)[citySortBy]}
+                          max={(cityMax as any)[citySortBy]}
+                          color="bg-[#4B2D8E]"
+                        />
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-xs font-mono text-gray-700">
+                          {citySortBy === "revenue" ? `$${c.revenue.toLocaleString()}` : (c as any)[citySortBy].toLocaleString()}
+                        </p>
+                        <p className="text-[9px] text-gray-400">{c.uniqueVisitors} visitors</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic py-8 text-center">No city data yet</p>
+              )}
+            </div>
+          </div>
+
+          {/* Daily Trend Chart */}
+          {(dailyTrend ?? []).length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <TrendingUp size={15} className="text-[#4B2D8E]" />
+                  Daily Trend
+                </h3>
+                <div className="flex gap-1">
+                  {(["events", "visitors", "orders"] as const).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setTrendMetric(key)}
+                      className={`text-[10px] px-2.5 py-1 rounded transition-all ${
+                        trendMetric === key
+                          ? "bg-[#4B2D8E] text-white"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <AreaChart
+                data={dailyTrend!}
+                dataKey={trendMetric}
+                color={trendColors[trendMetric]}
+                height={140}
+              />
+              <div className="flex justify-between text-[9px] text-gray-400 mt-1 px-1">
+                <span>{dailyTrend![0]?.date}</span>
+                <span>{dailyTrend![dailyTrend!.length - 1]?.date}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Category Breakdown by Province */}
+          {productsByProvince.size > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-4">
+                <BarChart3 size={15} className="text-indigo-500" />
+                Category Preferences by Province
+              </h3>
+              <div className="space-y-4">
+                {Array.from(productsByProvince.entries()).slice(0, 6).map(([province, cats]: [string, Array<{ category: string; orders: number }>]) => {
+                  const maxCat = Math.max(...cats.map((c: { category: string; orders: number }) => c.orders), 1);
+                  return (
+                    <div key={province}>
+                      <p className="text-xs font-semibold text-gray-700 mb-1.5">{province}</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {cats.slice(0, 6).map((c: { category: string; orders: number }) => (
+                          <div key={c.category} className="flex items-center gap-1.5">
+                            <div
+                              className="h-4 rounded"
+                              style={{
+                                width: `${Math.max(16, (c.orders / maxCat) * 120)}px`,
+                                backgroundColor: CATEGORY_COLORS[c.category] || "#9ca3af",
+                                opacity: 0.8,
+                              }}
+                            />
+                            <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                              {catLabel(c.category)} ({c.orders})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Province Revenue Breakdown */}
+          {(geoProvinces ?? []).length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 mb-3">
+                <DollarSign size={15} className="text-green-500" />
+                Revenue by Province
+              </h3>
+              <div className="space-y-2">
+                {geoProvinces!.filter(p => p.revenue > 0 || p.orders > 0).map(p => {
+                  const maxRev = Math.max(...geoProvinces!.map(x => x.revenue), 1);
+                  return (
+                    <div key={p.provinceCode}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-gray-700 font-medium flex items-center gap-1.5">
+                          <span className="text-[#4B2D8E] font-mono w-6">{p.provinceCode}</span>
+                          {p.province}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400">{p.orders} orders</span>
+                          <span className="font-mono text-gray-700 font-semibold">${p.revenue.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <MiniBar value={p.revenue} max={maxRev} color="bg-emerald-500" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,9 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { useBehavior } from '@/contexts/BehaviorContext';
 
 const LOGO_URL_FALLBACK = '/logo.webp';
+
+// Lazy load NearestStoreBanner — not critical for initial render
+const NearestStoreBanner = lazy(() => import('./NearestStoreBanner'));
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
@@ -864,6 +867,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="min-h-screen flex flex-col">
         <Header />
+        <Suspense fallback={null}><NearestStoreBanner /></Suspense>
         {/*
           pt-24 = 96px  (mobile:  h-16 nav + h-8 banner)
           md:pt-28 = 112px (desktop: h-20 nav + h-8 banner)
