@@ -37,7 +37,7 @@ export function hashIP(ip: string): string {
 
 const PRIVATE_IP_REGEX = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/;
 const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
-const IPV6_REGEX = /^[0-9a-fA-F:]+$/;
+const IPV6_REGEX = /^[0-9a-fA-F:.]+$/; // dot needed for IPv4-mapped IPv6 (::ffff:1.2.3.4)
 
 function isPrivateIP(ip: string): boolean {
   return PRIVATE_IP_REGEX.test(ip);
@@ -45,6 +45,16 @@ function isPrivateIP(ip: string): boolean {
 
 function isValidIP(ip: string): boolean {
   return IPV4_REGEX.test(ip) || IPV6_REGEX.test(ip);
+}
+
+/**
+ * Strip IPv4-mapped IPv6 prefix.
+ * Railway/Express behind a reverse proxy surfaces IPs as ::ffff:99.228.100.1
+ * FreeIPAPI expects plain IPv4, so strip the prefix.
+ */
+function normalizeIP(ip: string): string {
+  if (ip.startsWith('::ffff:')) return ip.substring(7);
+  return ip;
 }
 
 // Canadian province code mapping
@@ -74,7 +84,8 @@ function evictExpired(): void {
  * Resolve geo data for an IP address.
  * Returns null for private/invalid IPs or on API failure.
  */
-export async function lookupGeo(ip: string): Promise<GeoResult | null> {
+export async function lookupGeo(rawIp: string): Promise<GeoResult | null> {
+  const ip = normalizeIP(rawIp || "");
   if (!ip || isPrivateIP(ip) || !isValidIP(ip)) return null;
 
   const ipH = hashIP(ip);
@@ -120,7 +131,8 @@ export async function lookupGeo(ip: string): Promise<GeoResult | null> {
  * Requires `app.set("trust proxy", 1)` to be set.
  */
 export function getClientIP(req: { ip?: string; socket?: { remoteAddress?: string } }): string {
-  return req.ip || req.socket?.remoteAddress || "";
+  const raw = req.ip || req.socket?.remoteAddress || "";
+  return normalizeIP(raw);
 }
 
 /**
