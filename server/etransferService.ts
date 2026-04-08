@@ -22,6 +22,8 @@ import {
   getGmailClient,
   handleGmailError,
 } from "./gmailAuth";
+import { findOrderByCentAmount, markCentMatched } from "./centMatching";
+import { fuzzyMatchPayment, type FuzzyMatchResult } from "./fuzzyMatcher";
 
 const GMAIL_PAYMENT_EMAIL = process.env.GMAIL_PAYMENT_EMAIL || "";
 
@@ -423,7 +425,10 @@ function getHeader(headers: any[], name: string): string {
   return h?.value || "";
 }
 
-// ─── MATCHING ENGINE ───
+// ─── MATCHING ENGINE (3-Step Pipeline) ───
+// Step 1: Keyword match (order # in memo)
+// Step 2: Unique cent match (exact amount -> single pending order)
+// Step 3: Fuzzy match (name + amount + timing)
 
 function fuzzyNameMatch(name1: string, name2: string): boolean {
   if (!name1 || !name2) return false;
@@ -446,18 +451,41 @@ async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null
   const pendingOrders = await db.getPendingETransferOrders();
   if (pendingOrders.length === 0) return null;
 
-  // ── Strategy 1: Order number in memo ──
+  // ═══════════════════════════════════════════
+  // STEP 1: KEYWORD MATCH (order # in memo/body)
+  // ═══════════════════════════════════════════
   const orderNumFromMemo = extractOrderNumber(parsed.memo) || extractOrderNumber(parsed.bodySnippet);
   if (orderNumFromMemo) {
     const match = pendingOrders.find(o => o.orderNumber.toUpperCase() === orderNumFromMemo);
     if (match) {
+      // Verify amount is close enough (within $1 to account for cent adjustment)
+      if (parsed.amount !== null) {
+        const amountDiff = Math.abs(parseFloat(match.total) - parsed.amount);
+        if (amountDiff <= 1.00) {
+          return { orderId: match.id, orderNumber: match.orderNumber, confidence: "exact", method: "memo_order_number" };
+        }
+      }
+      // Even without amount verification, order # in memo is strong signal
       return { orderId: match.id, orderNumber: match.orderNumber, confidence: "exact", method: "memo_order_number" };
     }
   }
 
   if (parsed.amount === null) return null;
 
-  // ── Strategy 2: Exact amount match (only 1 pending order with that amount) ──
+  // ═══════════════════════════════════════════
+  // STEP 2: UNIQUE CENT MATCH (strongest fallback)
+  // Customer forgot memo — match by exact amount via cent reservation
+  // ═══════════════════════════════════════════
+  const centMatch = await findOrderByCentAmount(parsed.amount);
+  if (centMatch) {
+    const order = pendingOrders.find(o => o.id === centMatch.orderId);
+    if (order) {
+      await markCentMatched(centMatch.orderId);
+      return { orderId: order.id, orderNumber: order.orderNumber, confidence: "exact", method: "cent_amount_match" };
+    }
+  }
+
+  // Also try legacy exact amount match (for orders placed before cent matching)
   const amountMatches = pendingOrders.filter(o => {
     const orderTotal = parseFloat(o.total);
     return Math.abs(orderTotal - parsed.amount!) < 0.01;
@@ -467,7 +495,7 @@ async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null
     return { orderId: amountMatches[0].id, orderNumber: amountMatches[0].orderNumber, confidence: "high", method: "exact_amount_unique" };
   }
 
-  // ── Strategy 3: Amount + sender name match ──
+  // Amount + name disambiguation when multiple amount matches
   if (amountMatches.length > 1 && parsed.senderName) {
     for (const order of amountMatches) {
       const customerName = order.guestName || "";
@@ -475,17 +503,68 @@ async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null
         return { orderId: order.id, orderNumber: order.orderNumber, confidence: "high", method: "amount_plus_name" };
       }
     }
-    // Multiple amount matches but no name match → low confidence, pick first
     return { orderId: amountMatches[0].id, orderNumber: amountMatches[0].orderNumber, confidence: "low", method: "amount_multiple_matches" };
   }
 
-  // ── Strategy 4: Name-only match (no amount match) ──
+  // ═══════════════════════════════════════════
+  // STEP 3: FUZZY / AI MATCH
+  // Cross-reference name, amount proximity, timing
+  // ═══════════════════════════════════════════
+  const fuzzyResult = await fuzzyMatchPayment({
+    senderName: parsed.senderName,
+    amount: parsed.amount,
+    receivedAt: parsed.receivedAt,
+  });
+
+  if (fuzzyResult && fuzzyResult.confidence >= 0.85) {
+    // High confidence — auto-match
+    return {
+      orderId: fuzzyResult.orderId,
+      orderNumber: fuzzyResult.orderNumber,
+      confidence: "high",
+      method: `fuzzy_auto: ${fuzzyResult.reasons.join(", ")}`,
+    };
+  }
+
+  if (fuzzyResult && fuzzyResult.confidence >= 0.5) {
+    // Medium confidence — flag for admin review
+    await db.createUnmatchedPayment({
+      senderName: parsed.senderName || "Unknown",
+      amount: parsed.amount.toFixed(2),
+      memo: parsed.memo || null,
+      referenceNumber: null,
+      receivedAt: parsed.receivedAt,
+      rawBody: parsed.bodySnippet || null,
+      status: "needs_review",
+      likelyOrderId: fuzzyResult.orderId,
+      likelyCustomerName: fuzzyResult.customerName,
+      matchConfidence: fuzzyResult.confidence.toFixed(2),
+      matchReasons: JSON.stringify(fuzzyResult.reasons),
+    });
+    console.log(`[ETransfer] Fuzzy likely match: "${parsed.senderName}" -> order #${fuzzyResult.orderNumber} (${(fuzzyResult.confidence * 100).toFixed(0)}%) — flagged for review`);
+    return null; // Don't auto-match, goes to review queue
+  }
+
+  // Legacy: Name-only match (no amount match)
   if (parsed.senderName) {
     const nameMatches = pendingOrders.filter(o => fuzzyNameMatch(parsed.senderName, o.guestName || ""));
     if (nameMatches.length === 1) {
       return { orderId: nameMatches[0].id, orderNumber: nameMatches[0].orderNumber, confidence: "low", method: "name_only" };
     }
   }
+
+  // ═══════════════════════════════════════════
+  // NO MATCH — add to unmatched queue
+  // ═══════════════════════════════════════════
+  await db.createUnmatchedPayment({
+    senderName: parsed.senderName || "Unknown",
+    amount: parsed.amount.toFixed(2),
+    memo: parsed.memo || null,
+    referenceNumber: null,
+    receivedAt: parsed.receivedAt,
+    rawBody: parsed.bodySnippet || null,
+    status: "unmatched",
+  });
 
   return null;
 }

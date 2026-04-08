@@ -181,8 +181,10 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [orderAdjustedTotal, setOrderAdjustedTotal] = useState('');
   const [savedPointsEarned, setSavedPointsEarned] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [etransferAcknowledged, setEtransferAcknowledged] = useState(false);
   // guestIdSubmitted: guest has uploaded their ID (order allowed, held for review)
   const [guestIdSubmitted, setGuestIdSubmitted] = useState(false);
   const [guestVerificationId, setGuestVerificationId] = useState<number>(0);
@@ -253,9 +255,14 @@ export default function Checkout() {
           <div className="bg-[#F5F5F5] rounded-xl p-4 mb-6 text-left">
             <h3 className="font-display text-sm text-[#4B2D8E] mb-2">E-TRANSFER DETAILS</h3>
             <p className="text-sm font-body text-gray-600">Email: <strong>{paymentEmail}</strong></p>
-            <p className="text-sm font-body text-gray-600">Amount: <strong>${total.toFixed(2)}</strong></p>
+            <p className="text-sm font-body text-gray-600">Amount: <strong>${orderAdjustedTotal || total.toFixed(2)}</strong></p>
+            {orderAdjustedTotal && orderAdjustedTotal !== total.toFixed(2) && (
+              <p className="text-xs text-[#F15929] font-body font-semibold mt-1">
+                Note: The cents have been adjusted for automatic payment matching. Please send the exact amount shown.
+              </p>
+            )}
             <div className="mt-3 bg-[#4B2D8E]/10 border border-[#4B2D8E]/20 rounded-lg p-3">
-              <p className="text-xs font-display text-[#4B2D8E] mb-1">⚡ IMPORTANT — INCLUDE THIS IN THE MEMO:</p>
+              <p className="text-xs font-display text-[#4B2D8E] mb-1">IMPORTANT — INCLUDE THIS IN THE MEMO:</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-white rounded-lg px-3 py-2 font-mono text-sm text-[#4B2D8E] font-bold tracking-wide border">{orderNumber}</code>
                 <button
@@ -265,7 +272,7 @@ export default function Checkout() {
                   COPY
                 </button>
               </div>
-              <p className="text-xs text-gray-500 font-body mt-2">Including your order number ensures your payment is matched instantly.</p>
+              <p className="text-xs text-gray-500 font-body mt-2">Including your order number ensures your payment is matched instantly. If you forget the memo, send the <strong>exact amount</strong> and our system will still match it automatically.</p>
             </div>
           </div>
 
@@ -356,6 +363,7 @@ export default function Checkout() {
         couponCode: appliedCoupon?.code || undefined,
       });
       setOrderNumber(result.orderNumber);
+      setOrderAdjustedTotal(result.adjustedTotal || finalTotal.toFixed(2));
       // Save points BEFORE clearing the cart (clearCart resets subtotal → 0 → points become 0)
       setSavedPointsEarned(pointsToEarn);
       setOrderPlaced(true);
@@ -590,8 +598,23 @@ export default function Checkout() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 font-body bg-[#F5F5F5] rounded-lg p-3">
-                    After placing your order, send an e-Transfer to <strong>{paymentEmail}</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Your order will be processed once payment is received.
+                    After placing your order, send an e-Transfer to <strong>{paymentEmail}</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Send the <strong>exact amount shown</strong> (do not round). Your order will be processed once payment is received.
                   </p>
+
+                  {/* Mandatory acknowledgment checkbox */}
+                  <label className="flex items-start gap-3 cursor-pointer mt-3 p-3 rounded-lg border border-gray-200 hover:bg-[#4B2D8E]/5 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={etransferAcknowledged}
+                      onChange={e => setEtransferAcknowledged(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-2 border-[#4B2D8E] text-[#4B2D8E] focus:ring-[#4B2D8E]"
+                    />
+                    <span className="text-xs text-[#333] font-body leading-relaxed">
+                      I understand my order will be <strong>automatically cancelled in 24 hours</strong> if
+                      payment is not received. I will send the <strong>exact amount shown</strong> and
+                      include my <strong>order number</strong> in the e-Transfer memo.
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -650,8 +673,8 @@ export default function Checkout() {
                 )}
 
                 <button onClick={handlePlaceOrder}
-                  disabled={!canPlaceOrder || submitting}
-                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder && !submitting ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                  disabled={!canPlaceOrder || !etransferAcknowledged || submitting}
+                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder && etransferAcknowledged && !submitting ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
                   {submitting
                     ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> PLACING ORDER...</>
                     : <><Lock size={16} /> PLACE ORDER</>}

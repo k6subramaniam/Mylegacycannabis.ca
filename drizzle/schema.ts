@@ -161,6 +161,13 @@ export const orders = pgTable("orders", {
   shippingOriginPostal: varchar("shipping_origin_postal", { length: 10 }),
   shippingDestPostal: varchar("shipping_dest_postal", { length: 10 }),
   estimatedDeliveryDate: timestamp("estimated_delivery_date"),
+  // Smart e-Transfer matching fields
+  originalTotal: numeric("original_total", { precision: 10, scale: 2 }),
+  centAdjusted: boolean("cent_adjusted").default(false),
+  paymentMatchMethod: varchar("payment_match_method", { length: 50 }),
+  paymentReference: varchar("payment_reference", { length: 100 }),
+  paymentSenderName: varchar("payment_sender_name", { length: 255 }),
+  paymentAmount: numeric("payment_amount", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -537,3 +544,41 @@ export const pushNotificationLog = pgTable("push_notification_log", {
 
 export type PushNotificationLog = typeof pushNotificationLog.$inferSelect;
 export type InsertPushNotificationLog = typeof pushNotificationLog.$inferInsert;
+
+// ─── CENT RESERVATIONS (unique cent matching for e-Transfer) ───
+export const centReservations = pgTable("cent_reservations", {
+  id: serial("id").primaryKey(),
+  baseAmount: numeric("base_amount", { precision: 10, scale: 2 }).notNull(),
+  centOffset: integer("cent_offset").notNull(),
+  finalAmount: numeric("final_amount", { precision: 10, scale: 2 }).notNull(),
+  orderId: integer("order_id").notNull(),
+  status: varchar("status", { length: 20 }).default("reserved").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CentReservation = typeof centReservations.$inferSelect;
+export type InsertCentReservation = typeof centReservations.$inferInsert;
+
+// ─── UNMATCHED PAYMENTS (admin review queue) ───
+export const unmatchedPayments = pgTable("unmatched_payments", {
+  id: serial("id").primaryKey(),
+  senderName: text("sender_name").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  memo: text("memo"),
+  referenceNumber: varchar("reference_number", { length: 100 }),
+  receivedAt: timestamp("received_at").notNull(),
+  rawBody: text("raw_body"),
+  status: varchar("status", { length: 20 }).default("unmatched").notNull(),
+  likelyOrderId: integer("likely_order_id"),
+  likelyCustomerName: text("likely_customer_name"),
+  matchConfidence: numeric("match_confidence", { precision: 3, scale: 2 }),
+  matchReasons: text("match_reasons"),
+  resolvedOrderId: integer("resolved_order_id"),
+  resolvedBy: text("resolved_by"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UnmatchedPayment = typeof unmatchedPayments.$inferSelect;
+export type InsertUnmatchedPayment = typeof unmatchedPayments.$inferInsert;

@@ -570,6 +570,53 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // Smart e-Transfer matching: new columns on orders table
+  await _sql!`DO $$ BEGIN
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS original_total NUMERIC(10,2);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS cent_adjusted BOOLEAN DEFAULT FALSE;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_match_method VARCHAR(50);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_sender_name VARCHAR(255);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(10,2);
+  END $$`;
+
+  // Cent reservations (unique cent matching for e-Transfer)
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS cent_reservations (
+      id SERIAL PRIMARY KEY,
+      base_amount NUMERIC(10,2) NOT NULL,
+      cent_offset INTEGER NOT NULL,
+      final_amount NUMERIC(10,2) NOT NULL,
+      order_id INTEGER NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'reserved',
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_cent_amount ON cent_reservations(final_amount) WHERE status = 'reserved'`);
+
+  // Unmatched payments (admin review queue for smart matching)
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS unmatched_payments (
+      id SERIAL PRIMARY KEY,
+      sender_name TEXT NOT NULL,
+      amount NUMERIC(10,2) NOT NULL,
+      memo TEXT,
+      reference_number VARCHAR(100),
+      received_at TIMESTAMP NOT NULL,
+      raw_body TEXT,
+      status VARCHAR(20) NOT NULL DEFAULT 'unmatched',
+      likely_order_id INTEGER,
+      likely_customer_name TEXT,
+      match_confidence NUMERIC(3,2),
+      match_reasons TEXT,
+      resolved_order_id INTEGER,
+      resolved_by TEXT,
+      resolved_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("[DB] PostgreSQL tables created / verified");
 
   // Seed if empty
@@ -1893,6 +1940,87 @@ export async function getPendingETransferOrders() {
   return getDb().select().from(schema.orders)
     .where(and(eq(schema.orders.paymentStatus, 'pending'), or(eq(schema.orders.status, 'pending'), eq(schema.orders.status, 'confirmed'))))
     .orderBy(desc(schema.orders.createdAt));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CENT RESERVATIONS — unique cent matching for e-Transfer
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Get all reserved cent offsets for a given dollar base amount */
+export async function getReservedCentOffsets(baseDollars: string): Promise<number[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  const rows = await getDb().select({ centOffset: schema.centReservations.centOffset })
+    .from(schema.centReservations)
+    .where(and(
+      eq(schema.centReservations.baseAmount, baseDollars),
+      eq(schema.centReservations.status, 'reserved')
+    ));
+  return rows.map(r => r.centOffset);
+}
+
+/** Create a cent reservation */
+export async function createCentReservation(data: schema.InsertCentReservation): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const result = await getDb().insert(schema.centReservations).values(data).returning({ id: schema.centReservations.id });
+  return result[0].id;
+}
+
+/** Find a pending cent reservation by exact final amount (for matching) */
+export async function findCentReservationByAmount(amount: string): Promise<schema.CentReservation[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  return getDb().select().from(schema.centReservations)
+    .where(and(
+      eq(schema.centReservations.finalAmount, amount),
+      eq(schema.centReservations.status, 'reserved')
+    ));
+}
+
+/** Mark a cent reservation as matched */
+export async function markCentReservationMatched(orderId: number): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().update(schema.centReservations)
+    .set({ status: 'matched' })
+    .where(eq(schema.centReservations.orderId, orderId));
+}
+
+/** Expire old cent reservations (run with the existing auto-cancel cron) */
+export async function expireOldCentReservations(): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const result = await getDb().update(schema.centReservations)
+    .set({ status: 'expired' })
+    .where(and(
+      eq(schema.centReservations.status, 'reserved'),
+      sql`${schema.centReservations.expiresAt} < NOW()`
+    ));
+  return (result as any).rowCount || 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UNMATCHED PAYMENTS — admin review queue for smart matching
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Create an unmatched payment record */
+export async function createUnmatchedPayment(data: schema.InsertUnmatchedPayment): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const result = await getDb().insert(schema.unmatchedPayments).values(data).returning({ id: schema.unmatchedPayments.id });
+  return result[0].id;
+}
+
+/** Get all active unmatched/needs_review payments */
+export async function getUnmatchedPayments() {
+  if (!USE_PERSISTENT_DB) return [];
+  return getDb().select().from(schema.unmatchedPayments)
+    .where(or(
+      eq(schema.unmatchedPayments.status, 'unmatched'),
+      eq(schema.unmatchedPayments.status, 'needs_review')
+    ))
+    .orderBy(desc(schema.unmatchedPayments.receivedAt));
+}
+
+/** Update an unmatched payment (for resolve/dismiss) */
+export async function updateUnmatchedPayment(id: number, data: Partial<schema.InsertUnmatchedPayment>): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  await getDb().update(schema.unmatchedPayments).set(data as any).where(eq(schema.unmatchedPayments.id, id));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
