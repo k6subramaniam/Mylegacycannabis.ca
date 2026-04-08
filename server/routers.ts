@@ -40,6 +40,7 @@ import {
 } from "./emailTemplateEngine";
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured, getKeywordRules, clearKeywordRulesCache, DEFAULT_ETRANSFER_INDICATORS_FOR_TEST, type KeywordRule } from "./etransferService";
+import { reserveUniqueCentAmount, expireOldCentReservations } from "./centMatching";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
 import { getShippingRates, getTrackingSummary, getTrackingDetails, findPostOffices, validatePostalCode, getOriginPostal, isCanadaPostConfigured, DOMESTIC_SERVICES } from "./canadaPostService";
 import { invokeLLM, clearAiConfigCache } from "./_core/llm";
@@ -2276,6 +2277,24 @@ Return ONLY the JSON object.`;
       // ─── STOCK DECREMENT ───
       await db.decrementStock(input.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity })));
 
+      // ─── UNIQUE CENT MATCHING (e-Transfer smart matching) ───
+      // All orders use e-Transfer, so assign a unique cent amount for fallback matching
+      let adjustedTotal = parseFloat(input.total);
+      try {
+        const reserved = await reserveUniqueCentAmount(parseFloat(input.total), orderId);
+        if (reserved !== parseFloat(input.total)) {
+          adjustedTotal = reserved;
+          await db.updateOrder(orderId, {
+            total: reserved.toFixed(2),
+            originalTotal: input.total,
+            centAdjusted: true,
+          } as any);
+          console.log(`[CentMatch] Order ${orderNumber}: $${input.total} -> $${reserved.toFixed(2)}`);
+        }
+      } catch (centErr) {
+        console.warn("[CentMatch] Failed to reserve unique cent — order uses original total:", (centErr as Error).message);
+      }
+
       // ─── RECORD COUPON USAGE ───
       if (couponCode) {
         const coupon = await db.getCouponByCode(couponCode);
@@ -2310,7 +2329,7 @@ Return ONLY the JSON object.`;
         );
       }
 
-      return { orderNumber, orderId };
+      return { orderNumber, orderId, adjustedTotal: adjustedTotal.toFixed(2) };
     }),
     // ─── VALIDATE COUPON (public — for checkout preview) ───
     validateCoupon: publicProcedure.input(z.object({
@@ -3029,6 +3048,61 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
         defaultMatch,
         ruleResults,
       };
+    }),
+
+    // ─── SMART MATCHING: Unmatched payments with likely match suggestions ───
+    getUnmatchedPayments: adminProcedure.query(async () => {
+      return db.getUnmatchedPayments();
+    }),
+
+    resolveUnmatchedPayment: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      orderId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      // Confirm the payment -> update the order
+      await db.updateOrder(input.orderId, {
+        paymentStatus: "received",
+        paymentMatchMethod: "admin-manual",
+      } as any);
+
+      // Mark the unmatched payment as resolved
+      await db.updateUnmatchedPayment(input.paymentId, {
+        status: "resolved",
+        resolvedOrderId: input.orderId,
+        resolvedBy: ctx.user?.name || "admin",
+        resolvedAt: new Date(),
+      } as any);
+
+      await db.logAdminActivity({
+        adminId: ctx.user?.id ?? 0,
+        adminName: ctx.user?.name ?? "admin",
+        action: "resolve_unmatched_payment",
+        entityType: "unmatched_payment",
+        entityId: input.paymentId,
+        details: `Resolved payment #${input.paymentId} -> order #${input.orderId}`,
+      });
+
+      return { success: true };
+    }),
+
+    dismissUnmatchedPayment: adminProcedure.input(z.object({
+      paymentId: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      await db.updateUnmatchedPayment(input.paymentId, {
+        status: "dismissed",
+        resolvedBy: ctx.user?.name || "admin",
+        resolvedAt: new Date(),
+      } as any);
+
+      await db.logAdminActivity({
+        adminId: ctx.user?.id ?? 0,
+        adminName: ctx.user?.name ?? "admin",
+        action: "dismiss_unmatched_payment",
+        entityType: "unmatched_payment",
+        entityId: input.paymentId,
+      });
+
+      return { success: true };
     }),
   }),
 });

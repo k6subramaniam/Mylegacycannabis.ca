@@ -4,7 +4,8 @@ import {
   DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
   CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
   Download, Trash2, AlertTriangle, FileDown, Info, ChevronDown, ChevronUp,
-  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2, Shield
+  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2, Shield,
+  UserSearch, Sparkles, ThumbsDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -39,11 +40,13 @@ const STATUS_LABELS: Record<string, string> = {
 
 const MATCH_METHOD_LABELS: Record<string, string> = {
   memo_order_number: "Order # in memo",
+  cent_amount_match: "Unique cent match",
   exact_amount_unique: "Exact amount (unique)",
   amount_plus_name: "Amount + name match",
   amount_multiple_matches: "Amount (multiple)",
   name_only: "Name only",
   manual_admin: "Manual by admin",
+  "admin-manual": "Admin resolved",
 };
 
 /** Built-in default detection patterns (read-only, always active) */
@@ -92,6 +95,9 @@ export default function AdminPayments() {
   const [testBody, setTestBody] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
 
+  // Smart Matching Review Queue State
+  const [showSmartQueue, setShowSmartQueue] = useState(true);
+
   const statusFilter = tab === "all" ? undefined : tab;
 
   const { data, isLoading, refetch } = trpc.etransfer.list.useQuery(
@@ -101,6 +107,29 @@ export default function AdminPayments() {
 
   const { data: serviceStatus, refetch: refetchStatus } = trpc.etransfer.status.useQuery();
   const { data: pendingOrders } = trpc.etransfer.pendingOrders.useQuery();
+
+  // Unmatched Payments (Smart Matching Review Queue)
+  const { data: unmatchedPayments, refetch: refetchUnmatched } = trpc.etransfer.getUnmatchedPayments.useQuery(
+    undefined,
+    { refetchInterval: 30000 }
+  );
+
+  const resolveUnmatchedMutation = trpc.etransfer.resolveUnmatchedPayment.useMutation({
+    onSuccess: () => {
+      toast.success("Payment resolved and matched to order!");
+      refetchUnmatched();
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const dismissUnmatchedMutation = trpc.etransfer.dismissUnmatchedPayment.useMutation({
+    onSuccess: () => {
+      toast.success("Payment dismissed from review queue");
+      refetchUnmatched();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const updateEmailMutation = trpc.etransfer.updatePaymentEmail.useMutation({
     onSuccess: (res: any) => {
@@ -678,6 +707,155 @@ export default function AdminPayments() {
         )}
       </div>
 
+      {/* Smart Matching Review Queue */}
+      {unmatchedPayments && unmatchedPayments.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-orange-200 mb-6 overflow-hidden">
+          <button
+            onClick={() => setShowSmartQueue(!showSmartQueue)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-orange-50/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center relative">
+                <UserSearch size={18} className="text-orange-600" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unmatchedPayments.length}
+                </span>
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-semibold text-gray-800">Smart Matching Review Queue</h3>
+                <p className="text-xs text-gray-400">
+                  Payments that couldn't be auto-matched — review likely matches and resolve with 1 click
+                </p>
+              </div>
+            </div>
+            {showSmartQueue ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+          </button>
+
+          {showSmartQueue && (
+            <div className="px-5 pb-5 border-t border-orange-100">
+              <div className="space-y-3 mt-4">
+                {unmatchedPayments.map((up: any) => {
+                  const confidence = up.matchConfidence ? parseFloat(up.matchConfidence) : 0;
+                  const reasons: string[] = up.matchReasons ? (() => { try { return JSON.parse(up.matchReasons); } catch { return []; } })() : [];
+                  const isNeedsReview = up.status === "needs_review";
+                  const confPercent = Math.round(confidence * 100);
+
+                  return (
+                    <div
+                      key={up.id}
+                      className={`border rounded-xl p-4 transition-all ${
+                        isNeedsReview
+                          ? "border-orange-200 bg-orange-50/30"
+                          : "border-gray-200 bg-gray-50/30"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Payment info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-gray-800">{up.senderName}</span>
+                            <span className="text-sm font-bold text-green-700">${parseFloat(up.amount).toFixed(2)}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isNeedsReview
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {isNeedsReview ? "Likely Match" : "Unmatched"}
+                            </span>
+                            {up.receivedAt && (
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(up.receivedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            )}
+                          </div>
+                          {up.memo && (
+                            <p className="text-xs text-gray-500 mt-1 truncate" title={up.memo}>Memo: {up.memo}</p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {up.likelyOrderId ? (
+                            <button
+                              onClick={() => resolveUnmatchedMutation.mutate({ paymentId: up.id, orderId: up.likelyOrderId })}
+                              disabled={resolveUnmatchedMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 disabled:opacity-50 transition-all"
+                              title="Accept the likely match"
+                            >
+                              <Check size={12} />
+                              Resolve
+                            </button>
+                          ) : (
+                            <select
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white max-w-[170px]"
+                              onChange={e => {
+                                if (e.target.value) {
+                                  resolveUnmatchedMutation.mutate({ paymentId: up.id, orderId: parseInt(e.target.value) });
+                                }
+                              }}
+                            >
+                              <option value="">Match to order...</option>
+                              {(pendingOrders || []).map((o: any) => (
+                                <option key={o.id} value={o.id}>
+                                  {o.orderNumber} - ${parseFloat(o.total).toFixed(2)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <button
+                            onClick={() => dismissUnmatchedMutation.mutate({ paymentId: up.id })}
+                            disabled={dismissUnmatchedMutation.isPending}
+                            className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs font-medium hover:bg-gray-50 hover:text-red-500 hover:border-red-200 disabled:opacity-50 transition-all"
+                            title="Dismiss this payment"
+                          >
+                            <ThumbsDown size={11} />
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Likely match details */}
+                      {isNeedsReview && up.likelyOrderId && (
+                        <div className="mt-3 bg-white rounded-lg border border-orange-100 p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles size={13} className="text-orange-500" />
+                            <span className="text-xs font-semibold text-orange-700">Likely Match Found</span>
+                            <span className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              confPercent >= 75
+                                ? "bg-green-100 text-green-700"
+                                : confPercent >= 50
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                            }`}>
+                              {confPercent}% confidence
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-gray-600">
+                            {up.likelyCustomerName && (
+                              <span>Customer: <strong>{up.likelyCustomerName}</strong></span>
+                            )}
+                            <span>Order ID: <strong className="font-mono text-[#4B2D8E]">#{up.likelyOrderId}</strong></span>
+                          </div>
+                          {reasons.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {reasons.map((r: string, i: number) => (
+                                <span key={i} className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] rounded-md border border-orange-100">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Gmail Setup Info (only if not configured) */}
       {!serviceStatus?.configured && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -957,7 +1135,7 @@ export default function AdminPayments() {
                       <div><span className="text-gray-400 text-xs uppercase tracking-wide">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p>{p.senderEmail && <p className="text-xs text-gray-400 break-all mt-0.5">{p.senderEmail}</p>}</div>
                       <div><span className="text-gray-400 text-xs uppercase tracking-wide">Amount</span><p className="font-medium">{p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}</p></div>
                       <div><span className="text-gray-400 text-xs uppercase tracking-wide">Date</span><p className="font-medium">{p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-CA") : "\u2014"}</p></div>
-                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{MATCH_METHOD_LABELS[p.matchMethod] || p.matchMethod || "Not matched"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{MATCH_METHOD_LABELS[p.matchMethod] || (p.matchMethod?.startsWith("fuzzy_auto") ? "Fuzzy auto-match" : p.matchMethod) || "Not matched"}</p>{p.matchMethod?.startsWith("fuzzy_auto:") && <p className="text-[10px] text-gray-400 mt-0.5">{p.matchMethod.replace("fuzzy_auto: ", "")}</p>}</div>
                       {p.financialInstitution && (
                         <div className="col-span-2"><span className="text-gray-400 text-xs uppercase tracking-wide">Financial Institution</span><p className="font-medium">{p.financialInstitution}</p></div>
                       )}
