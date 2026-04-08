@@ -386,12 +386,13 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
   return (
     <div style={{ position: "relative" }}>
       <svg
-        viewBox="-130 -10 940 1040"
-        style={{ width: "100%", height: "auto", maxHeight: 400 }}
+        viewBox="-10 -10 813 1052"
+        style={{ width: "100%", height: "auto", maxHeight: 420 }}
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Canada province map showing traffic distribution"
       >
-        <rect x="-130" y="-10" width="940" height="1040" fill="#f0f4ff" rx="12" />
+        <rect x="-10" y="-10" width="813" height="1052" fill="#f0f4ff" rx="12" />
         {Object.entries(PROVINCE_PATHS).map(([code, prov]) => {
           const d = dataMap[code];
           const value = d ? (d[metric] || d.events || 0) : 0;
