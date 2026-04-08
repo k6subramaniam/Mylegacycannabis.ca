@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { CANADA_PATHS } from "@/data/canada-map-paths";
 import { useState, useEffect, useMemo } from "react";
 import {
   Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
@@ -113,22 +114,13 @@ const BRAND = {
   border: "#e5e7eb",
 };
 
-// ─── Canada SVG Map — simplified geographic province outlines ───
-const PROVINCE_PATHS: Record<string, { name: string; abbr: string; path: string; labelX: number; labelY: number }> = {
-  BC: { name: "British Columbia", abbr: "BC", path: "M30,195 L30,145 L45,130 L50,100 L55,95 L52,80 L48,75 L50,65 L60,60 L65,75 L70,80 L68,100 L75,120 L80,130 L85,140 L88,160 L80,175 L70,185 L55,195 Z", labelX: 55, labelY: 140 },
-  AB: { name: "Alberta", abbr: "AB", path: "M88,160 L85,140 L80,130 L75,120 L68,100 L70,80 L65,75 L60,60 L80,58 L105,58 L105,160 Z", labelX: 88, labelY: 115 },
-  SK: { name: "Saskatchewan", abbr: "SK", path: "M105,58 L105,160 L140,160 L140,58 Z", labelX: 122, labelY: 115 },
-  MB: { name: "Manitoba", abbr: "MB", path: "M140,58 L140,160 L165,165 L175,155 L180,135 L175,110 L178,90 L175,70 L168,58 Z", labelX: 158, labelY: 115 },
-  ON: { name: "Ontario", abbr: "ON", path: "M168,58 L175,70 L178,90 L175,110 L180,135 L175,155 L165,165 L170,180 L180,195 L195,205 L210,200 L225,195 L235,185 L240,175 L235,165 L225,160 L220,155 L225,145 L230,130 L228,115 L220,105 L210,100 L205,90 L195,80 L188,72 L180,65 L175,58 Z", labelX: 205, labelY: 150 },
-  QC: { name: "Quebec", abbr: "QC", path: "M225,195 L235,185 L240,175 L235,165 L225,160 L220,155 L225,145 L230,130 L228,115 L235,105 L245,95 L255,85 L265,78 L280,72 L295,68 L305,75 L310,85 L305,100 L295,115 L290,125 L285,140 L275,155 L265,165 L255,175 L245,185 L235,195 Z", labelX: 268, labelY: 130 },
-  NB: { name: "New Brunswick", abbr: "NB", path: "M305,170 L310,160 L318,155 L325,160 L328,170 L322,178 L312,180 Z", labelX: 316, labelY: 168 },
-  NS: { name: "Nova Scotia", abbr: "NS", path: "M322,178 L328,170 L340,168 L350,172 L355,180 L348,188 L335,190 L325,186 Z", labelX: 340, labelY: 180 },
-  PE: { name: "Prince Edward Island", abbr: "PE", path: "M332,155 L340,152 L348,155 L345,160 L335,160 Z", labelX: 340, labelY: 157 },
-  NL: { name: "Newfoundland & Labrador", abbr: "NL", path: "M310,85 L320,80 L335,78 L345,85 L350,100 L345,115 L335,120 L320,118 L310,110 L305,100 Z", labelX: 330, labelY: 100 },
-  YT: { name: "Yukon", abbr: "YT", path: "M30,45 L30,10 L60,8 L65,15 L60,30 L55,45 L50,55 L50,65 L48,75 L52,80 L55,95 L50,100 L45,80 L35,60 Z", labelX: 45, labelY: 45 },
-  NT: { name: "Northwest Territories", abbr: "NT", path: "M60,8 L65,15 L60,30 L55,45 L50,55 L60,60 L80,58 L105,58 L140,58 L168,58 L175,58 L180,50 L175,35 L160,20 L140,12 L120,8 L100,5 L80,5 Z", labelX: 120, labelY: 35 },
-  NU: { name: "Nunavut", abbr: "NU", path: "M175,58 L180,50 L175,35 L160,20 L170,15 L185,10 L200,5 L220,3 L245,5 L265,10 L280,20 L290,35 L295,50 L295,68 L280,72 L265,78 L255,85 L245,95 L235,105 L228,115 L220,105 L210,100 L205,90 L195,80 L188,72 L180,65 Z", labelX: 235, labelY: 45 },
-};
+// ─── Canada SVG Map — real geographic province outlines from SVG path data ───
+const PROVINCE_PATHS: Record<string, { name: string; abbr: string; path: string; labelX: number; labelY: number }> = Object.fromEntries(
+  Object.entries(CANADA_PATHS).map(([code, data]) => [
+    code,
+    { name: data.name, abbr: code, path: data.path, labelX: data.labelX, labelY: data.labelY },
+  ])
+);
 
 function getProvinceColor(value: number, maxValue: number, isSelected: boolean): string {
   if (isSelected) return BRAND.orange;
@@ -394,12 +386,12 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
   return (
     <div style={{ position: "relative" }}>
       <svg
-        viewBox="0 0 380 220"
-        style={{ width: "100%", height: "auto", maxHeight: 340 }}
+        viewBox="-130 -10 940 1040"
+        style={{ width: "100%", height: "auto", maxHeight: 400 }}
         role="img"
         aria-label="Canada province map showing traffic distribution"
       >
-        <rect x="0" y="0" width="380" height="220" fill="#f0f4ff" rx="8" />
+        <rect x="-130" y="-10" width="940" height="1040" fill="#f0f4ff" rx="12" />
         {Object.entries(PROVINCE_PATHS).map(([code, prov]) => {
           const d = dataMap[code];
           const value = d ? (d[metric] || d.events || 0) : 0;
@@ -411,7 +403,7 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
                 d={prov.path}
                 fill={getProvinceColor(value, maxValue, isSelected)}
                 stroke={isSelected ? BRAND.orange : isHovered ? BRAND.purple : "#c4c0d4"}
-                strokeWidth={isSelected ? 2.5 : isHovered ? 1.8 : 0.8}
+                strokeWidth={isSelected ? 3.5 : isHovered ? 2.5 : 1}
                 cursor={value > 0 ? "pointer" : "default"}
                 onClick={() => value > 0 && onSelectProvince(isSelected ? null : code)}
                 onMouseEnter={() => setHoveredProvince(code)}
@@ -421,15 +413,15 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
               <text
                 x={prov.labelX} y={prov.labelY}
                 textAnchor="middle" dominantBaseline="central"
-                style={{ fontSize: code === "PE" ? 6 : 8, fontWeight: 700, fill: value > maxValue * 0.5 ? "#fff" : isSelected ? "#fff" : "#4B2D8E", pointerEvents: "none", letterSpacing: 0.5, fontFamily: "system-ui, sans-serif" }}
+                style={{ fontSize: code === "PE" || code === "NB" || code === "NS" ? 14 : 18, fontWeight: 700, fill: value > maxValue * 0.5 ? "#fff" : isSelected ? "#fff" : "#4B2D8E", pointerEvents: "none", letterSpacing: 0.5, fontFamily: "system-ui, sans-serif" }}
               >
                 {code}
               </text>
               {value > 0 && (
                 <text
-                  x={prov.labelX} y={prov.labelY + (code === "PE" ? 7 : 10)}
+                  x={prov.labelX} y={prov.labelY + (code === "PE" || code === "NB" || code === "NS" ? 14 : 20)}
                   textAnchor="middle"
-                  style={{ fontSize: 6, fontWeight: 600, fill: value > maxValue * 0.5 ? "rgba(255,255,255,0.85)" : "#6b7280", pointerEvents: "none", fontFamily: "system-ui, sans-serif" }}
+                  style={{ fontSize: code === "PE" || code === "NB" || code === "NS" ? 11 : 13, fontWeight: 600, fill: value > maxValue * 0.5 ? "rgba(255,255,255,0.85)" : "#6b7280", pointerEvents: "none", fontFamily: "system-ui, sans-serif" }}
                 >
                   {value.toLocaleString()}
                 </text>
@@ -473,9 +465,9 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
       {/* Legend */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8, fontSize: 10, color: BRAND.textMuted }}>
         <span>Less traffic</span>
-        <div style={{ display: "flex", gap: 2 }}>
+        <div style={{ display: "flex", gap: 3 }}>
           {[0.1, 0.3, 0.5, 0.7, 0.9].map(i => (
-            <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: getProvinceColor(i * 100, 100, false) }} />
+            <div key={i} style={{ width: 20, height: 12, borderRadius: 3, background: getProvinceColor(i * 100, 100, false) }} />
           ))}
         </div>
         <span>More traffic</span>
