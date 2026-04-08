@@ -5,6 +5,7 @@ import { ROUTE_SEO, canonical } from '@/lib/seo-config';
 import { Phone, Calendar, Loader2, AlertCircle, Gift, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useAuth } from '@/contexts/AuthContext';
 
 function isAtLeast19(dob: string): boolean {
   if (!dob) return true; // optional field
@@ -28,6 +29,7 @@ function maxBirthdayDate(): string {
 
 export default function CompleteProfile() {
   const { logoUrl } = useSiteConfig();
+  const { isLoading: authLoading } = useAuth();
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,17 @@ export default function CompleteProfile() {
 
   const params = new URLSearchParams(window.location.search);
   const isWelcome = params.get('welcome') === 'true';
+
+  // Wait for auth to resolve before rendering — the complete-profile POST
+  // requires an active session cookie, which may not be hydrated yet after
+  // the Google OAuth redirect.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#4B2D8E] via-[#3a2270] to-[#2a1855]">
+        <Loader2 size={32} className="animate-spin text-white" />
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {

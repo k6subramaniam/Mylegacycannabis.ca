@@ -4,13 +4,13 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { POINTS_PER_DOLLAR, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2 } from 'lucide-react';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function Account() {
   const [location, navigate] = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { idVerificationEnabled } = useSiteConfig();
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -22,12 +22,24 @@ export default function Account() {
   }, [location]);
 
   // Redirect unauthenticated users to the real OTP-capable login/register pages
+  // IMPORTANT: Wait for isLoading to settle — prevents race condition after
+  // Google OAuth redirect where auth.me hasn't returned yet
   useEffect(() => {
+    if (isLoading) return; // don't redirect while checking session
     if (!isAuthenticated || !user) {
       const isRegister = location.includes('/register');
       navigate(isRegister ? '/register' : '/login', { replace: true });
     }
-  }, [isAuthenticated, user, location, navigate]);
+  }, [isAuthenticated, user, isLoading, location, navigate]);
+
+  // Show spinner while auth state is loading (prevents flash-redirect on Google OAuth callback)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#4B2D8E] via-[#3a2270] to-[#2a1855]">
+        <Loader2 size={32} className="animate-spin text-white" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return null; // will redirect above

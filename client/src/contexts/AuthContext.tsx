@@ -62,6 +62,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<true | string>;
   register: (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }) => Promise<true | string>;
   logout: () => void;
@@ -138,6 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch { return null; }
   });
 
+  // True until the first /api/trpc/auth.me check completes.
+  // Prevents pages like Account.tsx from redirecting to /login before
+  // the session cookie is verified (race condition after Google OAuth redirect).
+  const [isLoading, setIsLoading] = useState(true);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
@@ -151,7 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const result = await response.json();
         const userData = unwrapTrpcResponse(result);
-        if (!userData) return;
+        if (!userData) {
+          // Server returned OK but no user data — clear state
+          setUser(null);
+          persistUserToLocalStorage(null);
+          return;
+        }
         const transformedUser = transformBackendUser(userData);
         setUser(prev => {
           // Preserve locally-set fields that server doesn't return (like birthday from localStorage)
@@ -159,9 +169,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           persistUserToLocalStorage(merged);
           return merged;
         });
+      } else {
+        // 401 / error — no valid session
+        setUser(null);
+        persistUserToLocalStorage(null);
       }
     } catch {
-      // No active session — that's fine
+      // Network error / no active session — clear state
+      setUser(null);
+      persistUserToLocalStorage(null);
     }
   }, []);
 
@@ -169,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // (email, google, phone) so that page reloads retain the logged-in state.
   useEffect(() => {
     // Always fetch from server to get latest data (orders, verification status, etc.)
-    refreshUser();
+    refreshUser().finally(() => setIsLoading(false));
   }, [refreshUser]);
 
   // Periodically refresh user data every 60 seconds to pick up
@@ -421,6 +437,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: !!user,
       isAdmin: !!user && user.role === 'admin',
+      isLoading,
       login,
       register,
       logout,
