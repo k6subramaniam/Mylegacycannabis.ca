@@ -14,7 +14,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { lookupGeo, getClientIP } from "../geolocation";
+import { lookupGeo, getClientIP, hashIP, getGeoCacheStats } from "../geolocation";
 import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds, getNearestStore, getAllOrders, updateOrder, getOrderById, logAdminActivity, awardOrderPoints } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
@@ -147,7 +147,9 @@ async function startServer() {
     try {
       // Get client IP — req.ip is trusted because we set "trust proxy" above
       // Express parses X-Forwarded-For safely, taking only the first untrusted hop
-      const ip = req.ip || req.socket.remoteAddress || "";
+      const rawIp = req.ip || req.socket.remoteAddress || "";
+      // Strip IPv4-mapped IPv6 prefix (::ffff:99.228.100.1 → 99.228.100.1)
+      const ip = rawIp.startsWith('::ffff:') ? rawIp.substring(7) : rawIp;
 
       // Skip for localhost/private IPs
       if (!ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("192.168.") || ip.startsWith("10.")) {
@@ -157,7 +159,7 @@ async function startServer() {
       // SECURITY: Validate IP format to prevent SSRF via crafted X-Forwarded-For
       // Only allow valid IPv4 (1.2.3.4) or IPv6 (::ffff:1.2.3.4, 2001:db8::1) addresses
       const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
-      const IPV6_REGEX = /^[0-9a-fA-F:]+$/;
+      const IPV6_REGEX = /^[0-9a-fA-F:.]+$/; // dot needed for IPv4-mapped IPv6
       if (!IPV4_REGEX.test(ip) && !IPV6_REGEX.test(ip)) {
         return res.json({ province: "", region: "", country: "", source: "invalid" });
       }
@@ -189,8 +191,8 @@ async function startServer() {
     try {
       const ip = getClientIP(req);
       const geo = await lookupGeo(ip);
-      if (!geo || !geo.city) {
-        return res.json({ store: null, geo: null, source: "no-geo" });
+      if (!geo || !geo.city || geo.countryCode !== 'CA') {
+        return res.json({ store: null, geo: null, source: geo ? "non-ca" : "no-geo" });
       }
       const store = await getNearestStore(geo.city, geo.provinceCode || "ON");
       res.json({
@@ -210,6 +212,41 @@ async function startServer() {
       res.json({ store: null, geo: null, source: "error" });
     }
   });
+  // ─── DEBUG: Geo-check endpoint (temporary, for deployment validation) ───
+  app.get("/api/debug/geo-check", async (req, res) => {
+    try {
+      const rawIp = req.ip || req.socket.remoteAddress || "";
+      const clientIp = getClientIP(req);
+      const isIPv4Mapped = rawIp.startsWith("::ffff:");
+      const geo = await lookupGeo(clientIp);
+      const cacheStats = getGeoCacheStats();
+
+      res.json({
+        timestamp: new Date().toISOString(),
+        rawIp,
+        isIPv4Mapped,
+        normalizedIp: clientIp,
+        ipHash: clientIp ? hashIP(clientIp) : null,
+        geo: geo ? {
+          city: geo.city,
+          province: geo.province,
+          provinceCode: geo.provinceCode,
+          countryCode: geo.countryCode,
+          isProxy: geo.isProxy,
+        } : null,
+        geoLookupSuccess: !!geo,
+        cacheStats,
+        headers: {
+          "x-forwarded-for": req.headers["x-forwarded-for"] || null,
+          "x-real-ip": req.headers["x-real-ip"] || null,
+          "cf-connecting-ip": req.headers["cf-connecting-ip"] || null,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)

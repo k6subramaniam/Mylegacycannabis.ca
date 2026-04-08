@@ -2482,8 +2482,8 @@ export async function getGeoByProvince(days = 30): Promise<Array<{
       count(DISTINCT ub.session_id)::int as unique_visitors,
       count(DISTINCT CASE WHEN ub.event_type = 'checkout_complete' THEN ub.session_id END)::int as orders,
       COALESCE(SUM(
-        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'orderTotal' IS NOT NULL
-        THEN (ub.metadata->>'orderTotal')::numeric ELSE 0 END
+        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'total' IS NOT NULL
+        THEN (ub.metadata->>'total')::numeric ELSE 0 END
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.province IS NOT NULL AND ub.province != ''
@@ -2511,8 +2511,8 @@ export async function getGeoByCityRaw(days = 30, province?: string): Promise<Arr
       count(DISTINCT ub.session_id)::int as unique_visitors,
       count(DISTINCT CASE WHEN ub.event_type = 'checkout_complete' THEN ub.session_id END)::int as orders,
       COALESCE(SUM(
-        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'orderTotal' IS NOT NULL
-        THEN (ub.metadata->>'orderTotal')::numeric ELSE 0 END
+        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'total' IS NOT NULL
+        THEN (ub.metadata->>'total')::numeric ELSE 0 END
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.city IS NOT NULL AND ub.city != ''
