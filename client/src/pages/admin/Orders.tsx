@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
-import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2, Ban, Lock, Info } from "lucide-react";
+import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2, Ban, Lock, Info, Zap, Timer, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -81,6 +81,60 @@ const statusColors: Record<string, string> = {
   partially_refunded: "bg-orange-100 text-orange-700",
   received: "bg-blue-100 text-blue-700",
 };
+
+// ─── Canada Post Live Tracking Widget (fetches from /api/shipping/track/:pin) ───
+function CanadaPostTrackingWidget({ pin }: { pin: string }) {
+  const { data, isLoading, error } = trpc.store.trackShipment.useQuery({ pin }, {
+    staleTime: 300_000, // cache 5 min
+    retry: 1,
+  });
+
+  if (isLoading) return (
+    <div className="bg-gray-50 rounded-lg p-3 animate-pulse">
+      <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
+      <div className="h-3 bg-gray-200 rounded w-1/2" />
+    </div>
+  );
+
+  if (error || !data) return (
+    <div className="text-[10px] text-gray-400 mt-1">
+      Live tracking unavailable — <a
+        href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${pin}`}
+        target="_blank" rel="noopener noreferrer"
+        className="text-[#4B2D8E] hover:underline"
+      >track on Canada Post</a>
+    </div>
+  );
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-700">{data.status}</span>
+        {data.expectedDelivery && (
+          <span className="text-[10px] text-gray-500">
+            Est. {new Date(data.expectedDelivery).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-600">{data.lastEvent}</p>
+      {data.events && data.events.length > 0 && (
+        <div className="border-t border-gray-200 pt-2 mt-2 space-y-1.5">
+          <p className="text-[10px] text-gray-400 font-medium">Recent Events</p>
+          {data.events.slice(0, 3).map((evt: any, i: number) => (
+            <div key={i} className="flex items-start gap-2 text-[10px]">
+              <div className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${i === 0 ? 'bg-[#4B2D8E]' : 'bg-gray-300'}`} />
+              <div>
+                <span className="text-gray-500">{evt.date} {evt.time}</span>
+                {evt.location && <span className="text-gray-400"> — {evt.location}</span>}
+                <p className="text-gray-700">{evt.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function OrderDetail({ id }: { id: number }) {
   const utils = trpc.useUtils();
@@ -170,11 +224,45 @@ function OrderDetail({ id }: { id: number }) {
             </div>
           </div>
 
-          {/* Shipping Address */}
+          {/* Shipping Address & Method */}
           {addr && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Shipping Address</h2>
-              <p className="text-sm text-gray-700">{addr.street}<br />{addr.city}, {addr.province} {addr.postalCode}<br />{addr.country}</p>
+              <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Shipping</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Delivery Address</p>
+                  <p className="text-sm text-gray-700">{addr.street}<br />{addr.city}, {addr.province} {addr.postalCode}<br />{addr.country}</p>
+                </div>
+                <div className="space-y-2">
+                  {(order as any).shippingMethodName && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">Shipping Method</p>
+                      <p className="text-sm text-gray-800 font-medium flex items-center gap-1.5">
+                        {(order as any).shippingMethod === 'DOM.PC' ? <Timer size={14} className="text-[#F15929]" /> :
+                         (order as any).shippingMethod === 'DOM.XP' ? <Zap size={14} className="text-[#4B2D8E]" /> :
+                         (order as any).shippingMethod === 'DOM.EP' ? <Truck size={14} className="text-blue-500" /> :
+                         <Package size={14} className="text-gray-500" />}
+                        {(order as any).shippingMethodName}
+                        {((order as any).shippingMethod === 'DOM.XP' || (order as any).shippingMethod === 'DOM.PC') && (
+                          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Guaranteed</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {(order as any).estimatedDeliveryDate && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">Est. Delivery</p>
+                      <p className="text-sm text-gray-800">{new Date((order as any).estimatedDeliveryDate).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}</p>
+                    </div>
+                  )}
+                  {(order as any).shippingOriginPostal && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">Origin</p>
+                      <p className="text-sm text-gray-600 font-mono">{(order as any).shippingOriginPostal}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -319,17 +407,25 @@ function OrderDetail({ id }: { id: number }) {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Tracking</h2>
             {order.trackingNumber ? (
-              <div>
-                <a
-                  href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${order.trackingNumber}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-mono text-[#4B2D8E] font-semibold hover:text-[#F15929] hover:underline transition-colors inline-flex items-center gap-1"
-                >
-                  {order.trackingNumber}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                </a>
-                {order.trackingUrl && <a href={order.trackingUrl as string} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#F15929] hover:underline mt-1">Track on Canada Post</a>}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <a
+                    href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${order.trackingNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-mono text-[#4B2D8E] font-semibold hover:text-[#F15929] hover:underline transition-colors inline-flex items-center gap-1"
+                  >
+                    {order.trackingNumber}
+                    <ExternalLink size={12} />
+                  </a>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                    order.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'
+                  }`}>
+                    {order.status === 'delivered' ? 'Delivered' : 'In Transit'}
+                  </span>
+                </div>
+                {/* Live tracking info from Canada Post API */}
+                <CanadaPostTrackingWidget pin={order.trackingNumber} />
               </div>
             ) : trackingBlocked ? (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-2">

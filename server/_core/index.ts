@@ -15,11 +15,13 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
 import { lookupGeo, getClientIP } from "../geolocation";
-import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds, getNearestStore } from "../db";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds, getNearestStore, getAllOrders, updateOrder, getOrderById, logAdminActivity, awardOrderPoints } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 import { isGmailDisabled, getGmailStatus, resetGmailCircuitBreaker } from "../gmailAuth";
 import { initPushService, sendWinbackNotifications, isPushServiceConfigured } from "../pushService";
+import { getShippingRates, getTrackingSummary, getTrackingDetails, findPostOffices, validatePostalCode, getOriginPostal, isCanadaPostConfigured, pollCanadaPostTracking } from "../canadaPostService";
+import { triggerOrderStatusUpdate } from "../emailTemplateEngine";
 
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
@@ -214,6 +216,68 @@ async function startServer() {
   registerCustomAuthRoutes(app);
   // ID Verification REST API (guest + QR bridge + admin review)
   registerVerifyRoutes(app);
+
+  // ─── CANADA POST SHIPPING API ───
+  // POST /api/shipping/rates — get real-time rates (or fallback flat rates)
+  app.post("/api/shipping/rates", async (req, res) => {
+    try {
+      const { postalCode, weight, dimensions, storeId } = req.body;
+      if (!postalCode) return res.status(400).json({ error: "postalCode is required" });
+
+      const validation = validatePostalCode(postalCode);
+      if (!validation.valid) return res.status(400).json({ error: validation.error });
+
+      const origin = getOriginPostal(storeId);
+      const rates = await getShippingRates(origin, postalCode, weight || 0.5, dimensions);
+      res.json({ rates, origin, configured: isCanadaPostConfigured() });
+    } catch (err) {
+      console.error("[Shipping] Rate error:", (err as Error).message);
+      res.status(500).json({ error: "Failed to get shipping rates" });
+    }
+  });
+
+  // GET /api/shipping/track/:pin — summary tracking
+  app.get("/api/shipping/track/:pin", async (req, res) => {
+    try {
+      const summary = await getTrackingSummary(req.params.pin);
+      if (!summary) return res.status(404).json({ error: "Tracking info not found" });
+      res.json(summary);
+    } catch (err) {
+      res.status(500).json({ error: "Tracking lookup failed" });
+    }
+  });
+
+  // GET /api/shipping/track/:pin/details — full event history
+  app.get("/api/shipping/track/:pin/details", async (req, res) => {
+    try {
+      const details = await getTrackingDetails(req.params.pin);
+      if (!details) return res.status(404).json({ error: "Tracking details not found" });
+      res.json(details);
+    } catch (err) {
+      res.status(500).json({ error: "Tracking details lookup failed" });
+    }
+  });
+
+  // GET /api/shipping/post-offices?postalCode=...&max=5
+  app.get("/api/shipping/post-offices", async (req, res) => {
+    try {
+      const postalCode = req.query.postalCode as string;
+      if (!postalCode) return res.status(400).json({ error: "postalCode query param is required" });
+      const max = parseInt(req.query.max as string) || 5;
+      const offices = await findPostOffices(postalCode, max);
+      res.json(offices);
+    } catch (err) {
+      res.status(500).json({ error: "Post office search failed" });
+    }
+  });
+
+  // GET /api/shipping/validate-postal?code=...
+  app.get("/api/shipping/validate-postal", (req, res) => {
+    const code = req.query.code as string;
+    if (!code) return res.status(400).json({ error: "code query param is required" });
+    res.json(validatePostalCode(code));
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -373,6 +437,61 @@ async function startServer() {
     }, TRACKING_POLL_INTERVAL);
   }
 
+  // Poll Canada Post tracking API for shipped orders every 15 minutes
+  const CP_TRACKING_POLL = parseInt(process.env.CP_TRACKING_POLL_INTERVAL || "900000", 10);
+  if (isCanadaPostConfigured()) {
+    console.log(`[CanadaPost] Tracking poll configured — every ${CP_TRACKING_POLL / 1000}s`);
+    setInterval(async () => {
+      try {
+        const shippedOrders = await getAllOrders({ status: "shipped", limit: 200 });
+        const ordersWithTracking = shippedOrders.data
+          .filter(o => o.trackingNumber)
+          .map(o => ({ id: o.id, orderNumber: o.orderNumber, trackingNumber: o.trackingNumber }));
+
+        if (ordersWithTracking.length === 0) return;
+
+        const stats = await pollCanadaPostTracking(ordersWithTracking, async (orderId, data) => {
+          if (data.delivered) {
+            await updateOrder(orderId, { status: "delivered" } as any);
+            const order = await getOrderById(orderId);
+
+            // Award reward points
+            const pointsResult = await awardOrderPoints(orderId);
+            if (pointsResult) {
+              console.log(`[CanadaPost] Awarded ${pointsResult.points} points for delivered order #${order?.orderNumber}`);
+            }
+
+            // Send delivery email
+            if (order?.guestEmail) {
+              triggerOrderStatusUpdate({
+                customerName: order.guestName || "Customer",
+                customerEmail: order.guestEmail,
+                orderId: order.orderNumber || String(orderId),
+                orderStatus: "Delivered",
+                statusMessage: "Your order has been delivered! Thank you for shopping with MyLegacy Cannabis. We hope you enjoy your purchase.",
+              }).catch(err => console.warn("[CanadaPost] Delivery email failed:", err.message));
+            }
+
+            await logAdminActivity({
+              adminId: 0,
+              adminName: "System (Canada Post)",
+              action: "auto_delivered",
+              entityType: "order",
+              entityId: orderId,
+              details: `Auto-delivered via Canada Post tracking API (${order?.trackingNumber})`,
+            });
+          }
+        });
+
+        if (stats.delivered > 0) {
+          console.log(`[CanadaPost] Poll: ${stats.checked} checked, ${stats.delivered} auto-delivered, ${stats.errors} errors`);
+        }
+      } catch (err) {
+        console.error("[Cron] Canada Post tracking poll error:", (err as Error).message);
+      }
+    }, CP_TRACKING_POLL);
+  }
+
   // Run all jobs immediately on startup (after a short delay to let DB settle)
   setTimeout(async () => {
     try {
@@ -390,6 +509,39 @@ async function startServer() {
         const trackStats = await pollTrackingEmails();
         if (trackStats.deliveredOrders > 0) {
           console.log(`[Startup] Tracking poll: ${trackStats.deliveredOrders} orders auto-delivered`);
+        }
+      }
+      // Initial Canada Post API tracking poll
+      if (isCanadaPostConfigured()) {
+        const shippedOrders = await getAllOrders({ status: "shipped", limit: 200 });
+        const ordersWithTracking = shippedOrders.data
+          .filter(o => o.trackingNumber)
+          .map(o => ({ id: o.id, orderNumber: o.orderNumber, trackingNumber: o.trackingNumber }));
+        if (ordersWithTracking.length > 0) {
+          const cpStats = await pollCanadaPostTracking(ordersWithTracking, async (orderId, data) => {
+            if (data.delivered) {
+              await updateOrder(orderId, { status: "delivered" } as any);
+              const order = await getOrderById(orderId);
+              await awardOrderPoints(orderId);
+              if (order?.guestEmail) {
+                triggerOrderStatusUpdate({
+                  customerName: order.guestName || "Customer",
+                  customerEmail: order.guestEmail,
+                  orderId: order.orderNumber || String(orderId),
+                  orderStatus: "Delivered",
+                  statusMessage: "Your order has been delivered! Thank you for shopping with MyLegacy Cannabis.",
+                }).catch(() => {});
+              }
+              await logAdminActivity({
+                adminId: 0, adminName: "System (Canada Post)", action: "auto_delivered",
+                entityType: "order", entityId: orderId,
+                details: `Auto-delivered via Canada Post tracking API (${order?.trackingNumber})`,
+              });
+            }
+          });
+          if (cpStats.delivered > 0) {
+            console.log(`[Startup] Canada Post poll: ${cpStats.delivered} orders auto-delivered`);
+          }
         }
       }
     } catch (err) {

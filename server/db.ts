@@ -308,6 +308,13 @@ export async function initializeDatabase(): Promise<void> {
   await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50)`;
   await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount NUMERIC(10,2) DEFAULT 0`;
 
+  // ─── Alter orders table — add Canada Post shipping columns ───
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_method VARCHAR(30)`;
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_method_name VARCHAR(100)`;
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_origin_postal VARCHAR(10)`;
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_dest_postal VARCHAR(10)`;
+  await _sql!`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_delivery_date TIMESTAMP`;
+
   // ─── Coupons table ───
   await _sql!`
     CREATE TABLE IF NOT EXISTS coupons (

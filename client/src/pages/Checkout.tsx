@@ -351,6 +351,7 @@ export default function Checkout() {
           country: 'Canada',
         },
         shippingZone: form.province,
+        shippingDestPostal: form.postalCode.replace(/\s/g, '').toUpperCase(),
         notes: [form.notes, idNote].filter(Boolean).join('\n') || undefined,
         couponCode: appliedCoupon?.code || undefined,
       });

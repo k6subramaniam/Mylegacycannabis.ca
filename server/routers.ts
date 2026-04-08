@@ -41,6 +41,7 @@ import {
 import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured, getKeywordRules, clearKeywordRulesCache, DEFAULT_ETRANSFER_INDICATORS_FOR_TEST, type KeywordRule } from "./etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
+import { getShippingRates, getTrackingSummary, getTrackingDetails, findPostOffices, validatePostalCode, getOriginPostal, isCanadaPostConfigured, DOMESTIC_SERVICES } from "./canadaPostService";
 import { invokeLLM, clearAiConfigCache } from "./_core/llm";
 import { nanoid as nanoidSmall } from "nanoid";
 import { getMlcBusinessContext } from "./mlcContext";
@@ -2146,6 +2147,37 @@ Return ONLY the JSON object.`;
     shippingZones: publicProcedure.query(async () => {
       return db.getAllShippingZones();
     }),
+
+    // ─── CANADA POST SHIPPING RATES ───
+    shippingRates: publicProcedure.input(z.object({
+      postalCode: z.string(),
+      weight: z.number().default(0.5),
+      storeId: z.string().optional(),
+    })).query(async ({ input }) => {
+      const origin = getOriginPostal(input.storeId);
+      const rates = await getShippingRates(origin, input.postalCode, input.weight);
+      return { rates, configured: isCanadaPostConfigured() };
+    }),
+
+    // ─── CANADA POST TRACKING (public — for order tracking page) ───
+    trackShipment: publicProcedure.input(z.object({
+      pin: z.string(),
+    })).query(async ({ input }) => {
+      const summary = await getTrackingSummary(input.pin);
+      return summary;
+    }),
+    trackShipmentDetails: publicProcedure.input(z.object({
+      pin: z.string(),
+    })).query(async ({ input }) => {
+      const details = await getTrackingDetails(input.pin);
+      return details;
+    }),
+
+    validatePostalCode: publicProcedure.input(z.object({
+      code: z.string(),
+    })).query(async ({ input }) => {
+      return validatePostalCode(input.code);
+    }),
     submitOrder: publicProcedure.input(z.object({
       guestEmail: z.string().email(),
       guestName: z.string(),
@@ -2172,6 +2204,12 @@ Return ONLY the JSON object.`;
       shippingZone: z.string().optional(),
       notes: z.string().optional(),
       couponCode: z.string().optional(),
+      // Canada Post shipping method fields
+      shippingMethod: z.string().optional(),           // e.g. DOM.XP
+      shippingMethodName: z.string().optional(),       // e.g. "Xpresspost"
+      shippingOriginPostal: z.string().optional(),
+      shippingDestPostal: z.string().optional(),
+      estimatedDeliveryDays: z.number().optional(),
     })).mutation(async ({ input, ctx }) => {
       // ─── OUT-OF-STOCK GUARD ───
       const stockIssues = await db.checkStock(input.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity })));
@@ -2216,6 +2254,13 @@ Return ONLY the JSON object.`;
         notes: input.notes,
         couponCode,
         couponDiscount,
+        shippingMethod: input.shippingMethod,
+        shippingMethodName: input.shippingMethodName,
+        shippingOriginPostal: input.shippingOriginPostal,
+        shippingDestPostal: input.shippingDestPostal,
+        estimatedDeliveryDate: input.estimatedDeliveryDays
+          ? new Date(Date.now() + input.estimatedDeliveryDays * 86_400_000)
+          : undefined,
         status: "pending",
         paymentStatus: "pending",
       } as any);

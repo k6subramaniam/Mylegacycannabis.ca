@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { POINTS_PER_DOLLAR, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2, Loader2 } from 'lucide-react';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2, Loader2, Truck, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
@@ -186,6 +186,40 @@ function ProfileTab({ user }: { user: any }) {
   );
 }
 
+// ─── Mini order status progress bar (Processing → Shipped → Delivered) ───
+const TRACKING_STEPS = [
+  { key: 'processing', label: 'Processing' },
+  { key: 'shipped', label: 'Shipped' },
+  { key: 'delivered', label: 'Delivered' },
+];
+
+function OrderTrackingProgress({ status }: { status: string }) {
+  const stepIndex = TRACKING_STEPS.findIndex(s => s.key === status);
+  const activeIdx = stepIndex >= 0 ? stepIndex : -1;
+
+  return (
+    <div className="flex items-center gap-1">
+      {TRACKING_STEPS.map((step, i) => {
+        const isComplete = i <= activeIdx;
+        const isCurrent = i === activeIdx;
+        return (
+          <div key={step.key} className="flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${
+              isComplete ? (isCurrent && step.key === 'delivered' ? 'bg-green-500' : 'bg-[#4B2D8E]') : 'bg-gray-300'
+            }`} />
+            <span className={`text-[9px] ${isComplete ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+              {step.label}
+            </span>
+            {i < TRACKING_STEPS.length - 1 && (
+              <div className={`w-3 h-px ${i < activeIdx ? 'bg-[#4B2D8E]' : 'bg-gray-300'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function OrdersTab({ user }: { user: any }) {
   if (user.orders.length === 0) {
     return (
@@ -236,18 +270,23 @@ function OrdersTab({ user }: { user: any }) {
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-gray-200 pt-3 gap-2">
             <span className="font-display text-sm text-[#4B2D8E]">TOTAL: ${order.total.toFixed(2)}</span>
             {order.trackingNumber && (
-              <a
-                href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${order.trackingNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-[#F15929] font-mono-legacy hover:underline flex items-center gap-1"
-              >
-                Tracking: {order.trackingNumber}
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </a>
+              <div className="flex flex-col items-end gap-1">
+                <a
+                  href={`https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${order.trackingNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#F15929] font-mono-legacy hover:underline flex items-center gap-1"
+                >
+                  <Truck size={12} />
+                  Tracking: {order.trackingNumber}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+                {/* Mini status bar */}
+                <OrderTrackingProgress status={order.status} />
+              </div>
             )}
           </div>
         </div>

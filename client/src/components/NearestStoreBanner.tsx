@@ -18,8 +18,9 @@ interface NearestStoreData {
 /**
  * NearestStoreBanner — shows the closest store based on the visitor's IP geolocation.
  * Respects opt-out cookie and dismissal. Only shows for Canadian visitors.
+ * Lives inside the fixed <header> so it doesn't create a layout gap.
  */
-export default function NearestStoreBanner() {
+export default function NearestStoreBanner({ onVisibilityChange }: { onVisibilityChange?: (visible: boolean) => void }) {
   const [data, setData] = useState<NearestStoreData | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -38,7 +39,13 @@ export default function NearestStoreBanner() {
       .catch(() => { /* silent */ });
   }, []);
 
-  if (!data?.store || dismissed) return null;
+  // Notify parent (Layout) when visibility changes
+  const isVisible = !!data?.store && !dismissed;
+  useEffect(() => {
+    onVisibilityChange?.(isVisible);
+  }, [isVisible, onVisibilityChange]);
+
+  if (!isVisible) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -51,16 +58,16 @@ export default function NearestStoreBanner() {
         <div className="flex items-center gap-2 min-w-0">
           <MapPin size={16} className="shrink-0 text-white/80" />
           <p className="text-xs sm:text-sm truncate">
-            <span className="text-white/70">Near {data.geo!.city}?</span>{" "}
-            <span className="font-semibold">{data.store.name}</span>{" "}
-            <span className="text-white/70">—</span>{" "}
-            <span className="text-white/80">{data.store.address}, {data.store.city}</span>
+            <span className="text-white/70">Near {data!.geo!.city}?</span>{" "}
+            <span className="font-semibold">{data!.store!.name}</span>{" "}
+            <span className="text-white/70">&mdash;</span>{" "}
+            <span className="text-white/80">{data!.store!.address}, {data!.store!.city}</span>
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {data.store.directionsUrl && (
+          {data!.store!.directionsUrl && (
             <a
-              href={data.store.directionsUrl}
+              href={data!.store!.directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full transition-all"
