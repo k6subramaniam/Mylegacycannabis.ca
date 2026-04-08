@@ -362,7 +362,7 @@ function StoreHoursWidget() {
 // ============================================================
 // HEADER — fixed height so <main> offset never shifts
 // ============================================================
-function Header() {
+function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boolean) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { itemCount } = useCart();
@@ -509,6 +509,11 @@ function Header() {
             ))}
           </div>
         </div>
+
+        {/* Nearest store banner — inside the fixed header so it doesn't create a gap */}
+        <Suspense fallback={null}>
+          <NearestStoreBanner onVisibilityChange={onStoreBannerChange} />
+        </Suspense>
       </header>
 
       {/* Mobile Slide-out Menu — triggered by user, not CLS source */}
@@ -841,9 +846,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [ageVerified, setAgeVerified] = useState(() => {
     try { return localStorage.getItem('mlc-age-verified') === 'true'; } catch { return false; }
   });
+  const [storeBannerVisible, setStoreBannerVisible] = useState(false);
   const { maintenance, logoUrl } = useSiteConfig();
   const [location] = useLocation();
   const { trackPageView } = useBehavior();
+
+  // Publish header height as a CSS custom property so page heroes can consume it
+  useEffect(() => {
+    const root = document.documentElement;
+    // Base header: mobile 96px, desktop 112px.  Store banner adds ~40px.
+    const mobileH  = storeBannerVisible ? 136 : 96;
+    const desktopH = storeBannerVisible ? 152 : 112;
+    // We'll use the breakpoint at 768px (md) via matchMedia
+    const update = () => {
+      const h = window.matchMedia('(min-width: 768px)').matches ? desktopH : mobileH;
+      root.style.setProperty('--header-h', `${h}px`);
+    };
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, [storeBannerVisible]);
 
   // Track page views on route changes
   useEffect(() => {
@@ -866,14 +888,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="min-h-screen flex flex-col">
-        <Header />
-        <Suspense fallback={null}><NearestStoreBanner /></Suspense>
+        <Header onStoreBannerChange={(v) => setStoreBannerVisible(v)} />
         {/*
           pt-24 = 96px  (mobile:  h-16 nav + h-8 banner)
           md:pt-28 = 112px (desktop: h-20 nav + h-8 banner)
+          + 40px when nearest-store banner is visible
           Hard pixel values — no calc(), no font-dependent units — prevents reflow.
         */}
-        <main className="flex-1 pt-24 md:pt-28">
+        {/*
+          Padding-top matches the fixed header height (nav + shipping banner + optional store banner).
+          --header-h CSS variable is set on <html> so any page hero can use it to pull up seamlessly.
+        */}
+        <main
+          className={`flex-1 ${storeBannerVisible ? 'pt-[136px] md:pt-[152px]' : 'pt-24 md:pt-28'}`}
+        >
           {children}
         </main>
         <Footer />

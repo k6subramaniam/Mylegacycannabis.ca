@@ -48,8 +48,11 @@ export default function Home() {
         jsonLd={buildBreadcrumbJsonLd([{ name: 'Home', url: canonical('/') }])}
       />
 
-      {/* HERO SECTION — no animations, content immediately visible for LCP */}
-      <section className="relative bg-[#4B2D8E] overflow-hidden">
+      {/* HERO SECTION — pulled up to sit directly under the fixed header (no white gap) */}
+      <section
+        className="relative bg-[#4B2D8E] overflow-hidden"
+        style={{ marginTop: 'calc(-1 * var(--header-h, 96px))', paddingTop: 'var(--header-h, 96px)' }}
+      >
         <div className="absolute inset-0">
           <img
             src={HERO_IMG}

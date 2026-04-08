@@ -155,6 +155,12 @@ export const orders = pgTable("orders", {
   adminNotes: text("admin_notes"),
   couponCode: varchar("coupon_code", { length: 50 }),
   couponDiscount: numeric("coupon_discount", { precision: 10, scale: 2 }).default("0"),
+  // ─── Canada Post integration fields ───
+  shippingMethod: varchar("shipping_method", { length: 30 }),       // e.g. DOM.RP, DOM.EP, DOM.XP, DOM.PC
+  shippingMethodName: varchar("shipping_method_name", { length: 100 }), // e.g. "Xpresspost"
+  shippingOriginPostal: varchar("shipping_origin_postal", { length: 10 }),
+  shippingDestPostal: varchar("shipping_dest_postal", { length: 10 }),
+  estimatedDeliveryDate: timestamp("estimated_delivery_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
