@@ -408,6 +408,8 @@ export function registerCustomAuthRoutes(app: Express) {
       const state = req.query.state as string;
       const returnTo = state ? Buffer.from(state, "base64").toString() : "/";
 
+      console.log(`[Google Auth] Callback received — returnTo: ${returnTo}, hasCode: ${!!code}`);
+
       if (!code) {
         res.redirect(`/login?error=google_auth_failed`);
         return;
@@ -469,10 +471,12 @@ export function registerCustomAuthRoutes(app: Express) {
 
         // If user doesn't have a phone, redirect to complete profile
         if (!user.phone) {
+          console.log(`[Google Auth] Existing user ${googleUser.email} — no phone, redirecting to /complete-profile`);
           res.redirect(`/complete-profile?from=google`);
           return;
         }
 
+        console.log(`[Google Auth] Existing user ${googleUser.email} — session set, redirecting to ${returnTo}`);
         res.redirect(returnTo);
       } else {
         // New user — create account but require phone number
@@ -498,6 +502,7 @@ export function registerCustomAuthRoutes(app: Express) {
         await setSessionCookie(res, req, openId, googleUser.name);
 
         // Redirect to complete profile (phone is mandatory)
+        console.log(`[Google Auth] New user ${googleUser.email} — session set, redirecting to /complete-profile`);
         res.redirect(`/complete-profile?from=google&welcome=true`);
       }
     } catch (error) {

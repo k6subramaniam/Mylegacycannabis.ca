@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
   Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
   Menu, X, Settings, ShieldAlert, ImageUp, MessageSquare, DollarSign, MapPin,
-  Brain, ScrollText,
+  Brain, ScrollText, Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,11 +35,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { logoUrl } = useSiteConfig();
   const resolvedLogo = logoUrl || LOGO_URL_FALLBACK;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
+
+  // Show spinner while auth state is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 size={32} className="animate-spin text-[#4B2D8E]" />
+      </div>
+    );
+  }
 
   // Redirect unauthenticated users to login
   if (!isAuthenticated) {
