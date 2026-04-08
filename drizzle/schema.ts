@@ -447,6 +447,13 @@ export const userBehavior = pgTable("user_behavior", {
   searchQuery: varchar("search_query", { length: 255 }),
   metadata: json("metadata").$type<Record<string, any>>(),   // flexible extra data (time_on_page_ms, click_target, etc.)
   dwellTimeMs: integer("dwell_time_ms"),                     // time spent on page in milliseconds
+  // ── Geo-analytics (PIPEDA-compliant: no raw IP, no lat/lng, no postal code) ──
+  ipHash: varchar("ip_hash", { length: 16 }),                // SHA-256 first 16 chars of IP
+  city: varchar("city", { length: 100 }),
+  province: varchar("province", { length: 100 }),
+  provinceCode: varchar("province_code", { length: 5 }),
+  countryCode: varchar("country_code", { length: 2 }),
+  isProxy: boolean("is_proxy").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

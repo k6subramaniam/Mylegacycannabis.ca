@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { lookupGeo, getClientIP, isOptedOut, getGeoCacheStats } from "./geolocation";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { notifyOwner, notifyOwnerAsync } from "./_core/notification";
@@ -1790,6 +1791,52 @@ Return ONLY the JSON object.`;
       }),
     }),
 
+    // ═══════════════════════════════════════════════════════════════
+    // GEO-ANALYTICS (IP-based location insights — PIPEDA-compliant)
+    // ═══════════════════════════════════════════════════════════════
+    geoAnalytics: router({
+      /** Events, orders, revenue, visitors per province */
+      byProvince: adminProcedure.input(z.object({
+        days: z.number().default(30),
+      }).optional()).query(async ({ input }) => {
+        return db.getGeoByProvince(input?.days ?? 30);
+      }),
+
+      /** Events, orders, revenue, visitors per city (optional province filter) */
+      byCity: adminProcedure.input(z.object({
+        days: z.number().default(30),
+        province: z.string().optional(),
+      }).optional()).query(async ({ input }) => {
+        return db.getGeoByCityRaw(input?.days ?? 30, input?.province);
+      }),
+
+      /** Product category breakdown by province */
+      productsByRegion: adminProcedure.input(z.object({
+        days: z.number().default(30),
+      }).optional()).query(async ({ input }) => {
+        return db.getProductsByRegion(input?.days ?? 30);
+      }),
+
+      /** VPN/Proxy usage stats */
+      proxyStats: adminProcedure.input(z.object({
+        days: z.number().default(30),
+      }).optional()).query(async ({ input }) => {
+        return db.getProxyStats(input?.days ?? 30);
+      }),
+
+      /** Daily trend (events, visitors, orders) for charting */
+      dailyTrend: adminProcedure.input(z.object({
+        days: z.number().default(30),
+      }).optional()).query(async ({ input }) => {
+        return db.getGeoDailyTrend(input?.days ?? 30);
+      }),
+
+      /** Geo cache stats */
+      cacheStats: adminProcedure.query(() => {
+        return getGeoCacheStats();
+      }),
+    }),
+
   }),
   store: router({
     // ─── PUBLIC: LOCATIONS LIST ───
@@ -2053,10 +2100,31 @@ Return ONLY the JSON object.`;
       })),
     })).mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id || null;
+
+      // ── Geo-enrichment (non-blocking, PIPEDA-safe) ──
+      let geo: { ipHash: string; city: string; province: string; provinceCode: string; countryCode: string; isProxy: boolean } | null = null;
+      if (!isOptedOut(ctx.req)) {
+        try {
+          const ip = getClientIP(ctx.req);
+          geo = await lookupGeo(ip);
+        } catch {
+          // Geo lookup failed — proceed without geo data
+        }
+      }
+
       await db.recordBehaviorEvents(input.events.map(e => ({
         ...e,
         userId,
         metadata: e.metadata ?? undefined,
+        // Inject geo data into every event in the batch
+        ...(geo ? {
+          ipHash: geo.ipHash,
+          city: geo.city,
+          province: geo.province,
+          provinceCode: geo.provinceCode,
+          countryCode: geo.countryCode,
+          isProxy: geo.isProxy,
+        } : {}),
       })));
       return { recorded: input.events.length };
     }),

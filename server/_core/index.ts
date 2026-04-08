@@ -14,7 +14,8 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds } from "../db";
+import { lookupGeo, getClientIP } from "../geolocation";
+import { initializeDatabase, USE_PERSISTENT_DB, autoCancelUnpaidOrders, checkBirthdayBonuses, fileStoreGetAll, fileStorePut, refreshAllAiUserMemories, syncAllSiteKnowledge, backfillOrderUserIds, getNearestStore } from "../db";
 import { pollETransferEmails, isETransferServiceConfigured } from "../etransferService";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "../trackingService";
 import { isGmailDisabled, getGmailStatus, resetGmailCircuitBreaker } from "../gmailAuth";
@@ -178,6 +179,33 @@ async function startServer() {
     } catch (err) {
       // Fail silently — frontend will use browser language or default to English
       res.json({ province: "", region: "", country: "", source: "error" });
+    }
+  });
+
+  // ─── NEAREST STORE ENDPOINT (uses geo to find closest location) ───
+  app.get("/api/geo/nearest-store", async (req, res) => {
+    try {
+      const ip = getClientIP(req);
+      const geo = await lookupGeo(ip);
+      if (!geo || !geo.city) {
+        return res.json({ store: null, geo: null, source: "no-geo" });
+      }
+      const store = await getNearestStore(geo.city, geo.provinceCode || "ON");
+      res.json({
+        store: store ? {
+          name: store.name,
+          address: store.address,
+          city: store.city,
+          province: store.province,
+          phone: store.phone,
+          hours: store.hours,
+          directionsUrl: store.directionsUrl,
+        } : null,
+        geo: { city: geo.city, province: geo.province, provinceCode: geo.provinceCode },
+        source: "ipapi",
+      });
+    } catch {
+      res.json({ store: null, geo: null, source: "error" });
     }
   });
   // OAuth callback under /api/oauth/callback

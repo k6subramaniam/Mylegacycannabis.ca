@@ -488,6 +488,18 @@ export async function initializeDatabase(): Promise<void> {
   await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_session ON user_behavior(session_id)`);
   await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_created ON user_behavior(created_at DESC)`);
 
+  // Add geo-analytics columns to user_behavior (PIPEDA-compliant: no raw IP)
+  await _sql!`DO $$ BEGIN
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS ip_hash VARCHAR(16);
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS city VARCHAR(100);
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS province VARCHAR(100);
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS province_code VARCHAR(5);
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
+    ALTER TABLE user_behavior ADD COLUMN IF NOT EXISTS is_proxy BOOLEAN DEFAULT FALSE;
+  END $$`;
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_province ON user_behavior(province_code) WHERE province_code IS NOT NULL`);
+  await _sql!.unsafe(`CREATE INDEX IF NOT EXISTS idx_user_behavior_city ON user_behavior(city) WHERE city IS NOT NULL`);
+
   // ─── AI USER MEMORY ───
   await _sql!`
     CREATE TABLE IF NOT EXISTS ai_user_memory (
@@ -2315,9 +2327,12 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
   totalEvents: number;
   avgEventsPerUser: number;
   recentActivity: Array<{ date: string; events: number }>;
+  uniqueCities: number;
+  activeProvinces: number;
+  proxyRate: number;
 }> {
   if (!USE_PERSISTENT_DB) {
-    return { topCategories: [], topProducts: [], topSearches: [], eventCounts: {}, activeUsers: 0, totalEvents: 0, avgEventsPerUser: 0, recentActivity: [] };
+    return { topCategories: [], topProducts: [], topSearches: [], eventCounts: {}, activeUsers: 0, totalEvents: 0, avgEventsPerUser: 0, recentActivity: [], uniqueCities: 0, activeProvinces: 0, proxyRate: 0 };
   }
 
   // Top categories by views
@@ -2366,6 +2381,19 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
     GROUP BY created_at::date ORDER BY date ASC
   `;
 
+  // Geo stats summary (30 days)
+  const [geoSummary] = await _sql!`
+    SELECT
+      count(DISTINCT city)::int as unique_cities,
+      count(DISTINCT province_code)::int as active_provinces,
+      count(DISTINCT CASE WHEN is_proxy = TRUE THEN session_id END)::int as proxy_sessions,
+      count(DISTINCT CASE WHEN ip_hash IS NOT NULL THEN session_id END)::int as geo_sessions
+    FROM user_behavior
+    WHERE created_at > NOW() - INTERVAL '30 days'
+  `;
+  const geoSessionsTotal = geoSummary?.geo_sessions ?? 0;
+  const proxySessions = geoSummary?.proxy_sessions ?? 0;
+
   return {
     topCategories: topCats.map((r: any) => ({ category: r.category, views: r.views })),
     topProducts: topProds.map((r: any) => ({ slug: r.slug, views: r.views })),
@@ -2375,6 +2403,9 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
     totalEvents,
     avgEventsPerUser: activeUsers > 0 ? Math.round(totalEvents / activeUsers) : 0,
     recentActivity: recentActivity.map((r: any) => ({ date: r.date, events: r.events })),
+    uniqueCities: geoSummary?.unique_cities ?? 0,
+    activeProvinces: geoSummary?.active_provinces ?? 0,
+    proxyRate: geoSessionsTotal > 0 ? parseFloat(((proxySessions / geoSessionsTotal) * 100).toFixed(1)) : 0,
   };
 }
 
@@ -2426,6 +2457,149 @@ export async function getAllAiUserMemories(): Promise<Array<schema.AiUserMemory 
       liveAvgOrder: liveCompleted > 0 ? (liveSpent / liveCompleted).toFixed(2) : "0.00",
     };
   });
+}
+
+// ========================================================================================
+// GEO-ANALYTICS QUERIES
+// ========================================================================================
+
+/** Orders + revenue + unique visitors per province */
+export async function getGeoByProvince(days = 30): Promise<Array<{
+  province: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number;
+}>> {
+  if (!USE_PERSISTENT_DB) return [];
+  const rows = await _sql!`
+    SELECT
+      ub.province, ub.province_code,
+      count(*)::int as events,
+      count(DISTINCT ub.session_id)::int as unique_visitors,
+      count(DISTINCT CASE WHEN ub.event_type = 'checkout_complete' THEN ub.session_id END)::int as orders,
+      COALESCE(SUM(
+        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'orderTotal' IS NOT NULL
+        THEN (ub.metadata->>'orderTotal')::numeric ELSE 0 END
+      ), 0) as revenue
+    FROM user_behavior ub
+    WHERE ub.province IS NOT NULL AND ub.province != ''
+      AND ub.created_at > NOW() - (${days} || ' days')::interval
+    GROUP BY ub.province, ub.province_code
+    ORDER BY events DESC
+  `;
+  return rows.map((r: any) => ({
+    province: r.province, provinceCode: r.province_code || "",
+    events: r.events, uniqueVisitors: r.unique_visitors,
+    orders: r.orders, revenue: parseFloat(r.revenue || "0"),
+  }));
+}
+
+/** Orders + revenue + unique visitors per city (optional province filter) */
+export async function getGeoByCityRaw(days = 30, province?: string): Promise<Array<{
+  city: string; province: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number;
+}>> {
+  if (!USE_PERSISTENT_DB) return [];
+  const provFilter = province ? _sql!`AND ub.province_code = ${province}` : _sql!``;
+  const rows = await _sql!`
+    SELECT
+      ub.city, ub.province, ub.province_code,
+      count(*)::int as events,
+      count(DISTINCT ub.session_id)::int as unique_visitors,
+      count(DISTINCT CASE WHEN ub.event_type = 'checkout_complete' THEN ub.session_id END)::int as orders,
+      COALESCE(SUM(
+        CASE WHEN ub.event_type = 'checkout_complete' AND ub.metadata->>'orderTotal' IS NOT NULL
+        THEN (ub.metadata->>'orderTotal')::numeric ELSE 0 END
+      ), 0) as revenue
+    FROM user_behavior ub
+    WHERE ub.city IS NOT NULL AND ub.city != ''
+      AND ub.created_at > NOW() - (${days} || ' days')::interval
+      ${provFilter}
+    GROUP BY ub.city, ub.province, ub.province_code
+    ORDER BY events DESC
+    LIMIT 50
+  `;
+  return rows.map((r: any) => ({
+    city: r.city, province: r.province, provinceCode: r.province_code || "",
+    events: r.events, uniqueVisitors: r.unique_visitors,
+    orders: r.orders, revenue: parseFloat(r.revenue || "0"),
+  }));
+}
+
+/** Product category breakdown by province */
+export async function getProductsByRegion(days = 30): Promise<Array<{
+  province: string; provinceCode: string; category: string; orders: number; revenue: number;
+}>> {
+  if (!USE_PERSISTENT_DB) return [];
+  const rows = await _sql!`
+    SELECT
+      ub.province, ub.province_code, ub.category,
+      count(*)::int as views,
+      count(DISTINCT CASE WHEN ub.event_type = 'add_to_cart' THEN ub.session_id END)::int as carts
+    FROM user_behavior ub
+    WHERE ub.province IS NOT NULL AND ub.category IS NOT NULL
+      AND ub.created_at > NOW() - (${days} || ' days')::interval
+    GROUP BY ub.province, ub.province_code, ub.category
+    ORDER BY ub.province, views DESC
+  `;
+  return rows.map((r: any) => ({
+    province: r.province, provinceCode: r.province_code || "",
+    category: r.category, orders: r.views, revenue: r.carts,
+  }));
+}
+
+/** VPN/Proxy usage stats */
+export async function getProxyStats(days = 30): Promise<{ total: number; proxy: number; rate: number }> {
+  if (!USE_PERSISTENT_DB) return { total: 0, proxy: 0, rate: 0 };
+  const [row] = await _sql!`
+    SELECT
+      count(DISTINCT session_id)::int as total,
+      count(DISTINCT CASE WHEN is_proxy = TRUE THEN session_id END)::int as proxy
+    FROM user_behavior
+    WHERE created_at > NOW() - (${days} || ' days')::interval
+      AND ip_hash IS NOT NULL
+  `;
+  const total = row?.total ?? 0;
+  const proxy = row?.proxy ?? 0;
+  return { total, proxy, rate: total > 0 ? parseFloat(((proxy / total) * 100).toFixed(1)) : 0 };
+}
+
+/** Daily events, unique visitors, orders for charting */
+export async function getGeoDailyTrend(days = 30): Promise<Array<{
+  date: string; events: number; visitors: number; orders: number;
+}>> {
+  if (!USE_PERSISTENT_DB) return [];
+  const rows = await _sql!`
+    SELECT
+      created_at::date::text as date,
+      count(*)::int as events,
+      count(DISTINCT session_id)::int as visitors,
+      count(DISTINCT CASE WHEN event_type = 'checkout_complete' THEN session_id END)::int as orders
+    FROM user_behavior
+    WHERE created_at > NOW() - (${days} || ' days')::interval
+    GROUP BY created_at::date
+    ORDER BY date ASC
+  `;
+  return rows.map((r: any) => ({
+    date: r.date, events: r.events, visitors: r.visitors, orders: r.orders,
+  }));
+}
+
+/** Get nearest store to a given city/province */
+export async function getNearestStore(city: string, province: string): Promise<any | null> {
+  if (!USE_PERSISTENT_DB) return null;
+  const db = getDb();
+  // Try exact city match first
+  let stores = await db.select().from(schema.storeLocations)
+    .where(and(eq(schema.storeLocations.isActive, true), ilike(schema.storeLocations.city, city)))
+    .limit(1);
+  if (stores.length > 0) return stores[0];
+  // Fall back to same province
+  stores = await db.select().from(schema.storeLocations)
+    .where(and(eq(schema.storeLocations.isActive, true), eq(schema.storeLocations.province, province)))
+    .orderBy(schema.storeLocations.sortOrder).limit(1);
+  if (stores.length > 0) return stores[0];
+  // Fall back to any active store
+  stores = await db.select().from(schema.storeLocations)
+    .where(eq(schema.storeLocations.isActive, true))
+    .orderBy(schema.storeLocations.sortOrder).limit(1);
+  return stores[0] ?? null;
 }
 
 // ========================================================================================

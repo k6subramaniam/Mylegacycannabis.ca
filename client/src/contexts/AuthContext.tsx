@@ -149,35 +149,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Fetch the latest user data from the server.
    * Called on mount (session restore), after login, and periodically
    * to pick up ID verification status changes from admin actions.
+   *
+   * IMPORTANT — Network resilience:
+   *  - Only clear auth state on explicit 401/403 (server says "not logged in")
+   *  - On 500/502/503 (server error): preserve existing state (session cookie is still valid)
+   *  - On network error (timeout, dead zone): preserve existing state
+   * This prevents spurious logouts when users are on mobile with inconsistent
+   * connectivity (in-store, transit between GTA locations, congested networks).
    */
   const refreshUser = useCallback(async () => {
     try {
       const response = await fetch('/api/trpc/auth.me', { credentials: 'include' });
+
       if (response.ok) {
         const result = await response.json();
         const userData = unwrapTrpcResponse(result);
         if (!userData) {
-          // Server returned OK but no user data — clear state
+          // Server returned 200 but empty data — genuinely no session
           setUser(null);
           persistUserToLocalStorage(null);
           return;
         }
         const transformedUser = transformBackendUser(userData);
         setUser(prev => {
-          // Preserve locally-set fields that server doesn't return (like birthday from localStorage)
           const merged = prev ? { ...prev, ...transformedUser } : transformedUser;
           persistUserToLocalStorage(merged);
           return merged;
         });
-      } else {
-        // 401 / error — no valid session
+        return;
+      }
+
+      // ─── Non-OK responses ───
+      if (response.status === 401 || response.status === 403) {
+        // Server explicitly rejected the session — actually logged out
         setUser(null);
         persistUserToLocalStorage(null);
+        return;
       }
-    } catch {
-      // Network error / no active session — clear state
-      setUser(null);
-      persistUserToLocalStorage(null);
+
+      // 500, 502, 503, etc. — server issue, NOT an auth issue.
+      // Preserve existing user state; the session cookie is still valid.
+      console.warn(`[Auth] Server error ${response.status} checking session — preserving existing state`);
+    } catch (err) {
+      // Network failure (timeout, DNS, dead zone, CORS, etc.)
+      // The session cookie is almost certainly still valid — don't wipe the user.
+      // This prevents spurious logouts on mobile with flaky connectivity.
+      console.warn('[Auth] Network error checking session — preserving existing state:', (err as Error)?.message || err);
     }
   }, []);
 
