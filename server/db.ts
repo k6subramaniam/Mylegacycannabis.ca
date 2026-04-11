@@ -702,7 +702,7 @@ async function fixProductCategoriesAndGrades(db: PostgresJsDatabase<typeof schem
   // 1. Re-categorize Ounce Deals & Shake n Bake products (currently flower, name contains "28g" or "oz")
   //    Match by name patterns — menu import creates names like "Shake And Bake Premium — 28g"
   const shakeProducts = await sql.unsafe(
-    `UPDATE products SET category = 'shake-n-bake'
+    `UPDATE products SET category = 'shake-n-bake', subcategory = 'Shake n Bake', grade = 'SHAKE'
      WHERE category = 'flower' AND is_active = TRUE
      AND (LOWER(name) LIKE '%shake%bake%' OR LOWER(name) LIKE '%shake n bake%' OR LOWER(name) LIKE '%shake and bake%')
      RETURNING id`
@@ -713,7 +713,7 @@ async function fixProductCategoriesAndGrades(db: PostgresJsDatabase<typeof schem
   }
 
   const ounceProducts = await sql.unsafe(
-    `UPDATE products SET category = 'ounce-deals'
+    `UPDATE products SET category = 'ounce-deals', subcategory = 'Ounce Deals'
      WHERE category = 'flower' AND is_active = TRUE
      AND (LOWER(name) LIKE '%ounce deal%' OR LOWER(name) LIKE '%oz deal%')
      AND LOWER(name) NOT LIKE '%shake%'
@@ -727,7 +727,7 @@ async function fixProductCategoriesAndGrades(db: PostgresJsDatabase<typeof schem
   // Also re-categorize products whose "flavor" field contains clues (the old import stored grade in flavor)
   // Products with 28g weight under flower that match ounce-deal naming patterns from the seed data
   const ounceBySlug = await sql.unsafe(
-    `UPDATE products SET category = 'ounce-deals'
+    `UPDATE products SET category = 'ounce-deals', subcategory = 'Ounce Deals'
      WHERE category = 'flower' AND is_active = TRUE
      AND weight = '28g'
      AND slug IN ('sour-og-28g', 'granola-funk-28g', 'banana-sundae-28g')
@@ -755,12 +755,50 @@ async function fixProductCategoriesAndGrades(db: PostgresJsDatabase<typeof schem
     console.log(`[DB Fix] Set subcategory for ${flowerNoSub.length} flower products`);
   }
 
+  // 2.1 Populate subcategory for pre-rolls based on strain_type
+  const preRollNoSub = await sql.unsafe(
+    `UPDATE products SET subcategory =
+       CASE
+         WHEN strain_type = 'Indica' THEN 'Indica Pre-Rolls'
+         WHEN strain_type = 'Sativa' THEN 'Sativa Pre-Rolls'
+         WHEN strain_type = 'Hybrid' THEN 'Hybrid Pre-Rolls'
+         ELSE 'Pre-Rolls'
+       END
+     WHERE category = 'pre-rolls' AND (subcategory IS NULL OR subcategory = '')
+     RETURNING id`
+  );
+  if (preRollNoSub.length > 0) {
+    fixed += preRollNoSub.length;
+    console.log(`[DB Fix] Set subcategory for ${preRollNoSub.length} pre-roll products`);
+  }
+
+  // 2.2 Ensure ounce-deals and shake-n-bake categories have subcategories set
+  const ounceNoSub = await sql.unsafe(
+    `UPDATE products SET subcategory = 'Ounce Deals'
+     WHERE category = 'ounce-deals' AND (subcategory IS NULL OR subcategory = '')
+     RETURNING id`
+  );
+  if (ounceNoSub.length > 0) {
+    fixed += ounceNoSub.length;
+    console.log(`[DB Fix] Set subcategory for ${ounceNoSub.length} ounce-deal products`);
+  }
+
+  const shakeNoSub = await sql.unsafe(
+    `UPDATE products SET subcategory = 'Shake n Bake'
+     WHERE category = 'shake-n-bake' AND (subcategory IS NULL OR subcategory = '')
+     RETURNING id`
+  );
+  if (shakeNoSub.length > 0) {
+    fixed += shakeNoSub.length;
+    console.log(`[DB Fix] Set subcategory for ${shakeNoSub.length} shake-n-bake products`);
+  }
+
   // 3. Populate grade from flavor field (old import stored grade there)
   //    Valid grades: AAAA, AAA+, AAA, AAA-, AA+, AA, SHAKE
   const gradeFromFlavor = await sql.unsafe(
-    `UPDATE products SET grade = flavor
+    `UPDATE products SET grade = UPPER(TRIM(flavor))
      WHERE (grade IS NULL OR grade = '')
-     AND flavor IN ('AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'AA-', 'A+', 'A', 'SHAKE')
+     AND UPPER(TRIM(flavor)) IN ('AAAA', 'AAA+', 'AAA', 'AAA-', 'AA+', 'AA', 'AA-', 'A+', 'A', 'SHAKE')
      RETURNING id`
   );
   if (gradeFromFlavor.length > 0) {
