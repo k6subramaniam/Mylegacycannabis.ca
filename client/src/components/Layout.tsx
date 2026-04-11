@@ -1,37 +1,70 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { Link, useLocation } from 'wouter';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSiteConfig } from '@/hooks/useSiteConfig';
-import { storeLocations } from '@/lib/data';
-import { Menu, X, ShoppingCart, Home, Search, User, Phone, Mail, Gift, ChevronRight, ChevronLeft, Truck, Wrench, Clock, Navigation, Globe, Star } from 'lucide-react';
-import { useT } from '@/i18n';
-import { motion, AnimatePresence } from 'framer-motion';
-import useEmblaCarousel from 'embla-carousel-react';
-import { useBehavior } from '@/contexts/BehaviorContext';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  lazy,
+  Suspense,
+} from "react";
+import { Link, useLocation } from "wouter";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { storeLocations } from "@/lib/data";
+import {
+  Menu,
+  X,
+  ShoppingCart,
+  Home,
+  Search,
+  User,
+  Phone,
+  Mail,
+  Gift,
+  ChevronRight,
+  ChevronLeft,
+  Truck,
+  Wrench,
+  Clock,
+  Navigation,
+  Globe,
+  Star,
+} from "lucide-react";
+import { useT } from "@/i18n";
+import { motion, AnimatePresence } from "framer-motion";
+import useEmblaCarousel from "embla-carousel-react";
+import { useBehavior } from "@/contexts/BehaviorContext";
 
-const LOGO_URL_FALLBACK = '/logo.webp';
+const LOGO_URL_FALLBACK = "/logo.webp";
 
 // Lazy load NearestStoreBanner — not critical for initial render
-const NearestStoreBanner = lazy(() => import('./NearestStoreBanner'));
+const NearestStoreBanner = lazy(() => import("./NearestStoreBanner"));
 
 // ─── Header heights (must match <main> padding-top) ──────────────────────────
 // Mobile:  nav h-16 (64px) + banner 32px = 96px  → mt-24 (96px)
 // Desktop: nav h-20 (80px) + banner 32px = 112px → mt-28 (112px)
 // These are exported so Layout's <main> and any page hero can use the same value.
-export const HEADER_HEIGHT_MOBILE = 96;   // px
+export const HEADER_HEIGHT_MOBILE = 96; // px
 export const HEADER_HEIGHT_DESKTOP = 112; // px
 
 // ============================================================
 // AGE GATE — no animation, instant render, fixed full-screen
 // ============================================================
-function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: string }) {
+function AgeGate({
+  onConfirm,
+  logoUrl,
+}: {
+  onConfirm: () => void;
+  logoUrl: string;
+}) {
   const { t } = useT();
   useEffect(() => {
     // Lock scroll while gate is visible — prevents scrollbar CLS
     const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   return (
@@ -54,7 +87,11 @@ function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: strin
           loading="eager"
           decoding="async"
         />
-        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">{t.ageGate.welcome}<br />{t.ageGate.myLegacy}</h2>
+        <h2 className="font-display text-2xl text-[#4B2D8E] mb-4">
+          {t.ageGate.welcome}
+          <br />
+          {t.ageGate.myLegacy}
+        </h2>
         <p className="text-[#333] mb-6 font-body text-sm leading-relaxed">
           {t.ageGate.confirm}
         </p>
@@ -65,7 +102,9 @@ function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: strin
           {t.ageGate.iAmOlder}
         </button>
         <button
-          onClick={() => { window.location.href = 'https://www.google.com'; }}
+          onClick={() => {
+            window.location.href = "https://www.google.com";
+          }}
           className="mt-4 text-gray-400 hover:text-gray-600 font-body text-sm transition-colors cursor-pointer bg-transparent border-none w-full"
         >
           {t.ageGate.underAge}
@@ -78,7 +117,7 @@ function AgeGate({ onConfirm, logoUrl }: { onConfirm: () => void; logoUrl: strin
 // ============================================================
 // MAINTENANCE MODE OVERLAY
 // ============================================================
-function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
+function MaintenanceLocationCard({ loc }: { loc: (typeof storeLocations)[0] }) {
   return (
     <article className="bg-[#F5F5F5] rounded-2xl overflow-hidden shadow-md h-full">
       {/* Google Maps embed */}
@@ -110,7 +149,7 @@ function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
         </div>
 
         <a
-          href={`tel:${loc.phone.replace(/\D/g, '')}`}
+          href={`tel:${loc.phone.replace(/\D/g, "")}`}
           className="flex items-center gap-1 text-xs text-[#4B2D8E] hover:text-[#F15929] font-body transition-colors mb-3"
         >
           <Phone size={12} /> {loc.phone}
@@ -118,7 +157,7 @@ function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
 
         <div className="flex gap-2">
           <a
-            href={`tel:${loc.phone.replace(/\D/g, '')}`}
+            href={`tel:${loc.phone.replace(/\D/g, "")}`}
             className="flex-1 bg-[#4B2D8E] hover:bg-[#3a2270] text-white text-center font-display text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-1"
           >
             <Phone size={13} /> CALL NOW
@@ -137,16 +176,26 @@ function MaintenanceLocationCard({ loc }: { loc: typeof storeLocations[0] }) {
   );
 }
 
-function MaintenanceOverlay({ title, message, logoUrl }: { title: string; message: string; logoUrl: string }) {
+function MaintenanceOverlay({
+  title,
+  message,
+  logoUrl,
+}: {
+  title: string;
+  message: string;
+  logoUrl: string;
+}) {
   useEffect(() => {
     const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   // ── Embla carousel with auto-scroll ──
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'center',
+    align: "center",
     loop: true,
     skipSnaps: false,
     containScroll: false,
@@ -158,7 +207,10 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-  const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
+  const scrollTo = useCallback(
+    (index: number) => emblaApi?.scrollTo(index),
+    [emblaApi]
+  );
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -176,24 +228,27 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
   }, [emblaApi]);
 
   const stopAutoplay = useCallback(() => {
-    if (autoplayRef.current) { clearInterval(autoplayRef.current); autoplayRef.current = null; }
+    if (autoplayRef.current) {
+      clearInterval(autoplayRef.current);
+      autoplayRef.current = null;
+    }
   }, []);
 
   useEffect(() => {
     if (!emblaApi) return;
     onSelect();
-    emblaApi.on('select', onSelect);
-    emblaApi.on('reInit', onSelect);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
     // Pause auto-scroll on pointer interaction, resume on release
-    emblaApi.on('pointerDown', stopAutoplay);
-    emblaApi.on('pointerUp', startAutoplay);
+    emblaApi.on("pointerDown", stopAutoplay);
+    emblaApi.on("pointerUp", startAutoplay);
     startAutoplay();
     return () => {
       stopAutoplay();
-      emblaApi.off('select', onSelect);
-      emblaApi.off('reInit', onSelect);
-      emblaApi.off('pointerDown', stopAutoplay);
-      emblaApi.off('pointerUp', startAutoplay);
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+      emblaApi.off("pointerDown", stopAutoplay);
+      emblaApi.off("pointerUp", startAutoplay);
     };
   }, [emblaApi, onSelect, startAutoplay, stopAutoplay]);
 
@@ -225,13 +280,20 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
             {title || "WE'LL BE RIGHT BACK"}
           </h2>
           <p className="text-[#333] mb-5 font-body text-sm leading-relaxed whitespace-pre-wrap max-w-md mx-auto">
-            {message || "Our store is currently undergoing maintenance. Please check back soon!"}
+            {message ||
+              "Our store is currently undergoing maintenance. Please check back soon!"}
           </p>
           <div className="flex items-center justify-center gap-6 text-sm text-gray-400 font-body">
-            <a href="mailto:support@mylegacycannabis.ca" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+            <a
+              href="mailto:support@mylegacycannabis.ca"
+              className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5"
+            >
               <Mail size={14} /> Email Us
             </a>
-            <a href="tel:4372154722" className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5">
+            <a
+              href="tel:4372154722"
+              className="hover:text-[#4B2D8E] transition-colors flex items-center gap-1.5"
+            >
               <Phone size={14} /> (437) 215-4722
             </a>
           </div>
@@ -241,14 +303,20 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
         <div className="w-full max-w-5xl">
           <div className="flex items-center justify-between mb-4 px-1">
             <div>
-              <h3 className="font-display text-lg md:text-xl text-white">VISIT US IN PERSON</h3>
+              <h3 className="font-display text-lg md:text-xl text-white">
+                VISIT US IN PERSON
+              </h3>
               <p className="text-white/60 font-body text-xs md:text-sm mt-0.5">
                 5 locations across the GTA &amp; Ottawa — open 24/7
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { scrollPrev(); stopAutoplay(); startAutoplay(); }}
+                onClick={() => {
+                  scrollPrev();
+                  stopAutoplay();
+                  startAutoplay();
+                }}
                 disabled={!canScrollPrev}
                 className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/20 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/30 transition-colors"
                 aria-label="Previous location"
@@ -256,7 +324,11 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
                 <ChevronLeft size={18} />
               </button>
               <button
-                onClick={() => { scrollNext(); stopAutoplay(); startAutoplay(); }}
+                onClick={() => {
+                  scrollNext();
+                  stopAutoplay();
+                  startAutoplay();
+                }}
                 disabled={!canScrollNext}
                 className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F15929] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#d94d22] transition-colors"
                 aria-label="Next location"
@@ -269,7 +341,7 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
           {/* Embla viewport */}
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex gap-5 md:gap-6">
-              {storeLocations.map((loc) => (
+              {storeLocations.map(loc => (
                 <div
                   key={loc.id}
                   className="flex-[0_0_85%] sm:flex-[0_0_65%] md:flex-[0_0_46%] lg:flex-[0_0_36%]"
@@ -285,11 +357,15 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
             {storeLocations.map((_, i) => (
               <button
                 key={i}
-                onClick={() => { scrollTo(i); stopAutoplay(); startAutoplay(); }}
+                onClick={() => {
+                  scrollTo(i);
+                  stopAutoplay();
+                  startAutoplay();
+                }}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   i === selectedIndex
-                    ? 'w-6 bg-[#F15929]'
-                    : 'w-2 bg-white/30 hover:bg-white/50'
+                    ? "w-6 bg-[#F15929]"
+                    : "w-2 bg-white/30 hover:bg-white/50"
                 }`}
                 aria-label={`Go to location ${i + 1}`}
               />
@@ -308,16 +384,29 @@ function MaintenanceOverlay({ title, message, logoUrl }: { title: string; messag
 // STORE HOURS WIDGET — used in Footer
 // ============================================================
 const DAY_LABELS_SHORT: Record<string, string> = {
-  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed',
-  thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
 };
-const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAYS_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 
 function formatTime12(time24: string): string {
-  const [h, m] = time24.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
+  const [h, m] = time24.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+  return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
 function StoreHoursWidget() {
@@ -326,7 +415,8 @@ function StoreHoursWidget() {
   if (!storeHours.enabled || !storeHours.hours) return null;
 
   const hours = storeHours.hours;
-  const today = DAYS_ORDER[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const today =
+    DAYS_ORDER[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
   return (
     <div>
@@ -337,23 +427,27 @@ function StoreHoursWidget() {
           if (!d) return null;
           const isToday = day === today;
           return (
-            <li key={day} className={`flex items-center justify-between ${isToday ? 'text-[#F15929] font-semibold' : 'text-white/70'}`}>
+            <li
+              key={day}
+              className={`flex items-center justify-between ${isToday ? "text-[#F15929] font-semibold" : "text-white/70"}`}
+            >
               <span className="flex items-center gap-1.5">
                 {isToday && <Clock size={12} />}
                 {DAY_LABELS_SHORT[day]}
               </span>
               <span>
                 {d.closed
-                  ? 'Closed'
-                  : `${formatTime12(d.open)} - ${formatTime12(d.close)}`
-                }
+                  ? "Closed"
+                  : `${formatTime12(d.open)} - ${formatTime12(d.close)}`}
               </span>
             </li>
           );
         })}
       </ul>
       {storeHours.note && (
-        <p className="text-white/50 text-xs mt-3 leading-relaxed">{storeHours.note}</p>
+        <p className="text-white/50 text-xs mt-3 leading-relaxed">
+          {storeHours.note}
+        </p>
       )}
     </div>
   );
@@ -362,7 +456,11 @@ function StoreHoursWidget() {
 // ============================================================
 // HEADER — fixed height so <main> offset never shifts
 // ============================================================
-function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boolean) => void }) {
+function Header({
+  onStoreBannerChange,
+}: {
+  onStoreBannerChange?: (visible: boolean) => void;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { itemCount } = useCart();
@@ -372,27 +470,30 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
   const { logoUrl, bannerMessages: customBannerMessages } = useSiteConfig();
 
   // Use admin-configured banner messages if set, otherwise fall back to i18n defaults
-  const bannerMessages = (customBannerMessages && customBannerMessages.length > 0)
-    ? customBannerMessages
-    : t.header.bannerMessages;
+  const bannerMessages =
+    customBannerMessages && customBannerMessages.length > 0
+      ? customBannerMessages
+      : t.header.bannerMessages;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); }, [location]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location]);
 
   const navLinks = [
-    { href: '/', label: t.common.home },
-    { href: '/shop', label: t.common.shop },
-    { href: '/rewards', label: t.common.rewards },
-    { href: '/locations', label: t.common.locations },
-    { href: '/about', label: t.common.aboutUs },
-    { href: '/shipping', label: t.common.shipping },
-    { href: '/contact', label: t.common.contact },
-    { href: '/faq', label: t.common.faq },
+    { href: "/", label: t.common.home },
+    { href: "/shop", label: t.common.shop },
+    { href: "/rewards", label: t.common.rewards },
+    { href: "/locations", label: t.common.locations },
+    { href: "/about", label: t.common.aboutUs },
+    { href: "/shipping", label: t.common.shipping },
+    { href: "/contact", label: t.common.contact },
+    { href: "/faq", label: t.common.faq },
   ];
 
   return (
@@ -405,9 +506,11 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
       */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
-          scrolled ? 'bg-[#4B2D8E]/95 backdrop-blur-md shadow-lg' : 'bg-[#4B2D8E]'
+          scrolled
+            ? "bg-[#4B2D8E]/95 backdrop-blur-md shadow-lg"
+            : "bg-[#4B2D8E]"
         }`}
-        style={{ contain: 'layout' }}
+        style={{ contain: "layout" }}
       >
         {/* Nav row: explicit h prevents resize when logo loads */}
         <div className="container flex items-center justify-between h-16 md:h-20 overflow-visible">
@@ -426,13 +529,16 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
+          <nav
+            className="hidden lg:flex items-center gap-6"
+            aria-label="Main navigation"
+          >
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`text-sm font-medium transition-colors hover:text-[#F15929] ${
-                  location === link.href ? 'text-[#F15929]' : 'text-white'
+                  location === link.href ? "text-[#F15929]" : "text-white"
                 }`}
               >
                 {link.label}
@@ -444,7 +550,7 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
             <Link
               href="/cart"
               className="relative text-white hover:text-[#F15929] transition-colors p-2"
-              aria-label={`Shopping cart, ${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+              aria-label={`Shopping cart, ${itemCount} item${itemCount !== 1 ? "s" : ""}`}
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
@@ -462,13 +568,17 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
                 title="My Legacy Rewards"
               >
                 <Star size={14} className="text-[#F15929] fill-[#F15929]" />
-                <span className="text-xs font-display font-bold">{user.rewardsPoints?.toLocaleString() || 0}</span>
-                <span className="text-[10px] text-white/70 font-body hidden md:inline">pts</span>
+                <span className="text-xs font-display font-bold">
+                  {user.rewardsPoints?.toLocaleString() || 0}
+                </span>
+                <span className="text-[10px] text-white/70 font-body hidden md:inline">
+                  pts
+                </span>
               </Link>
             )}
             {/* Language Toggle */}
             <button
-              onClick={() => setLocale(locale === 'en' ? 'fr' : 'en')}
+              onClick={() => setLocale(locale === "en" ? "fr" : "en")}
               className="text-white hover:text-[#F15929] transition-colors p-2 flex items-center gap-1"
               aria-label={t.lang.tooltip}
               title={t.lang.tooltip}
@@ -477,7 +587,7 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
               <span className="text-xs font-display">{t.lang.switchTo}</span>
             </button>
             <Link
-              href={isAuthenticated ? '/account' : '/account/login'}
+              href={isAuthenticated ? "/account" : "/account/login"}
               className="hidden md:block text-white hover:text-[#F15929] transition-colors p-2"
               aria-label={t.common.account}
             >
@@ -494,13 +604,23 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
         </div>
 
         {/* Shipping banner: scrolling marquee, explicit h-8 (32px) so height never shifts */}
-        <div className="h-8 bg-[#F15929] text-white overflow-hidden relative" aria-label="Promotional announcements">
+        <div
+          className="h-8 bg-[#F15929] text-white overflow-hidden relative"
+          aria-label="Promotional announcements"
+        >
           <div className="marquee-track flex items-center h-full">
             {/* Duplicate the message set twice for seamless infinite loop */}
             {[0, 1].map(setIndex => (
-              <div key={setIndex} className="marquee-content flex items-center shrink-0" aria-hidden={setIndex === 1 ? 'true' : undefined}>
+              <div
+                key={setIndex}
+                className="marquee-content flex items-center shrink-0"
+                aria-hidden={setIndex === 1 ? "true" : undefined}
+              >
                 {bannerMessages.map((msg: string, i: number) => (
-                  <span key={`${setIndex}-${i}`} className="flex items-center whitespace-nowrap text-xs md:text-sm font-medium font-body mx-8">
+                  <span
+                    key={`${setIndex}-${i}`}
+                    className="flex items-center whitespace-nowrap text-xs md:text-sm font-medium font-body mx-8"
+                  >
                     <Truck size={14} className="inline-block shrink-0 mr-1.5" />
                     {msg}
                   </span>
@@ -521,13 +641,17 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
         {menuOpen && (
           <>
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 z-[60]"
               onClick={() => setMenuOpen(false)}
             />
             <motion.nav
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-[70] overflow-y-auto"
               aria-label="Mobile navigation"
             >
@@ -560,7 +684,9 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
                     <Link
                       href={link.href}
                       className={`flex items-center justify-between py-3 px-4 rounded-lg text-lg font-display transition-colors ${
-                        location === link.href ? 'bg-[#4B2D8E] text-white' : 'text-[#333] hover:bg-[#F5F5F5]'
+                        location === link.href
+                          ? "bg-[#4B2D8E] text-white"
+                          : "text-[#333] hover:bg-[#F5F5F5]"
                       }`}
                     >
                       {link.label}
@@ -570,10 +696,11 @@ function Header({ onStoreBannerChange }: { onStoreBannerChange?: (visible: boole
                 ))}
                 <div className="pt-4 border-t mt-4">
                   <Link
-                    href={isAuthenticated ? '/account' : '/account/login'}
+                    href={isAuthenticated ? "/account" : "/account/login"}
                     className="flex items-center gap-3 py-3 px-4 rounded-lg text-lg font-display text-[#333] hover:bg-[#F5F5F5]"
                   >
-                    <User size={20} /> {isAuthenticated ? t.common.myAccount : t.common.signIn}
+                    <User size={20} />{" "}
+                    {isAuthenticated ? t.common.myAccount : t.common.signIn}
                   </Link>
                   <Link
                     href="/rewards"
@@ -605,9 +732,14 @@ function Footer() {
   const { logoUrl, storeHours } = useSiteConfig();
   const showStoreHours = storeHours.enabled && !!storeHours.hours;
   return (
-    <footer className="bg-[#4B2D8E] text-white pb-24 md:pb-8" style={{ minHeight: 480, contain: 'layout style', contentVisibility: 'auto', containIntrinsicSize: 'auto 480px' }}>
+    <footer
+      className="bg-[#4B2D8E] text-white pb-24 md:pb-8"
+      style={{ minHeight: 480, contain: "layout style" }}
+    >
       <div className="container py-12">
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${showStoreHours ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-8`}>
+        <div
+          className={`grid grid-cols-1 md:grid-cols-2 ${showStoreHours ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-8`}
+        >
           {/* Brand */}
           <div>
             {/* Explicit width/height prevents layout shift when image loads */}
@@ -631,8 +763,14 @@ function Footer() {
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#F15929] transition-colors"
                 aria-label="My Legacy Cannabis on Instagram"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
                 </svg>
               </a>
             </div>
@@ -640,30 +778,51 @@ function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.quickLinks}</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">
+              {t.footer.quickLinks}
+            </h3>
             <ul className="space-y-2 font-body text-sm">
-              {[['/', t.common.home], ['/shop', t.footer.shopAll], ['/rewards', t.footer.rewardsProgram], ['/locations', t.footer.storeLocations], ['/about', t.common.aboutUs], ['/faq', t.common.faq]].map(([href, label]) => (
-                <li key={href}><Link href={href} className="text-white/70 hover:text-[#F15929] transition-colors">{label}</Link></li>
+              {[
+                ["/", t.common.home],
+                ["/shop", t.footer.shopAll],
+                ["/rewards", t.footer.rewardsProgram],
+                ["/locations", t.footer.storeLocations],
+                ["/about", t.common.aboutUs],
+                ["/faq", t.common.faq],
+              ].map(([href, label]) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-white/70 hover:text-[#F15929] transition-colors"
+                  >
+                    {label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
 
           {/* Categories */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.categories}</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">
+              {t.footer.categories}
+            </h3>
             <ul className="space-y-2 font-body text-sm">
               {[
-                { label: t.footer.flower,       slug: 'flower' },
-                { label: t.footer.preRolls,    slug: 'pre-rolls' },
-                { label: t.footer.edibles,      slug: 'edibles' },
-                { label: t.footer.vapes,        slug: 'vapes' },
-                { label: t.footer.concentrates, slug: 'concentrates' },
-                { label: t.footer.ounceDeals,   slug: 'ounce-deals' },
-                { label: t.footer.shakeNBake,   slug: 'shake-n-bake' },
-                { label: t.footer.accessories,  slug: 'accessories' },
+                { label: t.footer.flower, slug: "flower" },
+                { label: t.footer.preRolls, slug: "pre-rolls" },
+                { label: t.footer.edibles, slug: "edibles" },
+                { label: t.footer.vapes, slug: "vapes" },
+                { label: t.footer.concentrates, slug: "concentrates" },
+                { label: t.footer.ounceDeals, slug: "ounce-deals" },
+                { label: t.footer.shakeNBake, slug: "shake-n-bake" },
+                { label: t.footer.accessories, slug: "accessories" },
               ].map(cat => (
                 <li key={cat.slug}>
-                  <Link href={`/shop/${cat.slug}`} className="text-white/70 hover:text-[#F15929] transition-colors">
+                  <Link
+                    href={`/shop/${cat.slug}`}
+                    className="text-white/70 hover:text-[#F15929] transition-colors"
+                  >
                     {cat.label}
                   </Link>
                 </li>
@@ -680,16 +839,26 @@ function Footer() {
 
           {/* Get In Touch */}
           <div>
-            <h3 className="font-display text-lg mb-4 text-[#F15929]">{t.footer.getInTouch}</h3>
+            <h3 className="font-display text-lg mb-4 text-[#F15929]">
+              {t.footer.getInTouch}
+            </h3>
             <ul className="space-y-3 font-body text-sm">
               <li>
-                <a href="tel:4372154722" className="flex items-center gap-2 text-white/70 hover:text-[#F15929] transition-colors">
-                  <Phone size={16} className="shrink-0 text-[#F15929]" /> (437) 215-4722
+                <a
+                  href="tel:4372154722"
+                  className="flex items-center gap-2 text-white/70 hover:text-[#F15929] transition-colors"
+                >
+                  <Phone size={16} className="shrink-0 text-[#F15929]" /> (437)
+                  215-4722
                 </a>
               </li>
               <li>
-                <a href="mailto:support@mylegacycannabis.ca" className="flex items-center gap-2 text-white/70 hover:text-[#F15929] transition-colors">
-                  <Mail size={16} className="shrink-0 text-[#F15929]" /> support@mylegacycannabis.ca
+                <a
+                  href="mailto:support@mylegacycannabis.ca"
+                  className="flex items-center gap-2 text-white/70 hover:text-[#F15929] transition-colors"
+                >
+                  <Mail size={16} className="shrink-0 text-[#F15929]" />{" "}
+                  support@mylegacycannabis.ca
                 </a>
               </li>
             </ul>
@@ -697,11 +866,26 @@ function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/50 font-body">
-          <p>&copy; {new Date().getFullYear()} My Legacy Cannabis. {t.common.allRightsReserved}</p>
+          <p>
+            &copy; {new Date().getFullYear()} My Legacy Cannabis.{" "}
+            {t.common.allRightsReserved}
+          </p>
           <div className="flex gap-4">
-            <Link href="/privacy-policy" className="hover:text-white transition-colors">{t.common.privacyPolicy}</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">{t.common.terms}</Link>
-            <Link href="/shipping" className="hover:text-white transition-colors">{t.common.shippingPolicy}</Link>
+            <Link
+              href="/privacy-policy"
+              className="hover:text-white transition-colors"
+            >
+              {t.common.privacyPolicy}
+            </Link>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              {t.common.terms}
+            </Link>
+            <Link
+              href="/shipping"
+              className="hover:text-white transition-colors"
+            >
+              {t.common.shippingPolicy}
+            </Link>
           </div>
         </div>
       </div>
@@ -719,11 +903,20 @@ function MobileBottomNav() {
   const { t } = useT();
 
   const tabs = [
-    { href: '/', icon: Home, label: t.common.home },
-    { href: '/shop', icon: Search, label: t.common.shop },
-    { href: '/rewards', icon: Gift, label: t.common.rewards },
-    { href: '/cart', icon: ShoppingCart, label: t.common.cart, badge: itemCount },
-    { href: isAuthenticated ? '/account' : '/account/login', icon: User, label: t.common.account },
+    { href: "/", icon: Home, label: t.common.home },
+    { href: "/shop", icon: Search, label: t.common.shop },
+    { href: "/rewards", icon: Gift, label: t.common.rewards },
+    {
+      href: "/cart",
+      icon: ShoppingCart,
+      label: t.common.cart,
+      badge: itemCount,
+    },
+    {
+      href: isAuthenticated ? "/account" : "/account/login",
+      icon: User,
+      label: t.common.account,
+    },
   ];
 
   return (
@@ -735,14 +928,14 @@ function MobileBottomNav() {
         {tabs.map(tab => {
           const isActive =
             location === tab.href ||
-            (tab.href === '/shop' && location.startsWith('/shop')) ||
-            (tab.href === '/account' && location.startsWith('/account'));
+            (tab.href === "/shop" && location.startsWith("/shop")) ||
+            (tab.href === "/account" && location.startsWith("/account"));
           return (
             <Link
               key={tab.href}
               href={tab.href}
               className={`flex flex-col items-center justify-center gap-0.5 w-full h-full relative transition-colors ${
-                isActive ? 'text-[#4B2D8E]' : 'text-gray-400'
+                isActive ? "text-[#4B2D8E]" : "text-gray-400"
               }`}
               aria-label={tab.label}
             >
@@ -771,15 +964,19 @@ function MobileBottomNav() {
 // ============================================================
 export function Breadcrumbs({
   items,
-  variant = 'light',
+  variant = "light",
 }: {
   items: { label: string; href?: string }[];
-  variant?: 'light' | 'dark';
+  variant?: "light" | "dark";
 }) {
-  const isOnDark = variant === 'dark';
+  const isOnDark = variant === "dark";
   return (
     <nav aria-label="Breadcrumb" className="py-2 text-sm font-body">
-      <ol className="flex items-center gap-1.5 flex-wrap" itemScope itemType="https://schema.org/BreadcrumbList">
+      <ol
+        className="flex items-center gap-1.5 flex-wrap"
+        itemScope
+        itemType="https://schema.org/BreadcrumbList"
+      >
         {items.map((item, i) => (
           <li
             key={i}
@@ -791,19 +988,25 @@ export function Breadcrumbs({
             {item.href ? (
               <Link
                 href={item.href}
-                className={`${isOnDark ? 'text-white/80 hover:text-white' : 'text-[#4B2D8E] hover:text-[#F15929]'} transition-colors`}
+                className={`${isOnDark ? "text-white/80 hover:text-white" : "text-[#4B2D8E] hover:text-[#F15929]"} transition-colors`}
                 itemProp="item"
               >
                 <span itemProp="name">{item.label}</span>
               </Link>
             ) : (
-              <span className={isOnDark ? 'text-white' : 'text-gray-500'} itemProp="name">
+              <span
+                className={isOnDark ? "text-white" : "text-gray-500"}
+                itemProp="name"
+              >
                 {item.label}
               </span>
             )}
             <meta itemProp="position" content={String(i + 1)} />
             {i < items.length - 1 && (
-              <ChevronRight size={14} className={isOnDark ? 'text-white/50' : 'text-gray-400'} />
+              <ChevronRight
+                size={14}
+                className={isOnDark ? "text-white/50" : "text-gray-400"}
+              />
             )}
           </li>
         ))}
@@ -816,24 +1019,30 @@ export function Breadcrumbs({
 // WAVE DIVIDER
 // ============================================================
 export function WaveDivider({
-  color = '#4B2D8E',
+  color = "#4B2D8E",
   flip = false,
-  className = '',
+  className = "",
 }: {
   color?: string;
   flip?: boolean;
   className?: string;
 }) {
   return (
-    <div className={`wave-divider ${flip ? 'rotate-180' : ''} ${className}`} aria-hidden="true">
+    <div
+      className={`wave-divider ${flip ? "rotate-180" : ""} ${className}`}
+      aria-hidden="true"
+    >
       <svg
         viewBox="0 0 1440 80"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="none"
-        style={{ width: '100%', height: '40px' }}
+        style={{ width: "100%", height: "40px" }}
       >
-        <path d="M0,40 C360,80 720,0 1080,40 C1260,60 1380,50 1440,40 L1440,80 L0,80 Z" fill={color} />
+        <path
+          d="M0,40 C360,80 720,0 1080,40 C1260,60 1380,50 1440,40 L1440,80 L0,80 Z"
+          fill={color}
+        />
       </svg>
     </div>
   );
@@ -844,7 +1053,11 @@ export function WaveDivider({
 // ============================================================
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [ageVerified, setAgeVerified] = useState(() => {
-    try { return localStorage.getItem('mlc-age-verified') === 'true'; } catch { return false; }
+    try {
+      return localStorage.getItem("mlc-age-verified") === "true";
+    } catch {
+      return false;
+    }
   });
   const [storeBannerVisible, setStoreBannerVisible] = useState(false);
   const { maintenance, logoUrl } = useSiteConfig();
@@ -855,16 +1068,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     // Base header: mobile 96px, desktop 112px.  Store banner adds ~40px.
-    const mobileH  = storeBannerVisible ? 136 : 96;
+    const mobileH = storeBannerVisible ? 136 : 96;
     const desktopH = storeBannerVisible ? 152 : 112;
     // We'll use the breakpoint at 768px (md) via matchMedia
     const update = () => {
-      const h = window.matchMedia('(min-width: 768px)').matches ? desktopH : mobileH;
-      root.style.setProperty('--header-h', `${h}px`);
+      const h = window.matchMedia("(min-width: 768px)").matches
+        ? desktopH
+        : mobileH;
+      root.style.setProperty("--header-h", `${h}px`);
     };
     update();
-    window.addEventListener('resize', update, { passive: true });
-    return () => window.removeEventListener('resize', update);
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
   }, [storeBannerVisible]);
 
   // Track page views on route changes
@@ -874,21 +1089,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleAgeConfirm = () => {
     setAgeVerified(true);
-    try { localStorage.setItem('mlc-age-verified', 'true'); } catch {}
+    try {
+      localStorage.setItem("mlc-age-verified", "true");
+    } catch {}
   };
 
   return (
     <>
       {/* AgeGate is position:fixed — zero impact on document flow / CLS */}
-      {!ageVerified && <AgeGate onConfirm={handleAgeConfirm} logoUrl={logoUrl} />}
+      {!ageVerified && (
+        <AgeGate onConfirm={handleAgeConfirm} logoUrl={logoUrl} />
+      )}
 
       {/* Maintenance overlay — shown after age gate, blocks entire storefront */}
       {ageVerified && maintenance.enabled && (
-        <MaintenanceOverlay title={maintenance.title} message={maintenance.message} logoUrl={logoUrl} />
+        <MaintenanceOverlay
+          title={maintenance.title}
+          message={maintenance.message}
+          logoUrl={logoUrl}
+        />
       )}
 
       <div className="min-h-screen flex flex-col">
-        <Header onStoreBannerChange={(v) => setStoreBannerVisible(v)} />
+        <Header onStoreBannerChange={v => setStoreBannerVisible(v)} />
         {/*
           pt-24 = 96px  (mobile:  h-16 nav + h-8 banner)
           md:pt-28 = 112px (desktop: h-20 nav + h-8 banner)
@@ -900,7 +1123,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           --header-h CSS variable is set on <html> so any page hero can use it to pull up seamlessly.
         */}
         <main
-          className={`flex-1 ${storeBannerVisible ? 'pt-[136px] md:pt-[152px]' : 'pt-24 md:pt-28'}`}
+          className={`flex-1 ${storeBannerVisible ? "pt-[136px] md:pt-[152px]" : "pt-24 md:pt-28"}`}
         >
           {children}
         </main>
