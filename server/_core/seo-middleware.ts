@@ -19,6 +19,107 @@
  * The new patterns use [\s\S]*? (or \s*) to bridge newlines + indentation.
  */
 
+import { eq, and, avg, count } from "drizzle-orm";
+import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "../../drizzle/schema";
+
+// ── Lazy DB connection (reuse existing app DB if possible) ──
+let _seoDb: PostgresJsDatabase<typeof schema> | null = null;
+
+export function getSeoDb(): PostgresJsDatabase<typeof schema> | null {
+  if (_seoDb) return _seoDb;
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  try {
+    const client = postgres(dbUrl, {
+      max: 2,
+      idle_timeout: 30,
+      prepare: false,
+      ssl: { rejectUnauthorized: false },
+      onnotice: () => {},
+    });
+    _seoDb = drizzle(client, { schema });
+    return _seoDb;
+  } catch {
+    return null;
+  }
+}
+
+interface ProductSeoData {
+  name: string;
+  slug: string;
+  price: string;
+  description: string | null;
+  image: string | null;
+  images: string[] | null;
+  stock: number;
+  category: string;
+  strainType: string | null;
+  weight: string | null;
+  thc: string | null;
+  isActive: boolean;
+}
+
+interface ProductReviewStats {
+  avgRating: number;
+  reviewCount: number;
+}
+
+export async function getProductSeoData(slug: string): Promise<ProductSeoData | null> {
+  const db = getSeoDb();
+  if (!db) return null;
+  try {
+    const rows = await db
+      .select({
+        name: schema.products.name,
+        slug: schema.products.slug,
+        price: schema.products.price,
+        description: schema.products.description,
+        image: schema.products.image,
+        images: schema.products.images,
+        stock: schema.products.stock,
+        category: schema.products.category,
+        strainType: schema.products.strainType,
+        weight: schema.products.weight,
+        thc: schema.products.thc,
+        isActive: schema.products.isActive,
+      })
+      .from(schema.products)
+      .where(and(eq(schema.products.slug, slug), eq(schema.products.isActive, true)))
+      .limit(1);
+    return (rows[0] as ProductSeoData) ?? null;
+  } catch (err) {
+    console.warn("[SEO] Failed to fetch product data for slug:", slug, err);
+    return null;
+  }
+}
+
+export async function getProductReviewStats(slug: string): Promise<ProductReviewStats | null> {
+  const db = getSeoDb();
+  if (!db) return null;
+  try {
+    const rows = await db
+      .select({
+        avgRating: avg(schema.productReviews.rating),
+        reviewCount: count(schema.productReviews.id),
+      })
+      .from(schema.productReviews)
+      .innerJoin(schema.products, eq(schema.productReviews.productId, schema.products.id))
+      .where(and(eq(schema.products.slug, slug), eq(schema.productReviews.isApproved, true)));
+
+    const row = rows[0];
+    if (!row || !row.reviewCount || row.reviewCount === 0) return null;
+    return {
+      avgRating: parseFloat(String(row.avgRating ?? "0")),
+      reviewCount: row.reviewCount,
+    };
+  } catch (err) {
+    console.warn("[SEO] Failed to fetch review stats for slug:", slug, err);
+    return null;
+  }
+}
+
 // ── SEO route metadata ──────────────────────────────────────
 const SITE_URL =
   process.env.SITE_URL ||
@@ -244,15 +345,29 @@ function buildBreadcrumbJsonLd(
  * via tRPC, but providing a basic schema signals to Google that this is a
  * product page and enables breadcrumb-level rich results.
  */
-function buildProductJsonLd(slug: string, canonicalUrl: string): object {
-  const name = slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-  return {
+export async function buildProductJsonLd(slug: string, canonicalUrl: string): Promise<object> {
+  const product = await getProductSeoData(slug);
+  const reviews = await getProductReviewStats(slug);
+
+  const name = product ? product.name : slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  const description = product?.description ? product.description.substring(0, 200) : `Shop ${name} at My Legacy Cannabis. Premium cannabis with free shipping over $150.`;
+  const productImage = product?.image ? (product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image.startsWith("/") ? "" : "/"}${product.image}`) : `${SITE_URL}/logo.webp`;
+
+  const imageArray: string[] = [productImage];
+  if (product?.images && Array.isArray(product.images)) {
+    for (const img of product.images) {
+      const fullUrl = img.startsWith("http") ? img : `${SITE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
+      if (!imageArray.includes(fullUrl)) imageArray.push(fullUrl);
+    }
+  }
+
+  const jsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${canonicalUrl}#product`,
     name,
-    description: `Shop ${name} at My Legacy Cannabis. Premium cannabis with free shipping over $150.`,
-    image: [`${SITE_URL}/logo.webp`],
+    description,
+    image: imageArray,
     sku: `MLC-${slug}`,
     brand: {
       "@type": "Brand",
@@ -263,20 +378,53 @@ function buildProductJsonLd(slug: string, canonicalUrl: string): object {
       url: canonicalUrl,
       price: "0.00",
       priceCurrency: "CAD",
-      availability: "https://schema.org/InStock",
+      availability: product ? (product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock") : "https://schema.org/InStock",
       seller: {
         "@type": "Organization",
         name: "My Legacy Cannabis",
         url: SITE_URL,
       },
+      ...(product?.price ? { price: parseFloat(product.price).toFixed(2) } : {}),
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "CA" },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 5, unitCode: "DAY" },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "CA",
+        returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+        merchantReturnDays: 0,
+      },
     },
   };
+
+  if (product?.weight) {
+    jsonLd.weight = {
+      "@type": "QuantitativeValue",
+      value: parseFloat(product.weight) || product.weight,
+      unitText: "g",
+    };
+  }
+
+  if (reviews && reviews.reviewCount > 0) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: reviews.avgRating.toFixed(1),
+      reviewCount: reviews.reviewCount,
+      bestRating: "5",
+      worstRating: "1",
+    };
+  }
+
+  return jsonLd;
 }
 
-/**
- * Build LocalBusiness JSON-LD array for the Locations page.
- */
-function buildLocalBusinessJsonLd(): object[] {
+export function buildLocalBusinessJsonLd(): object[] {
   return STORE_LOCATIONS.map(loc => ({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -323,17 +471,17 @@ function buildLocalBusinessJsonLd(): object[] {
  * Generate per-route JSON-LD structured data to inject server-side.
  * Returns an array of JSON-LD objects (or empty array if none applicable).
  */
-function getStructuredDataForPath(
+async function getStructuredDataForPath(
   path: string,
   canonicalUrl: string
-): object[] {
+): Promise<object[]> {
   const schemas: object[] = [];
 
   // Product pages: Product + BreadcrumbList
   if (path.startsWith("/product/")) {
     const slug = path.replace("/product/", "");
     const name = slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-    schemas.push(buildProductJsonLd(slug, canonicalUrl));
+    schemas.push(await buildProductJsonLd(slug, canonicalUrl));
     schemas.push(
       buildBreadcrumbJsonLd([
         { name: "Home", url: SITE_URL },
@@ -406,7 +554,7 @@ function getStructuredDataForPath(
  * CRITICAL: Regex patterns use \s* between comment markers and tags to handle
  * both same-line (minified) and multi-line (Vite dev/build) HTML output.
  */
-export function injectSeoMeta(html: string, requestPath: string): string {
+export async function injectSeoMeta(html: string, requestPath: string): Promise<string> {
   const meta = getMetaForPath(requestPath);
   const canonicalUrl = `${SITE_URL}${requestPath === "/" ? "" : requestPath}`;
 
@@ -467,7 +615,7 @@ export function injectSeoMeta(html: string, requestPath: string): string {
   }
 
   // 10) Inject per-route JSON-LD structured data before </head>
-  const schemas = getStructuredDataForPath(requestPath, canonicalUrl);
+  const schemas = await getStructuredDataForPath(requestPath, canonicalUrl);
   if (schemas.length > 0) {
     const jsonLdTags = schemas
       .map(
