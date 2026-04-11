@@ -2759,8 +2759,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       }
 
       // Get the current payment record to find the old order
-      const allRecords = await db.exportAllPaymentRecords();
-      const paymentRecord = allRecords.find((r: any) => r.id === input.paymentId);
+      const paymentRecord = await db.getPaymentRecordById(input.paymentId);
       if (!paymentRecord) throw new Error("Payment record not found");
 
       const oldOrderId = paymentRecord.matchedOrderId;
@@ -2807,8 +2806,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
     unmatch: adminProcedure.input(z.object({
       paymentId: z.number(),
     })).mutation(async ({ input, ctx }) => {
-      const allRecords = await db.exportAllPaymentRecords();
-      const paymentRecord = allRecords.find((r: any) => r.id === input.paymentId);
+      const paymentRecord = await db.getPaymentRecordById(input.paymentId);
       if (!paymentRecord) throw new Error("Payment record not found");
 
       const oldOrderId = paymentRecord.matchedOrderId;
@@ -2873,8 +2871,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       const adminName = ctx.user?.name || "Admin";
-      const allRecords = await db.exportAllPaymentRecords();
-      const record = allRecords.find((r: any) => r.id === input.paymentId);
+      const record = await db.getPaymentRecordById(input.paymentId);
       if (!record) throw new Error("Payment record not found");
 
       const oldStatus = record.status;
