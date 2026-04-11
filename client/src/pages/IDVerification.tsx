@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, Upload, CheckCircle, Clock, AlertCircle, Camera, FileText, Smartphone, QrCode, Mail, ArrowLeft } from 'lucide-react';
+import { Shield, Upload, CheckCircle, Clock, AlertCircle, FileText, Smartphone, QrCode, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';

@@ -4,7 +4,7 @@ import SEOHead from '@/components/SEOHead';
 import { Breadcrumbs } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { POINTS_PER_DOLLAR, REFERRAL_BONUS_REFERRER } from '@/lib/data';
-import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2, Loader2, Truck, CheckCircle2 } from 'lucide-react';
+import { User, Package, Gift, Shield, LogOut, Copy, Star, Lock, Mail, MessageSquare, Share2, Loader2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 
