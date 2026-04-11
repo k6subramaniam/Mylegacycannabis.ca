@@ -28,10 +28,10 @@ describe("Product JSON-LD — no DB (graceful degradation)", () => {
   });
 
   it("returns valid Product schema with slug-derived name", async () => {
-    const jsonLd = await buildProductJsonLd(
+    const jsonLd = (await buildProductJsonLd(
       "pink-kush",
       "https://mylegacycannabisca-production.up.railway.app/product/pink-kush"
-    ) as any;
+    )) as any;
 
     expect(jsonLd["@type"]).toBe("Product");
     expect(jsonLd.name).toBe("Pink Kush");
@@ -42,24 +42,22 @@ describe("Product JSON-LD — no DB (graceful degradation)", () => {
   });
 
   it("includes shippingDetails and returnPolicy even without DB", async () => {
-    const jsonLd = await buildProductJsonLd(
+    const jsonLd = (await buildProductJsonLd(
       "pink-kush",
       "https://mylegacycannabisca-production.up.railway.app/product/pink-kush"
-    ) as any;
+    )) as any;
 
-    expect(jsonLd.offers.shippingDetails["@type"]).toBe(
-      "OfferShippingDetails"
-    );
+    expect(jsonLd.offers.shippingDetails["@type"]).toBe("OfferShippingDetails");
     expect(jsonLd.offers.hasMerchantReturnPolicy["@type"]).toBe(
       "MerchantReturnPolicy"
     );
   });
 
   it("does not include aggregateRating without DB", async () => {
-    const jsonLd = await buildProductJsonLd(
+    const jsonLd = (await buildProductJsonLd(
       "pink-kush",
       "https://mylegacycannabisca-production.up.railway.app/product/pink-kush"
-    ) as any;
+    )) as any;
 
     expect(jsonLd.aggregateRating).toBeUndefined();
   });
@@ -73,9 +71,7 @@ describe("LocalBusiness JSON-LD", () => {
       expect(loc["@type"]).toBe("LocalBusiness");
       expect(loc.image).toBeDefined();
       expect(
-        typeof loc.image === "string"
-          ? loc.image
-          : loc.image[0]
+        typeof loc.image === "string" ? loc.image : loc.image[0]
       ).toContain("logo.webp");
     }
   });
@@ -115,9 +111,7 @@ describe("injectSeoMeta", () => {
   it("replaces __SITE_URL__ placeholders", async () => {
     const result = await injectSeoMeta(template, "/");
     expect(result).not.toContain("__SITE_URL__");
-    expect(result).toContain(
-      "mylegacycannabisca-production.up.railway.app"
-    );
+    expect(result).toContain("mylegacycannabisca-production.up.railway.app");
   });
 
   it("injects JSON-LD for product pages", async () => {
