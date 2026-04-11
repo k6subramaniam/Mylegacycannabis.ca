@@ -4,6 +4,7 @@ import dns from "dns";
 // so nodemailer and any other net connections resolve to IPv4 addresses.
 dns.setDefaultResultOrder("ipv4first");
 import express from "express";
+import helmet from "helmet";
 import { createServer } from "http";
 import fs from "fs";
 import path from "path";
@@ -37,6 +38,12 @@ async function startServer() {
   // This makes req.ip use the real client IP from X-Forwarded-For
   // instead of always returning the proxy/load-balancer IP
   app.set("trust proxy", 1);
+
+  // Add security headers using helmet
+  app.use(helmet({
+    contentSecurityPolicy: false, // Don't block inline scripts/styles for now
+    crossOriginEmbedderPolicy: false,
+  }));
 
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));

@@ -113,11 +113,10 @@ describe("admin routes", () => {
     }
   });
 
-  it("allows any user to access admin routes (public access)", async () => {
+  it("denies regular users access to admin routes", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    const stats = await caller.admin.stats();
-    expect(stats).toHaveProperty("totalOrders");
+    await expect(caller.admin.stats()).rejects.toThrow();
   });
 });
 
