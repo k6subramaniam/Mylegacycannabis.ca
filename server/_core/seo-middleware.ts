@@ -261,6 +261,7 @@ function buildProductJsonLd(slug: string, canonicalUrl: string): object {
     offers: {
       "@type": "Offer",
       url: canonicalUrl,
+      price: "0.00",
       priceCurrency: "CAD",
       availability: "https://schema.org/InStock",
       seller: {
