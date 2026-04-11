@@ -376,6 +376,7 @@ export async function buildProductJsonLd(slug: string, canonicalUrl: string): Pr
     offers: {
       "@type": "Offer",
       url: canonicalUrl,
+      price: "0.00",
       priceCurrency: "CAD",
       availability: product ? (product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock") : "https://schema.org/InStock",
       seller: {
