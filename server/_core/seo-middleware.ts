@@ -66,7 +66,9 @@ interface ProductReviewStats {
   reviewCount: number;
 }
 
-export async function getProductSeoData(slug: string): Promise<ProductSeoData | null> {
+export async function getProductSeoData(
+  slug: string
+): Promise<ProductSeoData | null> {
   const db = getSeoDb();
   if (!db) return null;
   try {
@@ -86,7 +88,9 @@ export async function getProductSeoData(slug: string): Promise<ProductSeoData | 
         isActive: schema.products.isActive,
       })
       .from(schema.products)
-      .where(and(eq(schema.products.slug, slug), eq(schema.products.isActive, true)))
+      .where(
+        and(eq(schema.products.slug, slug), eq(schema.products.isActive, true))
+      )
       .limit(1);
     return (rows[0] as ProductSeoData) ?? null;
   } catch (err) {
@@ -95,7 +99,9 @@ export async function getProductSeoData(slug: string): Promise<ProductSeoData | 
   }
 }
 
-export async function getProductReviewStats(slug: string): Promise<ProductReviewStats | null> {
+export async function getProductReviewStats(
+  slug: string
+): Promise<ProductReviewStats | null> {
   const db = getSeoDb();
   if (!db) return null;
   try {
@@ -105,8 +111,16 @@ export async function getProductReviewStats(slug: string): Promise<ProductReview
         reviewCount: count(schema.productReviews.id),
       })
       .from(schema.productReviews)
-      .innerJoin(schema.products, eq(schema.productReviews.productId, schema.products.id))
-      .where(and(eq(schema.products.slug, slug), eq(schema.productReviews.isApproved, true)));
+      .innerJoin(
+        schema.products,
+        eq(schema.productReviews.productId, schema.products.id)
+      )
+      .where(
+        and(
+          eq(schema.products.slug, slug),
+          eq(schema.productReviews.isApproved, true)
+        )
+      );
 
     const row = rows[0];
     if (!row || !row.reviewCount || row.reviewCount === 0) return null;
@@ -345,18 +359,31 @@ function buildBreadcrumbJsonLd(
  * via tRPC, but providing a basic schema signals to Google that this is a
  * product page and enables breadcrumb-level rich results.
  */
-export async function buildProductJsonLd(slug: string, canonicalUrl: string): Promise<object> {
+export async function buildProductJsonLd(
+  slug: string,
+  canonicalUrl: string
+): Promise<object> {
   const product = await getProductSeoData(slug);
   const reviews = await getProductReviewStats(slug);
 
-  const name = product ? product.name : slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-  const description = product?.description ? product.description.substring(0, 200) : `Shop ${name} at My Legacy Cannabis. Premium cannabis with free shipping over $150.`;
-  const productImage = product?.image ? (product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image.startsWith("/") ? "" : "/"}${product.image}`) : `${SITE_URL}/logo.webp`;
+  const name = product
+    ? product.name
+    : slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  const description = product?.description
+    ? product.description.substring(0, 200)
+    : `Shop ${name} at My Legacy Cannabis. Premium cannabis with free shipping over $150.`;
+  const productImage = product?.image
+    ? product.image.startsWith("http")
+      ? product.image
+      : `${SITE_URL}${product.image.startsWith("/") ? "" : "/"}${product.image}`
+    : `${SITE_URL}/logo.webp`;
 
   const imageArray: string[] = [productImage];
   if (product?.images && Array.isArray(product.images)) {
     for (const img of product.images) {
-      const fullUrl = img.startsWith("http") ? img : `${SITE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
+      const fullUrl = img.startsWith("http")
+        ? img
+        : `${SITE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
       if (!imageArray.includes(fullUrl)) imageArray.push(fullUrl);
     }
   }
@@ -376,22 +403,37 @@ export async function buildProductJsonLd(slug: string, canonicalUrl: string): Pr
     offers: {
       "@type": "Offer",
       url: canonicalUrl,
-      price: "0.00",
       priceCurrency: "CAD",
-      availability: product ? (product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock") : "https://schema.org/InStock",
+      availability: product
+        ? product.stock > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
       seller: {
         "@type": "Organization",
         name: "My Legacy Cannabis",
         url: SITE_URL,
       },
-      ...(product?.price ? { price: parseFloat(product.price).toFixed(2) } : {}),
+      ...(product?.price
+        ? { price: parseFloat(product.price).toFixed(2) }
+        : {}),
       shippingDetails: {
         "@type": "OfferShippingDetails",
         shippingDestination: { "@type": "DefinedRegion", addressCountry: "CA" },
         deliveryTime: {
           "@type": "ShippingDeliveryTime",
-          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
-          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 5, unitCode: "DAY" },
+          handlingTime: {
+            "@type": "QuantitativeValue",
+            minValue: 0,
+            maxValue: 1,
+            unitCode: "DAY",
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 1,
+            maxValue: 5,
+            unitCode: "DAY",
+          },
         },
       },
       hasMerchantReturnPolicy: {
@@ -554,7 +596,10 @@ async function getStructuredDataForPath(
  * CRITICAL: Regex patterns use \s* between comment markers and tags to handle
  * both same-line (minified) and multi-line (Vite dev/build) HTML output.
  */
-export async function injectSeoMeta(html: string, requestPath: string): Promise<string> {
+export async function injectSeoMeta(
+  html: string,
+  requestPath: string
+): Promise<string> {
   const meta = getMetaForPath(requestPath);
   const canonicalUrl = `${SITE_URL}${requestPath === "/" ? "" : requestPath}`;
 
