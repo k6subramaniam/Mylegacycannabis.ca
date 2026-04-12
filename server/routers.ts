@@ -2697,9 +2697,8 @@ Return ONLY the JSON object.`;
     seo: router({
       /** Dashboard: latest metrics, trend, alerts, top keywords */
       dashboard: adminProcedure.query(async () => {
-        const { getSeoDashboard, isGscConfigured } = await import(
-          "./searchConsoleService"
-        );
+        const { getSeoDashboard, isGscConfigured } =
+          await import("./searchConsoleService");
         return {
           configured: isGscConfigured(),
           ...(await getSeoDashboard()),

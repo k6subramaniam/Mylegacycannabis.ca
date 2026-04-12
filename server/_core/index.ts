@@ -850,9 +850,8 @@ async function startServer() {
     setInterval(
       async () => {
         try {
-          const { collectSeoMetrics, isGscConfigured } = await import(
-            "../searchConsoleService"
-          );
+          const { collectSeoMetrics, isGscConfigured } =
+            await import("../searchConsoleService");
           if (!isGscConfigured()) return;
           const result = await collectSeoMetrics();
           if (result.collected) {
