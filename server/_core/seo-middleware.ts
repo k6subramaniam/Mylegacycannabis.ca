@@ -15,7 +15,7 @@
  * and tags on the same line (e.g. <!--seo:title--><title>), but Vite's HTML
  * output puts them on separate lines with whitespace:
  *   <!--seo:title-->
- *       <title>...</title>
+ *       <titlle>...</title>
  * The new patterns use [\s\S]*? (or \s*) to bridge newlines + indentation.
  */
 
