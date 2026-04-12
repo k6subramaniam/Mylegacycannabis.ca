@@ -24,6 +24,38 @@ import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../drizzle/schema";
 
+import { getDb, USE_PERSISTENT_DB } from "../db";
+import * as schema from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+let _cachedLogoUrl: string | null = null;
+let _cacheExpiry = 0;
+
+async function getLogoUrl(): Promise<string> {
+  const now = Date.now();
+  if (_cachedLogoUrl && now < _cacheExpiry) return _cachedLogoUrl;
+  
+  if (!USE_PERSISTENT_DB) return "/logo.webp";
+  
+  try {
+    const db = getDb();
+    // Check site_settings for admin-configured logo URL
+    const row = await db
+      .select({ value: schema.siteSettings.value })
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "logo_url"))
+      .limit(1);
+    
+    _cachedLogoUrl = row.length > 0 && row[0].value 
+      ? row[0].value 
+      : "/logo.webp";
+    _cacheExpiry = now + 3600000; // 1 hour cache
+    return _cachedLogoUrl;
+  } catch {
+    return "/logo.webp";
+  }
+}
+
 // ── Lazy DB connection (reuse existing app DB if possible) ──
 let _seoDb: PostgresJsDatabase<typeof schema> | null = null;
 
