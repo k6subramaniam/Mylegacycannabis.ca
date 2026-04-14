@@ -29,6 +29,10 @@ FROM node:20-slim
 
 RUN npm install -g pnpm@10.4.1
 
+# CIS Docker Benchmark 4.1 — run as non-root user
+RUN groupadd --gid 1001 nodejs \
+ && useradd --uid 1001 --gid nodejs --shell /bin/false --create-home appuser
+
 WORKDIR /app
 
 # Copy only what's needed for production
@@ -41,6 +45,11 @@ RUN pnpm install --no-frozen-lockfile --prod
 
 # Copy built artifacts from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Transfer ownership to non-root user
+RUN chown -R appuser:nodejs /app
+
+USER appuser
 
 # Railway sets $PORT at runtime; default 3000 for local dev
 EXPOSE 3000
