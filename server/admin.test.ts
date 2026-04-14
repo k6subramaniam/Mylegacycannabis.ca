@@ -116,6 +116,7 @@ describe("admin routes", () => {
     }
   });
 
+  it("denies regular users access to admin routes", async () => {
   it("rejects non-admin users from admin routes", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);

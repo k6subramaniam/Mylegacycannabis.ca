@@ -1,4 +1,4 @@
-## 2024-05-18 - [Insecure PRNG for OTP]
-**Vulnerability:** OTP tokens were being generated using `Math.random()`, which is cryptographically insecure and predictable.
-**Learning:** Legacy authentication code often relies on simple random generation without considering attack vectors on tokens like OTPs.
-**Prevention:** Always use Node.js `crypto` module (e.g., `crypto.randomInt()`) for generating any security-sensitive tokens, passwords, or identifiers.
+## 2024-05-24 - [Security Enhancement] Add Helmet Middleware
+**Vulnerability:** Missing basic security HTTP headers (defense in depth). Additionally, a unit test was incorrectly asserting that any regular user could access admin tRPC routes, providing a false sense of security.
+**Learning:** The tRPC router was already properly secured with `adminProcedure`, but the unit test suite was flawed. Express HTTP layer lacked foundational security headers.
+**Prevention:** Ensure test cases accurately reflect the intended security assertions (i.e., expecting unauthorized access to throw). Utilize tools like `helmet` to set secure default headers for Express applications while explicitly opting out of policies (like CSP/COEP) that might break legacy frontend implementations until properly configured.
