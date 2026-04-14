@@ -155,6 +155,16 @@ export async function initializeDatabase(): Promise<void> {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_birthday_bonus VARCHAR(4);
   END $$`;
 
+  // Add saved shipping address columns to users table (for "Use my account address" at checkout)
+  await _sql!`DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_street VARCHAR(500);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_city VARCHAR(255);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_province VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_province_code VARCHAR(5);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_postal_code VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_country VARCHAR(2) DEFAULT 'CA';
+  END $$`;
+
   // System logs table (emails, API errors, integrations)
   await _sql!`
     CREATE TABLE IF NOT EXISTS system_logs (
@@ -1304,6 +1314,50 @@ export async function updateUser(
     .where(eq(schema.users.id, id));
 }
 
+/** Update a user's saved shipping address */
+export async function updateUserAddress(
+  userId: number,
+  address: {
+    addressStreet: string;
+    addressCity: string;
+    addressProvince: string;
+    addressProvinceCode: string;
+    addressPostalCode: string;
+    addressCountry: string;
+  }
+): Promise<void> {
+  if (!USE_PERSISTENT_DB) {
+    _mem_updateUser(userId, address);
+    return;
+  }
+  const db = getDb();
+  await db
+    .update(schema.users)
+    .set({ ...address, updatedAt: new Date() } as any)
+    .where(eq(schema.users.id, userId));
+}
+
+/** Clear a user's saved shipping address */
+export async function clearUserAddress(userId: number): Promise<void> {
+  const emptyAddr = {
+    addressStreet: null,
+    addressCity: null,
+    addressProvince: null,
+    addressProvinceCode: null,
+    addressPostalCode: null,
+    addressCountry: null,
+  };
+  if (!USE_PERSISTENT_DB) {
+    _mem_updateUser(userId, emptyAddr);
+    return;
+  }
+  const db = getDb();
+  await db
+    .update(schema.users)
+    .set({ ...emptyAddr, updatedAt: new Date() } as any)
+    .where(eq(schema.users.id, userId));
+}
+
 export async function deleteUser(id: number): Promise<void> {
   if (!USE_PERSISTENT_DB) {
     _mem_deleteUser(id);
@@ -2282,6 +2336,17 @@ export async function getProductReviews(productId: number) {
     .orderBy(desc(schema.productReviews.createdAt));
 }
 
+
+export async function getProductReviewStats(productId: number) {
+  if (!USE_PERSISTENT_DB) return _mem_getProductReviewStats(productId);
+  const reviews = await getDb()
+    .select()
+    .from(schema.productReviews)
+    .where(eq(schema.productReviews.productId, productId));
+  if (reviews.length === 0) return { average: 0, count: 0 };
+  const sum = reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
+  return { average: sum / reviews.length, count: reviews.length };
+}
 export async function getUserReviews(userId: number) {
   if (!USE_PERSISTENT_DB) return _mem_getUserReviews(userId);
   return getDb()
@@ -2441,6 +2506,8 @@ export async function restoreStock(orderId: number): Promise<void> {
       }
     }
   }
+
+  console.timeEnd(`restoreStock-${orderId}`);
 }
 
 /**
@@ -2896,6 +2963,18 @@ export async function getUnmatchedPaymentRecords() {
     .from(schema.paymentRecords)
     .where(eq(schema.paymentRecords.status, "unmatched"))
     .orderBy(desc(schema.paymentRecords.createdAt));
+}
+
+/** Get a single payment record by ID */
+export async function getPaymentRecordById(id: number): Promise<any | null> {
+  if (!USE_PERSISTENT_DB)
+    return _mem_paymentRecords.find((p: any) => p.id === id) || null;
+  const rows = await getDb()
+    .select()
+    .from(schema.paymentRecords)
+    .where(eq(schema.paymentRecords.id, id))
+    .limit(1);
+  return rows[0] || null;
 }
 
 /** Export ALL payment records (no pagination) for CSV download */
@@ -3744,7 +3823,7 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
     GROUP BY created_at::date ORDER BY date ASC
   `;
 
-  // Geo stats summary (30 days)
+  // Geo stats summary (30 days — Canada only)
   const [geoSummary] = await _sql!`
     SELECT
       count(DISTINCT city)::int as unique_cities,
@@ -3753,6 +3832,7 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
       count(DISTINCT CASE WHEN ip_hash IS NOT NULL THEN session_id END)::int as geo_sessions
     FROM user_behavior
     WHERE created_at > NOW() - INTERVAL '30 days'
+      AND country_code = 'CA'
   `;
   const geoSessionsTotal = geoSummary?.geo_sessions ?? 0;
   const proxySessions = geoSummary?.proxy_sessions ?? 0;
@@ -3884,6 +3964,7 @@ export async function getGeoByProvince(days = 30): Promise<
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.province IS NOT NULL AND ub.province != ''
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
     GROUP BY ub.province, ub.province_code
     ORDER BY events DESC
@@ -3929,6 +4010,7 @@ export async function getGeoByCityRaw(
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.city IS NOT NULL AND ub.city != ''
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
       ${provFilter}
     GROUP BY ub.city, ub.province, ub.province_code
@@ -3964,6 +4046,7 @@ export async function getProductsByRegion(days = 30): Promise<
       count(DISTINCT CASE WHEN ub.event_type = 'add_to_cart' THEN ub.session_id END)::int as carts
     FROM user_behavior ub
     WHERE ub.province IS NOT NULL AND ub.category IS NOT NULL
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
     GROUP BY ub.province, ub.province_code, ub.category
     ORDER BY ub.province, views DESC
@@ -3975,6 +4058,85 @@ export async function getProductsByRegion(days = 30): Promise<
     orders: r.views,
     revenue: r.carts,
   }));
+}
+
+/** Sales by province — aggregates revenue and order count from the orders table (shipping_address jsonb). */
+export async function getSalesByProvince(
+  days = 30
+): Promise<
+  Record<string, { revenue: number; orders: number; province: string }>
+> {
+  if (!USE_PERSISTENT_DB) return {};
+
+  // Province name → code lookup
+  const NAME_TO_CODE: Record<string, string> = {
+    Alberta: "AB",
+    "British Columbia": "BC",
+    Manitoba: "MB",
+    "New Brunswick": "NB",
+    "Newfoundland and Labrador": "NL",
+    "Northwest Territories": "NT",
+    "Nova Scotia": "NS",
+    Nunavut: "NU",
+    Ontario: "ON",
+    "Prince Edward Island": "PE",
+    Quebec: "QC",
+    Saskatchewan: "SK",
+    Yukon: "YT",
+    // Short-form fallbacks
+    AB: "AB",
+    BC: "BC",
+    MB: "MB",
+    NB: "NB",
+    NL: "NL",
+    NT: "NT",
+    NS: "NS",
+    NU: "NU",
+    ON: "ON",
+    PE: "PE",
+    QC: "QC",
+    SK: "SK",
+    YT: "YT",
+  };
+
+  const rows = await _sql!`
+    SELECT
+      COALESCE(shipping_address::jsonb->>'province', shipping_zone) AS prov,
+      SUM(total::numeric) AS revenue,
+      COUNT(*)::int AS orders
+    FROM orders
+    WHERE status NOT IN ('cancelled', 'refunded')
+      AND payment_status IN ('received', 'confirmed')
+      AND created_at > NOW() - (${days} || ' days')::interval
+      AND (shipping_address::jsonb->>'province' IS NOT NULL OR shipping_zone IS NOT NULL)
+    GROUP BY prov
+    ORDER BY revenue DESC
+  `;
+
+  const result: Record<
+    string,
+    { revenue: number; orders: number; province: string }
+  > = {};
+  for (const r of rows) {
+    const raw = (r.prov as string) || "";
+    const code =
+      NAME_TO_CODE[raw] ||
+      NAME_TO_CODE[raw.trim()] ||
+      raw.toUpperCase().slice(0, 2);
+    if (!code) continue;
+    const existing = result[code];
+    if (existing) {
+      existing.revenue += parseFloat(r.revenue || "0");
+      existing.orders += r.orders as number;
+    } else {
+      result[code] = {
+        revenue: parseFloat(r.revenue || "0"),
+        orders: r.orders as number,
+        province: raw,
+      };
+    }
+  }
+  return result;
 }
 
 /** VPN/Proxy usage stats */
@@ -3989,6 +4151,7 @@ export async function getProxyStats(
     FROM user_behavior
     WHERE created_at > NOW() - (${days} || ' days')::interval
       AND ip_hash IS NOT NULL
+      AND country_code = 'CA'
   `;
   const total = row?.total ?? 0;
   const proxy = row?.proxy ?? 0;
@@ -4017,6 +4180,7 @@ export async function getGeoDailyTrend(days = 30): Promise<
       count(DISTINCT CASE WHEN event_type = 'checkout_complete' THEN session_id END)::int as orders
     FROM user_behavior
     WHERE created_at > NOW() - (${days} || ' days')::interval
+      AND country_code = 'CA'
     GROUP BY created_at::date
     ORDER BY date ASC
   `;
@@ -6517,6 +6681,13 @@ function _mem_getProductReviews(productId: number) {
     .filter((r: any) => r.productId === productId)
     .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
 }
+
+function _mem_getProductReviewStats(productId: number) {
+  const reviews = _productReviews.filter((r: any) => r.productId === productId);
+  if (reviews.length === 0) return { average: 0, count: 0 };
+  const sum = reviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
+  return { average: sum / reviews.length, count: reviews.length };
+}
 function _mem_getUserReviews(userId: number) {
   return _productReviews
     .filter((r: any) => r.userId === userId)
@@ -6588,121 +6759,4 @@ function _mem_getPendingETransferOrders() {
         (o.status === "pending" || o.status === "confirmed")
     )
     .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
-}
-
-// ─── SEO METRICS & ALERTS ───────────────────────────────────
-// Database operations for the Google Search Console integration.
-// These are thin wrappers that follow the existing db.ts pattern.
-
-const _mem_seoMetrics: schema.InsertSeoMetric[] = [];
-const _mem_seoAlerts: (schema.InsertSeoAlert & { id: number })[] = [];
-let _seoAlertId = 1;
-
-export async function insertSeoMetric(data: {
-  date: string;
-  metricType: string;
-  data: unknown;
-}): Promise<void> {
-  if (!USE_PERSISTENT_DB) {
-    _mem_seoMetrics.push({ ...data, data: data.data as any });
-    return;
-  }
-  await getDb()
-    .insert(schema.seoMetrics)
-    .values({
-      date: data.date,
-      metricType: data.metricType,
-      data: data.data as any,
-    });
-}
-
-export async function getSeoMetrics(
-  metricType: string,
-  limit = 30
-): Promise<schema.SeoMetric[]> {
-  if (!USE_PERSISTENT_DB) {
-    return _mem_seoMetrics
-      .filter(m => m.metricType === metricType)
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-      .slice(0, limit) as any;
-  }
-  return getDb()
-    .select()
-    .from(schema.seoMetrics)
-    .where(eq(schema.seoMetrics.metricType, metricType))
-    .orderBy(desc(schema.seoMetrics.date))
-    .limit(limit);
-}
-
-export async function insertSeoAlert(data: {
-  alertType: string;
-  severity: string;
-  message: string;
-  data?: unknown;
-}): Promise<void> {
-  if (!USE_PERSISTENT_DB) {
-    _mem_seoAlerts.push({
-      id: _seoAlertId++,
-      ...data,
-      data: (data.data as any) || null,
-      severity: data.severity,
-      acknowledged: false,
-      acknowledgedBy: null,
-      acknowledgedAt: null,
-    } as any);
-    return;
-  }
-  await getDb()
-    .insert(schema.seoAlerts)
-    .values({
-      alertType: data.alertType,
-      severity: data.severity,
-      message: data.message,
-      data: (data.data as any) || null,
-      acknowledged: false,
-    });
-}
-
-export async function getUnacknowledgedSeoAlerts(
-  limit = 50
-): Promise<schema.SeoAlert[]> {
-  if (!USE_PERSISTENT_DB) {
-    return _mem_seoAlerts
-      .filter(a => !a.acknowledged)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt || 0).getTime() -
-          new Date(a.createdAt || 0).getTime()
-      )
-      .slice(0, limit) as any;
-  }
-  return getDb()
-    .select()
-    .from(schema.seoAlerts)
-    .where(eq(schema.seoAlerts.acknowledged, false))
-    .orderBy(desc(schema.seoAlerts.createdAt))
-    .limit(limit);
-}
-
-export async function acknowledgeSeoAlert(
-  alertId: number,
-  acknowledgedBy: string
-): Promise<void> {
-  if (!USE_PERSISTENT_DB) {
-    const alert = _mem_seoAlerts.find(a => a.id === alertId);
-    if (alert) {
-      alert.acknowledged = true;
-      alert.acknowledgedBy = acknowledgedBy;
-      alert.acknowledgedAt = new Date();
-    }
-    return;
-  }
-  await getDb()
-    .update(schema.seoAlerts)
-    .set({
-      acknowledged: true,
-      acknowledgedBy,
-      acknowledgedAt: new Date(),
-    })
-    .where(eq(schema.seoAlerts.id, alertId));
 }

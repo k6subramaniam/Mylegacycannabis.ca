@@ -29,6 +29,7 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -43,11 +44,7 @@ export async function setupVite(app: Express, server: Server) {
       // Inject per-route SEO metadata BEFORE Vite's transform
       // (Vite's transformIndexHtml strips HTML comments)
       const requestPath = url.split("?")[0];
-      try {
-        template = await injectSeoMeta(template, requestPath);
-      } catch (err) {
-        console.error("[SEO] Middleware error:", err);
-      }
+      template = await injectSeoMeta(template, requestPath);
 
       template = template.replace(
         `src="/src/main.tsx"`,
