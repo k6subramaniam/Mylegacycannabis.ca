@@ -5,7 +5,7 @@ import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { trpc } from '@/lib/trpc';
-import { canadianProvinces, MINIMUM_ORDER } from '@/lib/data';
+import { canadianProvinces, FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER } from '@/lib/data';
 import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock, Tag, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';

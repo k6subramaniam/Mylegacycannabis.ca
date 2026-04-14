@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { SITE_NAME, absoluteOgImage } from '@/lib/seo-config';
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, absoluteOgImage } from '@/lib/seo-config';
 
 interface SEOHeadProps {
   title: string;
