@@ -2981,9 +2981,11 @@ Return ONLY the JSON object.`;
           page: 1,
         });
         // Filter out current product's base name group, pick random sample
-        const others = ((all as any).products || all).filter(
-          (p: any) => p.id !== input.productId
-        );
+        const others = (
+          (all as any).data ||
+          (all as any).products ||
+          all
+        ).filter((p: any) => p.id !== input.productId);
         // Shuffle and take the requested amount
         const shuffled = others.sort(() => 0.5 - Math.random());
         return shuffled.slice(0, input.limit);
