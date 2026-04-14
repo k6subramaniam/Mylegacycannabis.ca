@@ -5,7 +5,9 @@
 import * as db from "./db";
 import { nanoid } from "nanoid";
 
-export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType<typeof db.getUserByEmail>>>) {
+export async function buildFullUserResponse(
+  user: NonNullable<Awaited<ReturnType<typeof db.getUserByEmail>>>
+) {
   // Fetch orders
   const userOrders = await db.getUserOrders(user.id);
   const formattedOrders = [];
@@ -18,20 +20,27 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
         try {
           const product = await db.getProductById((i as any).productId);
           if (product) productSlug = product.slug;
-        } catch { /* product may have been deleted */ }
+        } catch {
+          /* product may have been deleted */
+        }
       }
       // Fallback: if no productId or product not found, try matching by name → slug
       if (!productSlug && (i as any).productName) {
         try {
-          const slugGuess = (i as any).productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const slugGuess = (i as any).productName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
           const product = await db.getProductBySlug(slugGuess);
           if (product) productSlug = product.slug;
-        } catch { /* best-effort lookup */ }
+        } catch {
+          /* best-effort lookup */
+        }
       }
       formattedItems.push({
-        name: (i as any).productName || 'Item',
+        name: (i as any).productName || "Item",
         quantity: (i as any).quantity || 1,
-        price: parseFloat((i as any).price || '0'),
+        price: parseFloat((i as any).price || "0"),
         productId: (i as any).productId || null,
         productSlug: productSlug || null,
       });
@@ -39,8 +48,8 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
     formattedOrders.push({
       id: o.orderNumber || `ORD-${o.id}`,
       date: o.createdAt?.toISOString?.() || new Date().toISOString(),
-      status: o.status || 'processing',
-      total: parseFloat((o as any).total || '0'),
+      status: o.status || "processing",
+      total: parseFloat((o as any).total || "0"),
       items: formattedItems,
       trackingNumber: (o as any).trackingNumber || undefined,
     });
@@ -48,43 +57,56 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
 
   // Determine idVerificationStatus
   const idVerifEnabled = await db.isIdVerificationEnabled();
-  let idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
+  let idVerificationStatus: "none" | "pending" | "approved" | "rejected" =
+    "none";
   if (!idVerifEnabled) {
-    idVerificationStatus = 'approved';
+    idVerificationStatus = "approved";
   } else if (user.idVerified) {
-    idVerificationStatus = 'approved';
+    idVerificationStatus = "approved";
   } else {
-    const verifications = await db.getAllVerifications({ email: user.email || '', limit: 1 });
+    const verifications = await db.getAllVerifications({
+      email: user.email || "",
+      limit: 1,
+    });
     if (verifications.data.length > 0) {
       const latest = verifications.data[0];
-      if (latest.status === 'approved') {
-        idVerificationStatus = 'approved';
+      if (latest.status === "approved") {
+        idVerificationStatus = "approved";
         await db.updateUser(user.id, { idVerified: true });
-      } else if (latest.status === 'pending') {
-        idVerificationStatus = 'pending';
-      } else if (latest.status === 'rejected') {
-        idVerificationStatus = 'rejected';
+      } else if (latest.status === "pending") {
+        idVerificationStatus = "pending";
+      } else if (latest.status === "rejected") {
+        idVerificationStatus = "rejected";
       }
     }
   }
 
   // ─── REWARDS HISTORY (from DB) ───
-  let rewardsHistory: { id: string; date: string; type: string; points: number; description: string }[] = [];
+  let rewardsHistory: {
+    id: string;
+    date: string;
+    type: string;
+    points: number;
+    description: string;
+  }[] = [];
   try {
     const history = await db.getRewardsHistoryByUser(user.id);
     rewardsHistory = (history || []).map((h: any) => ({
       id: `rh-${h.id}`,
       date: h.createdAt?.toISOString?.() || new Date().toISOString(),
-      type: h.type || 'earned',
+      type: h.type || "earned",
       points: h.points || 0,
-      description: h.description || '',
+      description: h.description || "",
     }));
   } catch (err) {
-    console.warn('[buildFullUserResponse] Failed to fetch rewards history:', err);
+    console.warn(
+      "[buildFullUserResponse] Failed to fetch rewards history:",
+      err
+    );
   }
 
   // ─── REFERRAL CODE (fetch or auto-generate) ───
-  let referralCode = '';
+  let referralCode = "";
   try {
     let refRecord = await db.getReferralCodeByUserId(user.id);
     if (!refRecord) {
@@ -92,9 +114,9 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
       await db.createReferralCode({ userId: user.id, code } as any);
       refRecord = await db.getReferralCodeByUserId(user.id);
     }
-    referralCode = refRecord?.code || '';
+    referralCode = refRecord?.code || "";
   } catch (err) {
-    console.warn('[buildFullUserResponse] Failed to fetch referral code:', err);
+    console.warn("[buildFullUserResponse] Failed to fetch referral code:", err);
   }
 
   return {
@@ -103,12 +125,24 @@ export async function buildFullUserResponse(user: NonNullable<Awaited<ReturnType
     name: user.name,
     phone: user.phone,
     birthday: user.birthday,
-    role: user.role || 'user',
-    idVerified: !idVerifEnabled || user.idVerified || idVerificationStatus === 'approved',
+    role: user.role || "user",
+    idVerified:
+      !idVerifEnabled || user.idVerified || idVerificationStatus === "approved",
     idVerificationStatus,
     rewardsPoints: user.rewardPoints || 0,
     rewardsHistory,
     referralCode,
     orders: formattedOrders,
+    // Saved shipping address (for checkout autofill)
+    savedAddress: (user as any).addressStreet
+      ? {
+          street: (user as any).addressStreet || "",
+          city: (user as any).addressCity || "",
+          province: (user as any).addressProvince || "",
+          provinceCode: (user as any).addressProvinceCode || "",
+          postalCode: (user as any).addressPostalCode || "",
+          country: (user as any).addressCountry || "CA",
+        }
+      : null,
   };
 }

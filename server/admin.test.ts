@@ -62,6 +62,7 @@ describe("admin routes", () => {
     expect(typeof stats.totalOrders).toBe("number");
     expect(typeof stats.totalRevenue).toBe("number");
   });
+});
 
   it("admin.products.list returns products for admin users", async () => {
     const ctx = createAdminContext();
@@ -113,13 +114,11 @@ describe("admin routes", () => {
     }
   });
 
-  it("allows any user to access admin routes (public access)", async () => {
+  it("rejects non-admin users from admin routes", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    const stats = await caller.admin.stats();
-    expect(stats).toHaveProperty("totalOrders");
+    await expect(caller.admin.stats()).rejects.toThrow();
   });
-});
 
 describe("store routes", () => {
   it("store.products returns active products", async () => {
