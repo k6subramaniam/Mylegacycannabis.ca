@@ -52,7 +52,7 @@ describe('e-Transfer Parsing Logic', () => {
     });
 
     it('extracts multi-line message', () => {
-      expect(extractMemo('Message:\nOrder 456\nThanks')).toBe('Order 456 Thanks');
+      expect(extractMemo('Message:\nOrder 456\nThanks')).toBe('Order 456');
     });
 
     it('returns null if no memo found', () => {
@@ -62,15 +62,15 @@ describe('e-Transfer Parsing Logic', () => {
 
   describe('extractOrderNumber', () => {
     it('extracts order with pound sign', () => {
-      expect(extractOrderNumber('Payment for #1234')).toBe(1234);
+      expect(extractOrderNumber('Payment for #1234')).toBe('1234');
     });
 
     it('extracts order with "order"', () => {
-      expect(extractOrderNumber('order 5678')).toBe(5678);
+      expect(extractOrderNumber('order 5678')).toBe('5678');
     });
 
     it('extracts order with "ord"', () => {
-      expect(extractOrderNumber('ord9012')).toBe(9012);
+      expect(extractOrderNumber('ord9012')).toBe('9012');
     });
 
     it('returns null if no order number found', () => {

@@ -352,14 +352,13 @@ export function extractAmount(subject: string, body: string): number | null {
 }
 
 export function extractMemo(body: string): string {
-  const matchString = body.replace(/\r?\n/g, ' ');
   for (const pattern of MEMO_PATTERNS) {
-    const m = matchString.match(pattern);
-    if (m && m[1]) return m[1].replace(/\n/g, ' ').trim();
+    const m = body.match(pattern);
+    if (m && m[1]) return m[1].trim();
   }
-  const msgMatch = body.match(/(?:Message)\s*[:：]\s*([\s\S]+?)(?:\n\n|$)/i);
+  const msgMatch = body.match(/(?:Message)\s*[:：]\s*(.+?)(?:\n|$)/i);
   if (msgMatch && msgMatch[1]) {
-    return msgMatch[1].replace(/\n/g, ' ').trim();
+    return msgMatch[1].trim();
   }
   return "";
 }
@@ -374,20 +373,18 @@ const ORDER_PATTERNS = [
   /Payment for\s*#?\s*(\d{3,})/i
 ];
 
-export function extractOrderNumber(subject: string, body?: string): number | null {
+export function extractOrderNumber(subject: string, body?: string): string | null {
   const combined = body ? `${subject}\n${body}` : subject;
   for (const pattern of ORDER_PATTERNS) {
     const m = combined.match(pattern);
     if (m && m[1]) {
-      const val = parseInt(m[1], 10);
-      if (!isNaN(val) && val > 0) return val;
+      return m[1].trim();
     }
   }
 
   const m = combined.match(/(?:#|order|ord)\s*(\d{4,})/i);
   if (m && m[1]) {
-    const val = parseInt(m[1], 10);
-    if (!isNaN(val) && val > 0) return val;
+    return m[1].trim();
   }
   return null;
 }
@@ -562,7 +559,9 @@ async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null
   // ═══════════════════════════════════════════
   const orderNumFromMemo = extractOrderNumber(parsed.memo) || extractOrderNumber(parsed.bodySnippet);
   if (orderNumFromMemo) {
-    const match = pendingOrders.find(o => o.orderNumber.toUpperCase() === orderNumFromMemo);
+    // The extracted order number is just the numeric part (e.g. "1234"), but the orderNumber in DB is typically "ML-12345" or similar.
+    // We should check if the orderNumber string in DB ends with or includes the extracted number.
+    const match = pendingOrders.find(o => o.orderNumber.toUpperCase().endsWith(orderNumFromMemo));
     if (match) {
       // Verify amount is close enough (within $1 to account for cent adjustment)
       if (parsed.amount !== null) {
