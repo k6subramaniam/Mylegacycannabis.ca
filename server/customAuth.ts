@@ -10,9 +10,11 @@ import { triggerWelcomeEmail } from "./emailTemplateEngine";
 import rateLimit from "express-rate-limit";
 import { buildFullUserResponse } from "./userHelpers";
 import { isDisposableEmail, validateCanadianPhone, isValidEmailFormat } from "./validation";
+import crypto from "crypto";
 
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Use cryptographically secure PRNG for OTP generation
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 /** Extract client IP from request — uses req.ip which respects Express "trust proxy" setting */
@@ -82,9 +84,24 @@ export function registerCustomAuthRoutes(app: Express) {
     legacyHeaders: false,
   });
 
+  const otpSendLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // limit each IP to 10 OTP send requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many verification requests. Please try again later." }
+  });
+
+  const otpVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // limit each IP to 20 OTP verify requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many verification attempts. Please try again later." }
+  });
 
   // ─── SEND OTP (Email or SMS) ───
-  app.post("/api/auth/send-otp", async (req: Request, res: Response) => {
+  app.post("/api/auth/send-otp", otpSendLimiter, async (req: Request, res: Response) => {
     try {
       const { identifier, type, purpose } = req.body as {
         identifier: string;
@@ -165,7 +182,7 @@ export function registerCustomAuthRoutes(app: Express) {
   });
 
   // ─── VERIFY OTP & LOGIN/REGISTER ───
-  app.post("/api/auth/verify-otp", async (req: Request, res: Response) => {
+  app.post("/api/auth/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
     try {
       const { identifier, code, type, purpose, registrationData } = req.body as {
         identifier: string;

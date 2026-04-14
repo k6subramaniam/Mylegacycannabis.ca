@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 
 type Theme = "light" | "dark";
 
@@ -48,8 +48,18 @@ export function ThemeProvider({
       }
     : undefined;
 
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Memoized the ThemeContext value object using useMemo.
+  // 🎯 Why: Previously, a new object reference was created on every render of ThemeProvider,
+  //          causing all consuming components to re-render unnecessarily even when theme state didn't change.
+  // 📊 Impact: Reduces unnecessary re-renders of all components consuming useTheme().
+  // 🔬 Measurement: Verify with React DevTools Profiler.
+  const contextValue = useMemo(() => ({
+    theme, toggleTheme, switchable
+  }), [theme, toggleTheme, switchable]);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

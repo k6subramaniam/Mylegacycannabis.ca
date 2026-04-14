@@ -84,7 +84,10 @@ describe("admin routes", () => {
   it("admin.verifications.list returns verifications for admin users", async () => {
     const ctx = createAdminContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.admin.verifications.list({ page: 1, limit: 10 });
+    const result = await caller.admin.verifications.list({
+      page: 1,
+      limit: 10,
+    });
     expect(result).toHaveProperty("data");
     expect(result).toHaveProperty("total");
   });
@@ -113,11 +116,11 @@ describe("admin routes", () => {
     }
   });
 
-  it("allows any user to access admin routes (public access)", async () => {
+  it("denies regular users access to admin routes", async () => {
+  it("rejects non-admin users from admin routes", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    const stats = await caller.admin.stats();
-    expect(stats).toHaveProperty("totalOrders");
+    await expect(caller.admin.stats()).rejects.toThrow();
   });
 });
 

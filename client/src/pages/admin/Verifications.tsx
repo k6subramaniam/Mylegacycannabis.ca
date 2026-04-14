@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { ShieldCheck, ShieldOff, Search, Eye, Check, X, ArrowLeft, Clock, AlertTriangle, User, Info, Sparkles } from "lucide-react";
+import { ShieldCheck, ShieldOff, Eye, Check, X, User, Info, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { useSiteConfig } from "@/hooks/useSiteConfig";

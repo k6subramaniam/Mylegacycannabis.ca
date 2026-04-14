@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
-import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2, Ban, Lock, Info, Zap, Timer, MapPin, ExternalLink } from "lucide-react";
+import { ShoppingCart, Search, Eye, ArrowLeft, Truck, MessageSquare, DollarSign, Package, Clock, ShieldAlert, AlertCircle, CheckCircle2, Lock, Info, Zap, Timer, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
