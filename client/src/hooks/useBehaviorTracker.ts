@@ -176,6 +176,9 @@ export function useBehaviorTracker() {
 
   const trackCheckoutComplete = useCallback((orderNumber: string, total: string) => {
     pushEvent({ eventType: 'checkout_complete', page: '/checkout', metadata: { orderNumber, total } });
+    // Flush immediately — checkout_complete is a critical conversion event
+    // that must be persisted before the user navigates away or admin checks Insights.
+    flushEvents();
   }, [pushEvent]);
 
   return {
