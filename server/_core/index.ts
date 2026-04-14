@@ -4,6 +4,7 @@ import dns from "dns";
 // so nodemailer and any other net connections resolve to IPv4 addresses.
 dns.setDefaultResultOrder("ipv4first");
 import express from "express";
+import helmet from "helmet";
 import { createServer } from "http";
 import fs from "fs";
 import path from "path";
@@ -76,6 +77,11 @@ async function startServer() {
 
   const app = express();
   const server = createServer(app);
+
+  // Add security headers
+  app.use(
+    helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })
+  );
 
   // Trust the first proxy hop (Railway, Cloudflare, etc.)
   // This makes req.ip use the real client IP from X-Forwarded-For
