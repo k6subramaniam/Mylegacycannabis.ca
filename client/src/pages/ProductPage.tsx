@@ -345,13 +345,31 @@ export default function ProductPage() {
 
               {/* Quantity & Add to Cart */}
               <div className="mb-6">
-                <label className="block font-display text-sm text-[#4B2D8E] mb-3">{t.productPage.quantity}</label>
+                <label htmlFor="product-quantity" className="block font-display text-sm text-[#4B2D8E] mb-3">{t.productPage.quantity}</label>
                 <div className="flex items-center gap-3 mb-6">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-full border-2 border-[#4B2D8E] text-[#4B2D8E] hover:bg-[#4B2D8E] hover:text-white transition-colors flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-10 h-10 rounded-full border-2 border-[#4B2D8E] text-[#4B2D8E] hover:bg-[#4B2D8E] hover:text-white transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#F19929] disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Decrease quantity"
+                    disabled={quantity <= 1}
+                  >
                     <Minus size={16} />
                   </button>
-                  <input type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 text-center border border-gray-300 rounded-lg py-2 font-display text-lg focus:outline-none focus:ring-2 focus:ring-[#F19929]" />
-                  <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-full border-2 border-[#4B2D8E] text-[#4B2D8E] hover:bg-[#4B2D8E] hover:text-white transition-colors flex items-center justify-center">
+                  <input
+                    id="product-quantity"
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 text-center border border-gray-300 rounded-lg py-2 font-display text-lg focus:outline-none focus:ring-2 focus:ring-[#F19929]"
+                    aria-label="Quantity"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-10 h-10 rounded-full border-2 border-[#4B2D8E] text-[#4B2D8E] hover:bg-[#4B2D8E] hover:text-white transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#F19929]"
+                    aria-label="Increase quantity"
+                  >
                     <Plus size={16} />
                   </button>
                 </div>
