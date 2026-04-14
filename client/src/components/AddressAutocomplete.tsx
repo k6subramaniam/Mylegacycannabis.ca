@@ -15,6 +15,8 @@ interface AddressResult {
 interface Props {
   /** Called when user selects a complete address */
   onSelect: (address: AddressResult) => void;
+  /** Called when user clears the input — parent should reset its address fields */
+  onClear?: () => void;
   /** Optional: pre-filled search term */
   defaultValue?: string;
   /** Optional: placeholder text */
@@ -69,6 +71,7 @@ function useDebounce<T extends (...args: any[]) => void>(
 
 export default function AddressAutocomplete({
   onSelect,
+  onClear,
   defaultValue = "",
   placeholder = "Start typing your address...",
   className = "",
@@ -252,6 +255,7 @@ export default function AddressAutocomplete({
               setQuery("");
               setSuggestions([]);
               setIsOpen(false);
+              onClear?.();
               inputRef.current?.focus();
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"

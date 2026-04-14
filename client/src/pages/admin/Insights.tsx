@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { CANADA_PATHS } from "@/data/canada-map-paths";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
   ChevronDown, ChevronUp, BarChart3, Activity, Zap, Star,
@@ -200,9 +200,9 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   const reviewHistory = memory.reviewHistory || [];
   const priceRange = memory.priceRange;
 
-  const { data: liveStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
+  const { data: liveStats, refetch: refetchOrderStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
     { userId: memory.userId },
-    { enabled: !!memory.userId }
+    { enabled: !!memory.userId, refetchInterval: 20_000, staleTime: 10_000 }
   );
 
   const totalOrders = liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
@@ -220,6 +220,20 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
             <X size={18} />
+          </button>
+        </div>
+
+        {/* Live refresh indicator */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="flex items-center gap-1 text-[9px] text-green-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Auto-refreshing every 20s
+          </span>
+          <button
+            onClick={() => refetchOrderStats()}
+            className="text-[10px] text-gray-400 hover:text-[#4B2D8E] px-2 py-0.5 rounded hover:bg-gray-100 transition-all flex items-center gap-1"
+          >
+            <RefreshCw size={10} /> Refresh now
           </button>
         </div>
 
@@ -664,32 +678,50 @@ export default function AdminInsights() {
   // ─── Existing data fetching ───
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
     refetchOnWindowFocus: true,
+    refetchInterval: 30_000,   // Auto-refresh every 30s so new events appear promptly
+    staleTime: 15_000,         // Consider data fresh for 15s to avoid duplicate fetches
   });
   const { data: memories, isLoading: memoriesLoading, refetch: refetchMemories } = trpc.admin.aiMemory.allMemories.useQuery(undefined, {
     refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
 
   // ─── Geo data fetching ───
-  const { data: geoProvinces } = trpc.admin.geoAnalytics.byProvince.useQuery(
+  const { data: geoProvinces, refetch: refetchGeoProvinces } = trpc.admin.geoAnalytics.byProvince.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo" }
+    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
   );
-  const { data: geoCities } = trpc.admin.geoAnalytics.byCity.useQuery(
+  const { data: geoCities, refetch: refetchGeoCities } = trpc.admin.geoAnalytics.byCity.useQuery(
     { days: geoPeriod, province: selectedProvince || undefined },
-    { enabled: activeTab === "geo" }
+    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
   );
-  const { data: geoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
+  const { data: geoProducts, refetch: refetchGeoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo" }
+    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
   );
-  const { data: proxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
+  const { data: proxyStats, refetch: refetchProxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo" }
+    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
   );
-  const { data: dailyTrend } = trpc.admin.geoAnalytics.dailyTrend.useQuery(
+  const { data: dailyTrend, refetch: refetchDailyTrend } = trpc.admin.geoAnalytics.dailyTrend.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo" }
+    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
   );
+
+  // Refetch ALL data (behavior + geo) — used by the Refresh button and auto-refresh
+  const refetchAll = useCallback(() => {
+    refetchMemories();
+    refetchAnalytics();
+    // Geo queries only have data if the tab has been visited at least once
+    if (activeTab === "geo") {
+      refetchGeoProvinces();
+      refetchGeoCities();
+      refetchGeoProducts();
+      refetchProxyStats();
+      refetchDailyTrend();
+    }
+  }, [activeTab, refetchMemories, refetchAnalytics, refetchGeoProvinces, refetchGeoCities, refetchGeoProducts, refetchProxyStats, refetchDailyTrend]);
 
   const refreshAllMut = trpc.admin.aiMemory.refreshAllMemories.useMutation({
     onSuccess: (res: any) => {
@@ -698,8 +730,7 @@ export default function AdminInsights() {
       } else {
         toast.info('All profiles are already up to date — no new activity to process');
       }
-      refetchMemories();
-      refetchAnalytics();
+      refetchAll();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -759,9 +790,20 @@ export default function AdminInsights() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[10px] text-green-500 bg-green-50 px-2 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Live &middot; 30s
+          </span>
           <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded-full font-mono">
             {analytics?.activeUsers ?? 0} tracked users
           </span>
+          <button
+            onClick={() => refetchAll()}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-all"
+            title="Refresh all dashboard data now"
+          >
+            <RefreshCw size={12} /> Data
+          </button>
           <button
             onClick={() => refreshAllMut.mutate()}
             disabled={refreshAllMut.isPending}

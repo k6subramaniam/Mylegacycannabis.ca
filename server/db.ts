@@ -155,6 +155,16 @@ export async function initializeDatabase(): Promise<void> {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_birthday_bonus VARCHAR(4);
   END $$`;
 
+  // Add saved shipping address columns to users table (for "Use my account address" at checkout)
+  await _sql!`DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_street VARCHAR(500);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_city VARCHAR(255);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_province VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_province_code VARCHAR(5);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_postal_code VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address_country VARCHAR(2) DEFAULT 'CA';
+  END $$`;
+
   // System logs table (emails, API errors, integrations)
   await _sql!`
     CREATE TABLE IF NOT EXISTS system_logs (
@@ -1316,7 +1326,10 @@ export async function updateUserAddress(
     addressCountry: string;
   }
 ): Promise<void> {
-  if (!USE_PERSISTENT_DB) return; // in-memory mode: no-op
+  if (!USE_PERSISTENT_DB) {
+    _mem_updateUser(userId, address);
+    return;
+  }
   const db = getDb();
   await db
     .update(schema.users)
