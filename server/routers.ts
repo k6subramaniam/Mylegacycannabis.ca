@@ -4198,6 +4198,27 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       }),
 
     // Admin: change payment status (with guards for data integrity)
+    changeStatus: adminProcedure.input(z.object({
+      paymentId: z.number(),
+      status: z.enum(["auto_matched", "manual_matched", "unmatched", "ignored"]),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const adminName = ctx.user?.name || "Admin";
+      const record = await db.getPaymentRecordById(input.paymentId);
+      if (!record) throw new Error("Payment record not found");
+
+      const oldStatus = record.status;
+      const isMatchedTarget = input.status === "auto_matched" || input.status === "manual_matched";
+      const wasMatched = oldStatus === "auto_matched" || oldStatus === "manual_matched";
+      const isUnmatchTarget = input.status === "unmatched" || input.status === "ignored";
+
+      // ─── GUARD: Cannot set to "matched" without a linked order ───
+      if (isMatchedTarget && !record.matchedOrderId) {
+        throw new Error(
+          `Cannot set status to "${input.status}" — no order is linked. ` +
+          `Use the "Match to Order" dropdown to link an order first.`
+        );
+      }
     changeStatus: adminProcedure
       .input(
         z.object({
