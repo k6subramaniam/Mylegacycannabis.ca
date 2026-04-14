@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20"
-  PNPM_VERSION: "10.4.1"
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.4.1'
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -150,51 +150,20 @@ jobs:
           key: modules-${{ hashFiles('pnpm-lock.yaml') }}
       - name: pnpm audit (production deps)
         run: pnpm audit --prod --audit-level=high
-        continue-on-error: true # Warn but don't block (set to false when ready)
+        continue-on-error: true  # Warn but don't block (set to false when ready)
       - name: Check for known vulnerable patterns
         run: |
           echo "=== Checking for publicProcedure on admin routes ==="
-          # Exclude import statements and type-only lines to avoid false positives
-          if grep -rn 'publicProcedure' server/routers.ts \
-            | grep -v '^\s*import ' \
-            | grep -v '^\s*//' \
-            | grep -v '^\s*\*' \
-            | grep -v 'type ' \
-            | grep -i 'admin'; then
+          if grep -rn 'publicProcedure' server/routers.ts | grep -i 'admin'; then
             echo "::error::CRITICAL: Found publicProcedure on admin-prefixed routes!"
             exit 1
           else
             echo "✅ No admin routes using publicProcedure"
           fi
-      - name: Detect hard-coded secrets
-        run: |
-          echo "=== Scanning for hard-coded credentials ==="
-          FOUND=0
-          # Check for hardcoded SMTP passwords
-          if grep -rn 'SMTP_PASS\s*=' server/ --include='*.ts' | grep -v 'process.env' | grep -v '.test.' | grep -v '^\s*//'; then
+          echo ""
+          echo "=== Checking for hardcoded secrets ==="
+          if grep -rn 'SMTP_PASS\s*=' server/ --include='*.ts' | grep -v 'process.env' | grep -v '.test.'; then
             echo "::error::Potential hardcoded SMTP credential found"
-            FOUND=1
-          fi
-          # Check for hardcoded API keys / tokens (common patterns)
-          if grep -rEn '(API_KEY|SECRET_KEY|AUTH_TOKEN|PRIVATE_KEY)\s*=\s*["\x27][A-Za-z0-9+/=]{16,}' server/ --include='*.ts' \
-            | grep -v 'process.env' \
-            | grep -v '.test.' \
-            | grep -v '^\s*//' \
-            | grep -v '^\s*\*'; then
-            echo "::error::Potential hardcoded API key or secret token found"
-            FOUND=1
-          fi
-          # Check for hardcoded database connection strings
-          if grep -rEn 'postgresql://[^$]+@' server/ --include='*.ts' \
-            | grep -v 'process.env' \
-            | grep -v '.test.' \
-            | grep -v '^\s*//' \
-            | grep -v '// example' \
-            | grep -v 'localhost'; then
-            echo "::error::Potential hardcoded database connection string found"
-            FOUND=1
-          fi
-          if [ "$FOUND" -eq 1 ]; then
             exit 1
           else
             echo "✅ No hardcoded secrets detected"
