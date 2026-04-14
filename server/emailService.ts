@@ -20,7 +20,7 @@ import { logSystem } from "./db";
  *   SMTP_HOST=smtp.gmail.com            <-- fallback
  *   SMTP_PORT=587
  *   SMTP_USER=k6subramaniam@gmail.com
- *   // Set SMTP_PASS via environment variable
+ *   SMTP_PASS=<Gmail App Password>
  *   SMTP_FROM="My Legacy Cannabis <k6subramaniam@gmail.com>"
  *   ADMIN_EMAIL=k6subramaniam@gmail.com
  */
@@ -28,8 +28,7 @@ import { logSystem } from "./db";
 // ─── Logo URL helper ───
 // Returns the default logo URL (static fallback). For dynamic logos, use getLogoUrlDynamic().
 function getLogoUrlFallback(): string {
-  if (process.env.RAILWAY_PUBLIC_DOMAIN)
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
   return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
 }
 
@@ -72,12 +71,8 @@ function getTransporter(): nodemailer.Transporter | null {
         !ENV.smtpHost && "SMTP_HOST",
         !ENV.smtpUser && "SMTP_USER",
         !ENV.smtpPass && "SMTP_PASS",
-      ]
-        .filter(Boolean)
-        .join(", ");
-      console.log(
-        `[Email] SMTP not configured (missing: ${missing}). Using Resend only.`
-      );
+      ].filter(Boolean).join(", ");
+      console.log(`[Email] SMTP not configured (missing: ${missing}). Using Resend only.`);
     }
     return null;
   }
@@ -113,11 +108,8 @@ async function sendMail(options: {
   // ── Try Resend (primary) ──
   if (resend) {
     try {
-      const from =
-        process.env.RESEND_FROM ||
-        (ENV.smtpFrom
-          ? ENV.smtpFrom
-          : "My Legacy Cannabis <noreply@mylegacycannabis.ca>");
+      const from = process.env.RESEND_FROM ||
+        (ENV.smtpFrom ? ENV.smtpFrom : "My Legacy Cannabis <noreply@mylegacycannabis.ca>");
       const { error } = await resend.emails.send({
         from,
         to: options.to,
@@ -138,9 +130,7 @@ async function sendMail(options: {
         });
         // Fall through to SMTP
       } else {
-        console.log(
-          `[Email] Sent via Resend to ${options.to}: ${options.subject}`
-        );
+        console.log(`[Email] Sent via Resend to ${options.to}: ${options.subject}`);
         recordEmailEvent({
           timestamp: new Date().toISOString(),
           provider: "resend",
@@ -169,9 +159,7 @@ async function sendMail(options: {
   // ── Try SMTP (fallback) ──
   const transporter = getTransporter();
   if (!transporter) {
-    console.log(
-      `[Email] No delivery method configured. Would send to: ${options.to} | Subject: ${options.subject}`
-    );
+    console.log(`[Email] No delivery method configured. Would send to: ${options.to} | Subject: ${options.subject}`);
     // Only record if there was no Resend attempt (otherwise it was already recorded)
     if (!resend) {
       recordEmailEvent({
@@ -238,11 +226,8 @@ export async function sendMailTracked(options: {
   // Try Resend
   if (resend) {
     try {
-      const from =
-        process.env.RESEND_FROM ||
-        (ENV.smtpFrom
-          ? ENV.smtpFrom
-          : "My Legacy Cannabis <noreply@mylegacycannabis.ca>");
+      const from = process.env.RESEND_FROM ||
+        (ENV.smtpFrom ? ENV.smtpFrom : "My Legacy Cannabis <noreply@mylegacycannabis.ca>");
       const { error } = await resend.emails.send({
         from,
         to: options.to,
@@ -259,12 +244,7 @@ export async function sendMailTracked(options: {
           status: "sent",
           latencyMs: Date.now() - start,
         });
-        logSystem({
-          level: "info",
-          source: "email",
-          action: "send",
-          message: `Email sent via Resend to ${options.to}: ${options.subject}`,
-        }).catch(() => {});
+        logSystem({ level: "info", source: "email", action: "send", message: `Email sent via Resend to ${options.to}: ${options.subject}` }).catch(() => {});
         return { success: true, provider: "resend" };
       }
       recordEmailEvent({
@@ -276,12 +256,7 @@ export async function sendMailTracked(options: {
         error: error.message,
         latencyMs: Date.now() - start,
       });
-      logSystem({
-        level: "error",
-        source: "email",
-        action: "send_failed",
-        message: `Resend failed for ${options.to}: ${error.message}`,
-      }).catch(() => {});
+      logSystem({ level: "error", source: "email", action: "send_failed", message: `Resend failed for ${options.to}: ${error.message}` }).catch(() => {});
       // Fall through
     } catch (err: any) {
       recordEmailEvent({
@@ -315,12 +290,7 @@ export async function sendMailTracked(options: {
         status: "sent",
         latencyMs: Date.now() - start,
       });
-      logSystem({
-        level: "info",
-        source: "email",
-        action: "send",
-        message: `Email sent via SMTP to ${options.to}: ${options.subject}`,
-      }).catch(() => {});
+      logSystem({ level: "info", source: "email", action: "send", message: `Email sent via SMTP to ${options.to}: ${options.subject}` }).catch(() => {});
       return { success: true, provider: "smtp" };
     } catch (err: any) {
       recordEmailEvent({
@@ -332,21 +302,12 @@ export async function sendMailTracked(options: {
         error: err.message,
         latencyMs: Date.now() - start,
       });
-      logSystem({
-        level: "error",
-        source: "email",
-        action: "send_failed",
-        message: `SMTP failed for ${options.to}: ${err.message}`,
-      }).catch(() => {});
+      logSystem({ level: "error", source: "email", action: "send_failed", message: `SMTP failed for ${options.to}: ${err.message}` }).catch(() => {});
       return { success: false, provider: "smtp", error: err.message };
     }
   }
 
-  return {
-    success: false,
-    provider: "unknown",
-    error: "No email provider configured",
-  };
+  return { success: false, provider: "unknown", error: "No email provider configured" };
 }
 
 // ─── Provider status (used by /api/auth/smtp-available) ───
@@ -357,12 +318,7 @@ export function getEmailProviderStatus(): {
   missing: string[];
 } {
   if (ENV.resendApiKey) {
-    return {
-      available: true,
-      provider: "resend",
-      adminEmail: ENV.adminEmail,
-      missing: [],
-    };
+    return { available: true, provider: "resend", adminEmail: ENV.adminEmail, missing: [] };
   }
   const missing = [
     !ENV.smtpHost && "SMTP_HOST",
@@ -370,19 +326,9 @@ export function getEmailProviderStatus(): {
     !ENV.smtpPass && "SMTP_PASS",
   ].filter(Boolean) as string[];
   if (missing.length === 0) {
-    return {
-      available: true,
-      provider: "smtp",
-      adminEmail: ENV.adminEmail,
-      missing: [],
-    };
+    return { available: true, provider: "smtp", adminEmail: ENV.adminEmail, missing: [] };
   }
-  return {
-    available: false,
-    provider: "none",
-    adminEmail: ENV.adminEmail,
-    missing,
-  };
+  return { available: false, provider: "none", adminEmail: ENV.adminEmail, missing };
 }
 
 // ─── OTP Email ───
@@ -392,11 +338,7 @@ export async function sendOTPEmail(
   purpose: "login" | "register" | "verify"
 ): Promise<boolean> {
   const purposeText =
-    purpose === "login"
-      ? "sign in to"
-      : purpose === "register"
-        ? "create"
-        : "verify";
+    purpose === "login" ? "sign in to" : purpose === "register" ? "create" : "verify";
 
   const subject = `My Legacy Cannabis — Your Verification Code: ${code}`;
   const resolvedLogo = await getLogoUrl();
@@ -447,10 +389,7 @@ export async function sendOTPEmail(
             "content-type": "application/json",
             "connect-protocol-version": "1",
           },
-          body: JSON.stringify({
-            title: subject,
-            content: html.replace(/<[^>]*>/g, ""),
-          }),
+          body: JSON.stringify({ title: subject, content: html.replace(/<[^>]*>/g, "") }),
         });
       } catch {
         // Silently fail
@@ -468,14 +407,8 @@ export async function sendOTPSms(
   purpose: "login" | "register" | "verify"
 ): Promise<{ sent: boolean; reason?: string }> {
   if (!ENV.twilioAccountSid || !ENV.twilioAuthToken || !ENV.twilioPhoneNumber) {
-    console.log(
-      `[OTP SMS] Twilio not configured. Phone: ${phone} | Code: ${code} | Purpose: ${purpose}`
-    );
-    return {
-      sent: false,
-      reason:
-        "SMS service not configured. Please use email verification instead.",
-    };
+    console.log(`[OTP SMS] Twilio not configured. Phone: ${phone} | Code: ${code} | Purpose: ${purpose}`);
+    return { sent: false, reason: "SMS service not configured. Please use email verification instead." };
   }
 
   try {
@@ -498,20 +431,14 @@ export async function sendOTPSms(
     if (!response.ok) {
       const errorData = await response.text();
       console.warn(`[SMS] Twilio error: ${errorData}`);
-      return {
-        sent: false,
-        reason: "Failed to send SMS. Please try email verification.",
-      };
+      return { sent: false, reason: "Failed to send SMS. Please try email verification." };
     }
 
     console.log(`[SMS] OTP sent to ${phone} for ${purpose}`);
     return { sent: true };
   } catch (error) {
     console.warn("[SMS] Error sending OTP:", error);
-    return {
-      sent: false,
-      reason: "SMS service error. Please try email verification.",
-    };
+    return { sent: false, reason: "SMS service error. Please try email verification." };
   }
 }
 
@@ -522,9 +449,7 @@ export async function sendAdminNotification(
 ): Promise<boolean> {
   const adminEmail = ENV.adminEmail;
   if (!adminEmail) {
-    console.log(
-      `[Notification] No ADMIN_EMAIL configured. Subject: ${subject}`
-    );
+    console.log(`[Notification] No ADMIN_EMAIL configured. Subject: ${subject}`);
     return false;
   }
 
@@ -561,10 +486,7 @@ export async function sendCustomerEmail(
   bodyHtml: string
 ): Promise<boolean> {
   // If bodyHtml is a full HTML document (from templates), send it raw
-  if (
-    bodyHtml.trimStart().startsWith("<!DOCTYPE") ||
-    bodyHtml.trimStart().startsWith("<html")
-  ) {
+  if (bodyHtml.trimStart().startsWith("<!DOCTYPE") || bodyHtml.trimStart().startsWith("<html")) {
     return sendMail({ to, subject, html: bodyHtml });
   }
 
@@ -597,9 +519,7 @@ export async function sendAdminTemplatedEmail(
 ): Promise<boolean> {
   const adminEmail = ENV.adminEmail;
   if (!adminEmail) {
-    console.log(
-      `[Notification] No ADMIN_EMAIL configured. Subject: ${subject}`
-    );
+    console.log(`[Notification] No ADMIN_EMAIL configured. Subject: ${subject}`);
     return false;
   }
   return sendMail({ to: adminEmail, subject, html: fullHtml });
