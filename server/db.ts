@@ -1337,6 +1337,27 @@ export async function updateUserAddress(
     .where(eq(schema.users.id, userId));
 }
 
+/** Clear a user's saved shipping address */
+export async function clearUserAddress(userId: number): Promise<void> {
+  const emptyAddr = {
+    addressStreet: null,
+    addressCity: null,
+    addressProvince: null,
+    addressProvinceCode: null,
+    addressPostalCode: null,
+    addressCountry: null,
+  };
+  if (!USE_PERSISTENT_DB) {
+    _mem_updateUser(userId, emptyAddr);
+    return;
+  }
+  const db = getDb();
+  await db
+    .update(schema.users)
+    .set({ ...emptyAddr, updatedAt: new Date() } as any)
+    .where(eq(schema.users.id, userId));
+}
+
 export async function deleteUser(id: number): Promise<void> {
   if (!USE_PERSISTENT_DB) {
     _mem_deleteUser(id);

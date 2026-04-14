@@ -2819,6 +2819,14 @@ Return ONLY the JSON object.`;
         return { success: true };
       }),
 
+    /** Remove the authenticated user's saved shipping address */
+    clearAddress: protectedProcedure.mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error("Not authenticated");
+      await db.clearUserAddress(userId);
+      return { success: true };
+    }),
+
     // ─── REFRESH USER (authenticated users — re-fetch latest data incl. ID verification status) ───
     refreshUser: protectedProcedure.query(async ({ ctx }) => {
       const userId = ctx.user?.id;
