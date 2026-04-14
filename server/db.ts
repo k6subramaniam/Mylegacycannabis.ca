@@ -1943,6 +1943,13 @@ export async function getUnmatchedPaymentRecords() {
   return getDb().select().from(schema.paymentRecords).where(eq(schema.paymentRecords.status, 'unmatched')).orderBy(desc(schema.paymentRecords.createdAt));
 }
 
+/** Get a single payment record by ID */
+export async function getPaymentRecordById(id: number): Promise<any | null> {
+  if (!USE_PERSISTENT_DB) return _mem_paymentRecords.find((p: any) => p.id === id) || null;
+  const rows = await getDb().select().from(schema.paymentRecords).where(eq(schema.paymentRecords.id, id)).limit(1);
+  return rows[0] || null;
+}
+
 /** Export ALL payment records (no pagination) for CSV download */
 export async function exportAllPaymentRecords() {
   if (!USE_PERSISTENT_DB) {

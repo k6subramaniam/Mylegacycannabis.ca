@@ -2873,8 +2873,7 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       const adminName = ctx.user?.name || "Admin";
-      const allRecords = await db.exportAllPaymentRecords();
-      const record = allRecords.find((r: any) => r.id === input.paymentId);
+      const record = await db.getPaymentRecordById(input.paymentId);
       if (!record) throw new Error("Payment record not found");
 
       const oldStatus = record.status;
@@ -2889,6 +2888,40 @@ Be strict but fair. If the image is too blurry to read, reject it. If you can cl
           `Use the "Match to Order" dropdown to link an order first.`
         );
       }
+    changeStatus: adminProcedure
+      .input(
+        z.object({
+          paymentId: z.number(),
+          status: z.enum([
+            "auto_matched",
+            "manual_matched",
+            "unmatched",
+            "ignored",
+          ]),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const adminName = ctx.user?.name || "Admin";
+        const allRecords = await db.exportAllPaymentRecords();
+        const record = allRecords.find((r: any) => r.id === input.paymentId);
+        if (!record) throw new Error("Payment record not found");
+
+        const oldStatus = record.status;
+        const isMatchedTarget =
+          input.status === "auto_matched" || input.status === "manual_matched";
+        const wasMatched =
+          oldStatus === "auto_matched" || oldStatus === "manual_matched";
+        const isUnmatchTarget =
+          input.status === "unmatched" || input.status === "ignored";
+
+        // ─── GUARD: Cannot set to "matched" without a linked order ───
+        if (isMatchedTarget && !record.matchedOrderId) {
+          throw new Error(
+            `Cannot set status to "${input.status}" — no order is linked. ` +
+              `Use the "Match to Order" dropdown to link an order first.`
+          );
+        }
 
       // ─── GUARD: When reverting a matched payment to unmatched/ignored, ───
       // ─── clear the order link and revert the order's payment status   ───
