@@ -2495,6 +2495,8 @@ export async function restoreStock(orderId: number): Promise<void> {
       }
     }
   }
+
+  console.timeEnd(`restoreStock-${orderId}`);
 }
 
 /**
