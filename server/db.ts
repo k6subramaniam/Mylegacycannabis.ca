@@ -3789,7 +3789,7 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
     GROUP BY created_at::date ORDER BY date ASC
   `;
 
-  // Geo stats summary (30 days)
+  // Geo stats summary (30 days — Canada only)
   const [geoSummary] = await _sql!`
     SELECT
       count(DISTINCT city)::int as unique_cities,
@@ -3798,6 +3798,7 @@ export async function getAggregateBehaviorAnalytics(): Promise<{
       count(DISTINCT CASE WHEN ip_hash IS NOT NULL THEN session_id END)::int as geo_sessions
     FROM user_behavior
     WHERE created_at > NOW() - INTERVAL '30 days'
+      AND country_code = 'CA'
   `;
   const geoSessionsTotal = geoSummary?.geo_sessions ?? 0;
   const proxySessions = geoSummary?.proxy_sessions ?? 0;
@@ -3929,6 +3930,7 @@ export async function getGeoByProvince(days = 30): Promise<
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.province IS NOT NULL AND ub.province != ''
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
     GROUP BY ub.province, ub.province_code
     ORDER BY events DESC
@@ -3974,6 +3976,7 @@ export async function getGeoByCityRaw(
       ), 0) as revenue
     FROM user_behavior ub
     WHERE ub.city IS NOT NULL AND ub.city != ''
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
       ${provFilter}
     GROUP BY ub.city, ub.province, ub.province_code
@@ -4009,6 +4012,7 @@ export async function getProductsByRegion(days = 30): Promise<
       count(DISTINCT CASE WHEN ub.event_type = 'add_to_cart' THEN ub.session_id END)::int as carts
     FROM user_behavior ub
     WHERE ub.province IS NOT NULL AND ub.category IS NOT NULL
+      AND ub.country_code = 'CA'
       AND ub.created_at > NOW() - (${days} || ' days')::interval
     GROUP BY ub.province, ub.province_code, ub.category
     ORDER BY ub.province, views DESC
@@ -4113,6 +4117,7 @@ export async function getProxyStats(
     FROM user_behavior
     WHERE created_at > NOW() - (${days} || ' days')::interval
       AND ip_hash IS NOT NULL
+      AND country_code = 'CA'
   `;
   const total = row?.total ?? 0;
   const proxy = row?.proxy ?? 0;
@@ -4141,6 +4146,7 @@ export async function getGeoDailyTrend(days = 30): Promise<
       count(DISTINCT CASE WHEN event_type = 'checkout_complete' THEN session_id END)::int as orders
     FROM user_behavior
     WHERE created_at > NOW() - (${days} || ' days')::interval
+      AND country_code = 'CA'
     GROUP BY created_at::date
     ORDER BY date ASC
   `;

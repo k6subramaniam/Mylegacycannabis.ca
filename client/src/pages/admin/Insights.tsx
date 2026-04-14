@@ -642,7 +642,7 @@ function ConversionFunnel({ data }: {
                 </span>
                 {i > 0 && dropoff > 0 && (
                   <span style={{ fontSize: 9, fontWeight: 600, color: BRAND.red, background: "#fef2f2", padding: "1px 6px", borderRadius: 4 }}>
-                    -{dropoff.toFixed(0)}%
+                    -{dropoff >= 99.5 && dropoff < 100 ? dropoff.toFixed(1) : dropoff.toFixed(0)}%
                   </span>
                 )}
               </div>
@@ -745,10 +745,11 @@ export default function AdminInsights() {
 
   // ─── Geo computed: conversion metrics ───
   const geoConversionMetrics = useMemo(() => {
-    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0 };
+    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0, totalEvents: 0 };
     const totalVisitors = geoProvinces.reduce((s, p) => s + (p.uniqueVisitors || 0), 0);
     const totalOrders = geoProvinces.reduce((s, p) => s + (p.orders || 0), 0);
     const totalRevenue = geoProvinces.reduce((s, p) => s + (p.revenue || 0), 0);
+    const totalEvents = geoProvinces.reduce((s, p) => s + (p.events || 0), 0);
     const convRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
     const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     // Best converting and highest traffic city
@@ -760,7 +761,7 @@ export default function AdminInsights() {
         if (c.events > topCityEvents) { topCityEvents = c.events; topCity = c.city; }
       }
     }
-    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue };
+    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue, totalEvents };
   }, [geoProvinces, geoCities]);
 
   // Group products by province for category breakdown
@@ -779,7 +780,7 @@ export default function AdminInsights() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Brain size={24} className="text-[#4B2D8E]" />
@@ -789,7 +790,7 @@ export default function AdminInsights() {
             AI-powered behavior analytics, user profiles, and geo-analytics
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 text-[10px] text-green-500 bg-green-50 px-2 py-1 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             Live &middot; 30s
@@ -810,7 +811,7 @@ export default function AdminInsights() {
             className="flex items-center gap-2 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
           >
             <RefreshCw size={14} className={refreshAllMut.isPending ? "animate-spin" : ""} />
-            {refreshAllMut.isPending ? "Refreshing..." : "Refresh All Profiles"}
+            {refreshAllMut.isPending ? "Refreshing..." : "Refresh Profiles"}
           </button>
         </div>
       </div>
@@ -1115,24 +1116,25 @@ export default function AdminInsights() {
             ))}
           </div>
 
-          {/* Geo KPI cards */}
+          {/* Geo KPI cards — use CA-only geo data, not behavior-tab totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Events</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{totalEvents.toLocaleString()}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">CA Events</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoConversionMetrics.totalEvents.toLocaleString()}</p>
                 </div>
                 <div className="bg-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Activity size={18} className="text-white" />
                 </div>
               </div>
+              <p className="text-xs text-gray-400 mt-3">Canada only</p>
             </div>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cities Reached</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.uniqueCities ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">CA Cities</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoCities?.length ?? analytics?.uniqueCities ?? 0}</p>
                 </div>
                 <div className="bg-emerald-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <MapPin size={18} className="text-white" />
@@ -1142,8 +1144,8 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Provinces</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.activeProvinces ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Provinces</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoProvinces?.length ?? analytics?.activeProvinces ?? 0}</p>
                 </div>
                 <div className="bg-[#4B2D8E] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Globe size={18} className="text-white" />
