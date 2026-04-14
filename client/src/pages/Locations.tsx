@@ -353,7 +353,7 @@ export default function Locations() {
               '@id': `${SITE_URL}/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
               image: [
-                '/logo.webp',
+                `${SITE_URL}/logo.webp`,
                 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
               ],
               url: `${SITE_URL}/locations`,
