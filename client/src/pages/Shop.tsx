@@ -1,10 +1,10 @@
 import { Link, useParams, useSearch } from 'wouter';
 import SEOHead from '@/components/SEOHead';
-import { ROUTE_SEO, CATEGORY_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
+import { ROUTE_SEO, CATEGORY_SEO, canonical, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/seo-config';
 import { Breadcrumbs } from '@/components/Layout';
 import { useCart } from '@/contexts/CartContext';
 import { categories } from '@/lib/data';
-import { ShoppingCart, Star, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Star, Loader, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';

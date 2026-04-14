@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import {
   LanguageContext,
   translations,
@@ -87,18 +87,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  // ⚡ Bolt Performance Optimization:
-  // 💡 What: Memoized the LanguageContext value object using useMemo.
-  // 🎯 Why: Previously, a new object reference was created on every render of LanguageProvider,
-  //          causing all consuming components to re-render unnecessarily even when language state didn't change.
-  // 📊 Impact: Reduces unnecessary re-renders of all components consuming useLanguage().
-  // 🔬 Measurement: Verify with React DevTools Profiler.
-  const contextValue = useMemo(() => ({
-    locale, setLocale, t, tt
-  }), [locale, setLocale, t, tt]);
-
   return (
-    <LanguageContext.Provider value={contextValue}>
+    <LanguageContext.Provider value={{ locale, setLocale, t, tt }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { WELCOME_BONUS } from '@/lib/data';
 
 export interface User {
@@ -449,40 +449,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // ⚡ Bolt Performance Optimization:
-  // 💡 What: Memoized the AuthContext value object using useMemo.
-  // 🎯 Why: Previously, a new object reference was created on every render of AuthProvider,
-  //          causing all consuming components to re-render unnecessarily even when auth state didn't change.
-  // 📊 Impact: Reduces unnecessary re-renders of all components consuming useAuth(), especially
-  //             during global state updates or layout shifts.
-  // 🔬 Measurement: Verify with React DevTools Profiler that components consuming useAuth()
-  //                  no longer re-render unless auth state actually changes.
-  const contextValue = useMemo(() => ({
-    user,
-    isAuthenticated: !!user,
-    isAdmin: !!user && user.role === 'admin',
-    isLoading,
-    login,
-    register,
-    logout,
-    updateProfile,
-    submitIdVerification,
-    addOrder,
-    refreshUser,
-  }), [
-    user,
-    isLoading,
-    login,
-    register,
-    logout,
-    updateProfile,
-    submitIdVerification,
-    addOrder,
-    refreshUser,
-  ]);
-
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      isAdmin: !!user && user.role === 'admin',
+      isLoading,
+      login,
+      register,
+      logout,
+      updateProfile,
+      submitIdVerification,
+      addOrder,
+      refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

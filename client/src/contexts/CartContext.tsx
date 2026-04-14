@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Product, RewardTier } from '@/lib/data';
 import { FREE_SHIPPING_THRESHOLD, MINIMUM_ORDER, calculatePointsEarned, shippingZones } from '@/lib/data';
 
@@ -98,28 +98,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const total = subtotal - rewardDiscount + shippingRate;
 
-  // ⚡ Bolt Performance Optimization:
-  // 💡 What: Memoized the CartContext value object using useMemo.
-  // 🎯 Why: Previously, a new object reference was created on every render of CartProvider,
-  //          causing all consuming components to re-render unnecessarily even when cart state didn't change.
-  // 📊 Impact: Reduces unnecessary re-renders of all components consuming useCart(), especially
-  //             during global state updates or layout shifts.
-  // 🔬 Measurement: Verify with React DevTools Profiler that components consuming useCart()
-  //                  no longer re-render unless cart state actually changes.
-  const contextValue = useMemo(() => ({
-    items, addItem, removeItem, updateQuantity, clearCart,
-    itemCount, subtotal, shippingRate, shippingProvince, setShippingProvince,
-    total, isFreeShipping, freeShippingProgress, amountToFreeShipping,
-    meetsMinimum, pointsToEarn, appliedReward, applyReward: setAppliedReward, rewardDiscount,
-  }), [
-    items, addItem, removeItem, updateQuantity, clearCart,
-    itemCount, subtotal, shippingRate, shippingProvince,
-    total, isFreeShipping, freeShippingProgress, amountToFreeShipping,
-    meetsMinimum, pointsToEarn, appliedReward, rewardDiscount
-  ]);
-
   return (
-    <CartContext.Provider value={contextValue}>
+    <CartContext.Provider value={{
+      items, addItem, removeItem, updateQuantity, clearCart,
+      itemCount, subtotal, shippingRate, shippingProvince, setShippingProvince,
+      total, isFreeShipping, freeShippingProgress, amountToFreeShipping,
+      meetsMinimum, pointsToEarn, appliedReward, applyReward: setAppliedReward, rewardDiscount,
+    }}>
       {children}
     </CartContext.Provider>
   );
