@@ -1655,15 +1655,48 @@ export async function checkStock(items: { productId?: number; productName: strin
  */
 export async function restoreStock(orderId: number): Promise<void> {
   const items = await getOrderItems(orderId);
-  for (const item of items) {
-    if (!item.productId) continue;
-    if (USE_PERSISTENT_DB) {
-      await getDb().update(schema.products).set({ stock: sql`${schema.products.stock} + ${item.quantity}`, updatedAt: new Date() }).where(eq(schema.products.id, item.productId));
-    } else {
-      const p = _products.find((p: any) => p.id === item.productId);
-      if (p) { p.stock += item.quantity; p.updatedAt = new Date(); }
+  if (!items || items.length === 0) return;
+
+  console.time(`restoreStock-${orderId}`);
+
+  // Aggregate quantities in case the same product appears multiple times
+  const aggregatedItems = items.reduce((acc, item) => {
+    if (!item.productId) return acc;
+    acc[item.productId] = (acc[item.productId] || 0) + item.quantity;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const productIds = Object.keys(aggregatedItems).map(Number);
+  if (productIds.length === 0) {
+    console.timeEnd(`restoreStock-${orderId}`);
+    return;
+  }
+
+  if (USE_PERSISTENT_DB) {
+    // 💡 What: Bulk update products instead of N+1 queries
+    // 🎯 Why: order cancellation could issue many sequential DB requests
+    // Combine all updates into a single CASE statement
+    const sqlChunks: any[] = [];
+    sqlChunks.push(sql`CASE ${schema.products.id}`);
+    for (const [idStr, qty] of Object.entries(aggregatedItems)) {
+      const id = Number(idStr);
+      sqlChunks.push(sql`WHEN ${id} THEN ${schema.products.stock} + ${qty}`);
+    }
+    sqlChunks.push(sql`ELSE ${schema.products.stock} END`);
+
+    const finalSql = sql.join(sqlChunks, sql.raw(' '));
+
+    await getDb().update(schema.products)
+      .set({ stock: finalSql, updatedAt: new Date() })
+      .where(inArray(schema.products.id, productIds));
+  } else {
+    for (const [id, qty] of Object.entries(aggregatedItems)) {
+      const p = _products.find((p: any) => p.id === Number(id));
+      if (p) { p.stock += qty; p.updatedAt = new Date(); }
     }
   }
+
+  console.timeEnd(`restoreStock-${orderId}`);
 }
 
 /**
