@@ -101,13 +101,9 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Health check endpoint (useful for Railway, monitoring, etc.)
+  // BEFORE all other routes — this must respond instantly
   app.get("/api/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      database: USE_PERSISTENT_DB ? "postgresql" : "in-memory",
-      gmail: getGmailStatus(),
-      timestamp: new Date().toISOString(),
-    });
+    res.status(200).json({ status: "ok", timestamp: Date.now() });
   });
 
   // ─── STEALTH HEADERS: prevent search engines from indexing admin / API routes ───
