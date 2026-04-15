@@ -1,13 +1,7 @@
-⚡ Bolt: [performance improvement] Enable compression middleware
+Fix analytics trackCheckoutComplete and restore helmet dependency
 
-💡 What
-Added compression middleware to Express server.
-
-🎯 Why
-To reduce the size of the payloads sent to clients, drastically improving First Contentful Paint (FCP) and reducing bandwidth consumption.
-
-📊 Impact
-CSS bundle from 163 KB to ~25 KB, vendor JS from ~745 KB to ~200 KB over the wire. FCP improvement from 7.5s to approximately 3-4s.
-
-🔬 Measurement
-Compared payload sizes with and without compression.
+Fixes applied for PR 165 review feedback:
+- Replaced `pushEvent` with `navigator.sendBeacon` in `trackCheckoutComplete` within `useBehaviorTracker.ts` to ensure analytics flush synchronously during page unloads.
+- Verified that `helmet` is present in `package.json` dependencies.
+- Maintained `app.use(helmet(...))` in `server/_core/index.ts` to preserve security configurations.
+- Verified product JSON-LD logic using `getProductBySlug` and `getProductReviewStats` is present in `server/_core/seo-middleware.ts`.
