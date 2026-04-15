@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { CANADA_PATHS } from "@/data/canada-map-paths";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
   ChevronDown, ChevronUp, BarChart3, Activity, Zap, Star,
@@ -200,9 +200,9 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
   const reviewHistory = memory.reviewHistory || [];
   const priceRange = memory.priceRange;
 
-  const { data: liveStats, refetch: refetchOrderStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
+  const { data: liveStats } = trpc.admin.aiMemory.getUserOrderStats.useQuery(
     { userId: memory.userId },
-    { enabled: !!memory.userId, refetchInterval: 20_000, staleTime: 10_000 }
+    { enabled: !!memory.userId }
   );
 
   const totalOrders = liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
@@ -220,20 +220,6 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
             <X size={18} />
-          </button>
-        </div>
-
-        {/* Live refresh indicator */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="flex items-center gap-1 text-[9px] text-green-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Auto-refreshing every 20s
-          </span>
-          <button
-            onClick={() => refetchOrderStats()}
-            className="text-[10px] text-gray-400 hover:text-[#4B2D8E] px-2 py-0.5 rounded hover:bg-gray-100 transition-all flex items-center gap-1"
-          >
-            <RefreshCw size={10} /> Refresh now
           </button>
         </div>
 
@@ -642,7 +628,7 @@ function ConversionFunnel({ data }: {
                 </span>
                 {i > 0 && dropoff > 0 && (
                   <span style={{ fontSize: 9, fontWeight: 600, color: BRAND.red, background: "#fef2f2", padding: "1px 6px", borderRadius: 4 }}>
-                    -{dropoff >= 99.5 && dropoff < 100 ? dropoff.toFixed(1) : dropoff.toFixed(0)}%
+                    -{dropoff.toFixed(0)}%
                   </span>
                 )}
               </div>
@@ -678,50 +664,32 @@ export default function AdminInsights() {
   // ─── Existing data fetching ───
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
     refetchOnWindowFocus: true,
-    refetchInterval: 30_000,   // Auto-refresh every 30s so new events appear promptly
-    staleTime: 15_000,         // Consider data fresh for 15s to avoid duplicate fetches
   });
   const { data: memories, isLoading: memoriesLoading, refetch: refetchMemories } = trpc.admin.aiMemory.allMemories.useQuery(undefined, {
     refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
   });
 
   // ─── Geo data fetching ───
-  const { data: geoProvinces, refetch: refetchGeoProvinces } = trpc.admin.geoAnalytics.byProvince.useQuery(
+  const { data: geoProvinces } = trpc.admin.geoAnalytics.byProvince.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
+    { enabled: activeTab === "geo" }
   );
-  const { data: geoCities, refetch: refetchGeoCities } = trpc.admin.geoAnalytics.byCity.useQuery(
+  const { data: geoCities } = trpc.admin.geoAnalytics.byCity.useQuery(
     { days: geoPeriod, province: selectedProvince || undefined },
-    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
+    { enabled: activeTab === "geo" }
   );
-  const { data: geoProducts, refetch: refetchGeoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
+  const { data: geoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
+    { enabled: activeTab === "geo" }
   );
-  const { data: proxyStats, refetch: refetchProxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
+  const { data: proxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
+    { enabled: activeTab === "geo" }
   );
-  const { data: dailyTrend, refetch: refetchDailyTrend } = trpc.admin.geoAnalytics.dailyTrend.useQuery(
+  const { data: dailyTrend } = trpc.admin.geoAnalytics.dailyTrend.useQuery(
     { days: geoPeriod },
-    { enabled: activeTab === "geo", refetchOnWindowFocus: true, refetchInterval: 30_000, staleTime: 15_000 }
+    { enabled: activeTab === "geo" }
   );
-
-  // Refetch ALL data (behavior + geo) — used by the Refresh button and auto-refresh
-  const refetchAll = useCallback(() => {
-    refetchMemories();
-    refetchAnalytics();
-    // Geo queries only have data if the tab has been visited at least once
-    if (activeTab === "geo") {
-      refetchGeoProvinces();
-      refetchGeoCities();
-      refetchGeoProducts();
-      refetchProxyStats();
-      refetchDailyTrend();
-    }
-  }, [activeTab, refetchMemories, refetchAnalytics, refetchGeoProvinces, refetchGeoCities, refetchGeoProducts, refetchProxyStats, refetchDailyTrend]);
 
   const refreshAllMut = trpc.admin.aiMemory.refreshAllMemories.useMutation({
     onSuccess: (res: any) => {
@@ -730,7 +698,8 @@ export default function AdminInsights() {
       } else {
         toast.info('All profiles are already up to date — no new activity to process');
       }
-      refetchAll();
+      refetchMemories();
+      refetchAnalytics();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -745,11 +714,10 @@ export default function AdminInsights() {
 
   // ─── Geo computed: conversion metrics ───
   const geoConversionMetrics = useMemo(() => {
-    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0, totalEvents: 0 };
+    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0 };
     const totalVisitors = geoProvinces.reduce((s, p) => s + (p.uniqueVisitors || 0), 0);
     const totalOrders = geoProvinces.reduce((s, p) => s + (p.orders || 0), 0);
     const totalRevenue = geoProvinces.reduce((s, p) => s + (p.revenue || 0), 0);
-    const totalEvents = geoProvinces.reduce((s, p) => s + (p.events || 0), 0);
     const convRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
     const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     // Best converting and highest traffic city
@@ -761,7 +729,7 @@ export default function AdminInsights() {
         if (c.events > topCityEvents) { topCityEvents = c.events; topCity = c.city; }
       }
     }
-    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue, totalEvents };
+    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue };
   }, [geoProvinces, geoCities]);
 
   // Group products by province for category breakdown
@@ -780,7 +748,7 @@ export default function AdminInsights() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Brain size={24} className="text-[#4B2D8E]" />
@@ -790,28 +758,17 @@ export default function AdminInsights() {
             AI-powered behavior analytics, user profiles, and geo-analytics
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-[10px] text-green-500 bg-green-50 px-2 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Live &middot; 30s
-          </span>
+        <div className="flex items-center gap-2">
           <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded-full font-mono">
             {analytics?.activeUsers ?? 0} tracked users
           </span>
-          <button
-            onClick={() => refetchAll()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-all"
-            title="Refresh all dashboard data now"
-          >
-            <RefreshCw size={12} /> Data
-          </button>
           <button
             onClick={() => refreshAllMut.mutate()}
             disabled={refreshAllMut.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
           >
             <RefreshCw size={14} className={refreshAllMut.isPending ? "animate-spin" : ""} />
-            {refreshAllMut.isPending ? "Refreshing..." : "Refresh Profiles"}
+            {refreshAllMut.isPending ? "Refreshing..." : "Refresh All Profiles"}
           </button>
         </div>
       </div>
@@ -1116,25 +1073,24 @@ export default function AdminInsights() {
             ))}
           </div>
 
-          {/* Geo KPI cards — use CA-only geo data, not behavior-tab totals */}
+          {/* Geo KPI cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">CA Events</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoConversionMetrics.totalEvents.toLocaleString()}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Events</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{totalEvents.toLocaleString()}</p>
                 </div>
                 <div className="bg-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Activity size={18} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">Canada only</p>
             </div>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">CA Cities</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoCities?.length ?? analytics?.uniqueCities ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cities Reached</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.uniqueCities ?? 0}</p>
                 </div>
                 <div className="bg-emerald-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <MapPin size={18} className="text-white" />
@@ -1144,8 +1100,8 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Provinces</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{geoProvinces?.length ?? analytics?.activeProvinces ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Provinces</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.activeProvinces ?? 0}</p>
                 </div>
                 <div className="bg-[#4B2D8E] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Globe size={18} className="text-white" />
