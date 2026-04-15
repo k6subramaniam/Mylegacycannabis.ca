@@ -1,3 +1,7 @@
+import posthog from "posthog-js";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { PostHogProvider } from "posthog-js/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -212,6 +216,11 @@ function Router() {
 }
 
 function App() {
+  const [location] = useLocation();
+  useEffect(() => {
+    posthog.capture('$pageview');
+  }, [location]);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
