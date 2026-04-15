@@ -3013,7 +3013,8 @@ Return ONLY the JSON object.`;
           page: 1,
         });
         // Filter out current product's base name group, pick random sample
-        const others = ((all as any).data || all).filter(
+        const productsList = (all as any).data || (all as any).products || (Array.isArray(all) ? all : []);
+        const others = productsList.filter(
           (p: any) => p.id !== input.productId
         );
         // Shuffle and take the requested amount
