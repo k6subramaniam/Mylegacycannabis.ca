@@ -68,30 +68,23 @@ import {
   pollCanadaPostTracking,
 } from "../canadaPostService";
 import { triggerOrderStatusUpdate } from "../emailTemplateEngine";
-
 async function startServer() {
   // Initialize database (PostgreSQL if DATABASE_URL is set, otherwise in-memory)
   await initializeDatabase();
-
   // Initialize PWA push notification service (requires VAPID env vars)
   initPushService();
-
   const app = express();
-
   // First middleware — before everything else
   app.use(compression({ level: 6, threshold: 1024 }));
   const server = createServer(app);
-
   // Add security headers
   app.use(
     helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })
   );
-
   // Trust the first proxy hop (Railway, Cloudflare, etc.)
   // This makes req.ip use the real client IP from X-Forwarded-For
   // instead of always returning the proxy/load-balancer IP
   app.set("trust proxy", 1);
-
   // Add security headers using helmet
   app.use(
     helmet({
@@ -99,11 +92,9 @@ async function startServer() {
       crossOriginEmbedderPolicy: false,
     })
   );
-
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
   // Health check endpoint (useful for Railway, monitoring, etc.)
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -113,7 +104,6 @@ async function startServer() {
       timestamp: new Date().toISOString(),
     });
   });
-
   // ─── STEALTH HEADERS: prevent search engines from indexing admin / API routes ───
   app.use((req, res, next) => {
     if (req.path.startsWith("/admin") || req.path.startsWith("/api/")) {
@@ -125,7 +115,6 @@ async function startServer() {
     }
     next();
   });
-
   // ─── ROBOTS.TXT ───
   app.get("/robots.txt", (_req, res) => {
     const SITE =
@@ -138,11 +127,13 @@ async function startServer() {
           `Allow: /\n` +
           `Disallow: /admin\n` +
           `Disallow: /admin/*\n` +
-          `Allow: /api/trpc/store.\n` +
-          `Allow: /api/geo/\n` +
-          `Disallow: /api/trpc/admin.\n` +
-          `Disallow: /api/trpc/auth.\n` +
-          `Disallow: /api/auth/\n` +
+          `Allow: /api/trpc/store.products\n` +
+          `Allow: /api/trpc/store.siteConfig\n` +
+          `Allow: /api/trpc/store.featuredProducts\n` +
+          `Allow: /api/trpc/store.relatedProducts\n` +
+          `Allow: /api/trpc/store.pushConfig\n` +
+          `Allow: /api/geo/nearest-store\n` +
+          `Disallow: /api/\n` +
           `Disallow: /cart\n` +
           `Disallow: /checkout\n` +
           `Disallow: /account\n` +
@@ -156,14 +147,12 @@ async function startServer() {
           `Sitemap: ${SITE}/sitemap.xml\n`
       );
   });
-
   // ─── XML SITEMAP ───
   app.get("/sitemap.xml", async (_req, res) => {
     const SITE =
       process.env.SITE_URL ||
       "https://mylegacycannabisca-production.up.railway.app";
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
     // Static pages with priority and changefreq
     const staticPages = [
       { loc: "/", priority: "1.0", changefreq: "daily" },
@@ -177,7 +166,6 @@ async function startServer() {
       { loc: "/privacy-policy", priority: "0.3", changefreq: "yearly" },
       { loc: "/terms", priority: "0.3", changefreq: "yearly" },
     ];
-
     // Category pages
     const categories = [
       "flower",
@@ -189,19 +177,16 @@ async function startServer() {
       "shake-n-bake",
       "accessories",
     ];
-
     let urls = staticPages.map(
       p =>
         `  <url>\n    <loc>${SITE}${p.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${p.changefreq}</changefreq>\n    <priority>${p.priority}</priority>\n  </url>`
     );
-
     // Add category pages
     for (const cat of categories) {
       urls.push(
         `  <url>\n    <loc>${SITE}/shop/${cat}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>`
       );
     }
-
     // Try to add product pages dynamically from DB
     try {
       const dbModule = await import("../db");
@@ -222,11 +207,9 @@ async function startServer() {
     } catch {
       // Products not available from DB — skip dynamic product URLs
     }
-
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;
     res.type("application/xml").send(xml);
   });
-
   // ─── GEO-LOCATION ENDPOINT (for auto-translation) ───
   // Returns the user's province/region from their IP via free ipapi.co service.
   // Quebec customers get French; everyone else gets English.
@@ -237,7 +220,6 @@ async function startServer() {
       const rawIp = req.ip || req.socket.remoteAddress || "";
       // Strip IPv4-mapped IPv6 prefix (::ffff:99.228.100.1 → 99.228.100.1)
       const ip = rawIp.startsWith("::ffff:") ? rawIp.substring(7) : rawIp;
-
       // Skip for localhost/private IPs
       if (
         !ip ||
@@ -253,7 +235,6 @@ async function startServer() {
           source: "local",
         });
       }
-
       // SECURITY: Validate IP format to prevent SSRF via crafted X-Forwarded-For
       // Only allow valid IPv4 (1.2.3.4) or IPv6 (::ffff:1.2.3.4, 2001:db8::1) addresses
       const IPV4_REGEX =
@@ -267,7 +248,6 @@ async function startServer() {
           source: "invalid",
         });
       }
-
       // Use free ipapi.co (no key required, 30k/month free)
       // IP is validated above — safe to interpolate into URL
       const geoUrl = `https://ipapi.co/${encodeURIComponent(ip)}/json/`;
@@ -276,7 +256,6 @@ async function startServer() {
       });
       if (!geoRes.ok) throw new Error(`ipapi returned ${geoRes.status}`);
       const geo = (await geoRes.json()) as any;
-
       res.json({
         province: geo.region_code || geo.region || "",
         region: geo.region || "",
@@ -289,7 +268,6 @@ async function startServer() {
       res.json({ province: "", region: "", country: "", source: "error" });
     }
   });
-
   // ─── NEAREST STORE ENDPOINT (uses geo to find closest location) ───
   app.get("/api/geo/nearest-store", async (req, res) => {
     try {
@@ -334,7 +312,6 @@ async function startServer() {
       const isIPv4Mapped = rawIp.startsWith("::ffff:");
       const geo = await lookupGeo(clientIp);
       const cacheStats = getGeoCacheStats();
-
       res.json({
         timestamp: new Date().toISOString(),
         rawIp,
@@ -362,14 +339,12 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
-
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)
   registerCustomAuthRoutes(app);
   // ID Verification REST API (guest + QR bridge + admin review)
   registerVerifyRoutes(app);
-
   // ─── CANADA POST SHIPPING API ───
   // POST /api/shipping/rates — get real-time rates (or fallback flat rates)
   app.post("/api/shipping/rates", async (req, res) => {
@@ -377,11 +352,9 @@ async function startServer() {
       const { postalCode, weight, dimensions, storeId } = req.body;
       if (!postalCode)
         return res.status(400).json({ error: "postalCode is required" });
-
       const validation = validatePostalCode(postalCode);
       if (!validation.valid)
         return res.status(400).json({ error: validation.error });
-
       const origin = getOriginPostal(storeId);
       const rates = await getShippingRates(
         origin,
@@ -395,7 +368,6 @@ async function startServer() {
       res.status(500).json({ error: "Failed to get shipping rates" });
     }
   });
-
   // GET /api/shipping/track/:pin — summary tracking
   app.get("/api/shipping/track/:pin", async (req, res) => {
     try {
@@ -407,7 +379,6 @@ async function startServer() {
       res.status(500).json({ error: "Tracking lookup failed" });
     }
   });
-
   // GET /api/shipping/track/:pin/details — full event history
   app.get("/api/shipping/track/:pin/details", async (req, res) => {
     try {
@@ -419,7 +390,6 @@ async function startServer() {
       res.status(500).json({ error: "Tracking details lookup failed" });
     }
   });
-
   // GET /api/shipping/post-offices?postalCode=...&max=5
   app.get("/api/shipping/post-offices", async (req, res) => {
     try {
@@ -435,7 +405,6 @@ async function startServer() {
       res.status(500).json({ error: "Post office search failed" });
     }
   });
-
   // GET /api/shipping/validate-postal?code=...
   app.get("/api/shipping/validate-postal", (req, res) => {
     const code = req.query.code as string;
@@ -443,12 +412,10 @@ async function startServer() {
       return res.status(400).json({ error: "code query param is required" });
     res.json(validatePostalCode(code));
   });
-
   // ─── CANADA POST ADDRESSCOMPLETE PROXY ───
   // Proxies requests to Canada Post AddressComplete API to keep the API key server-side.
   // Requires CANADA_POST_ADDRESS_KEY env var.
   const CANADA_POST_ADDRESS_KEY = process.env.CANADA_POST_ADDRESS_KEY || "";
-
   app.get("/api/address-lookup", async (req, res) => {
     if (!CANADA_POST_ADDRESS_KEY) {
       return res.json({ Items: [] });
@@ -459,7 +426,6 @@ async function startServer() {
       const country = req.query.Country || "CAN";
       if (!searchTerm)
         return res.status(400).json({ error: "SearchTerm is required" });
-
       const params = new URLSearchParams({
         Key: CANADA_POST_ADDRESS_KEY,
         SearchTerm: searchTerm,
@@ -468,7 +434,6 @@ async function startServer() {
         MaxResults: "7",
       });
       if (lastId) params.set("LastId", lastId);
-
       const apiRes = await fetch(
         `https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Find/v2.10/json3.ws?${params}`,
         { signal: AbortSignal.timeout(5000) }
@@ -482,7 +447,6 @@ async function startServer() {
       res.json({ Items: [] });
     }
   });
-
   app.get("/api/address-lookup/retrieve", async (req, res) => {
     if (!CANADA_POST_ADDRESS_KEY) {
       return res.json({ Items: [] });
@@ -490,12 +454,10 @@ async function startServer() {
     try {
       const id = req.query.Id as string;
       if (!id) return res.status(400).json({ error: "Id is required" });
-
       const params = new URLSearchParams({
         Key: CANADA_POST_ADDRESS_KEY,
         Id: id,
       });
-
       const apiRes = await fetch(
         `https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Retrieve/v2.11/json3.ws?${params}`,
         { signal: AbortSignal.timeout(5000) }
@@ -509,7 +471,6 @@ async function startServer() {
       res.json({ Items: [] });
     }
   });
-
   // tRPC API
   app.use(
     "/api/trpc",
@@ -531,7 +492,6 @@ async function startServer() {
         : path.resolve(process.cwd(), "dist", "public");
       const uploadsDir = path.join(distPublicForUploads, "uploads");
       fs.mkdirSync(uploadsDir, { recursive: true });
-
       const files = await fileStoreGetAll();
       let restored = 0;
       for (const file of files) {
@@ -559,7 +519,6 @@ async function startServer() {
           `[FileStore] Materialized ${restored} of ${files.length} files from DB to disk`
         );
       }
-
       // ── BACKFILL: persist existing disk files to DB (first deploy after this feature) ──
       // If the uploads dir has files not yet in the DB, persist them so next deploy is safe.
       const diskFiles = fs.existsSync(uploadsDir)
@@ -606,7 +565,6 @@ async function startServer() {
       );
     }
   }
-
   // Use static serving if the dist/public directory exists (production build available),
   // otherwise fall back to Vite dev server. This allows NODE_ENV=development in .env
   // while still serving the production build in sandbox/Railway.
@@ -623,16 +581,13 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
-
   // Railway (and most PaaS platforms) assign a PORT env var and expect the server
   // to bind EXACTLY to that port on 0.0.0.0. Port-scanning to a fallback causes
   // Railway to return 502 because traffic is routed only to the assigned PORT.
   const port = parseInt(process.env.PORT || "3000", 10);
-
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
   });
-
   // ─── GRACEFUL SHUTDOWN (fixes EADDRINUSE on tsx watch restarts) ───
   const shutdown = () => {
     server.close(() => process.exit(0));
@@ -641,7 +596,6 @@ async function startServer() {
   };
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
-
   // ─── BACKGROUND JOBS ───
   // Run auto-cancel for unpaid orders every hour
   setInterval(
@@ -656,7 +610,6 @@ async function startServer() {
     },
     60 * 60 * 1000
   ); // every hour
-
   // Run birthday bonus check every 6 hours
   setInterval(
     async () => {
@@ -670,7 +623,6 @@ async function startServer() {
     },
     6 * 60 * 60 * 1000
   ); // every 6 hours
-
   // Poll Gmail for e-Transfer deposit notifications every 5 minutes
   const ETRANSFER_POLL_INTERVAL = parseInt(
     process.env.ETRANSFER_POLL_INTERVAL || "300000",
@@ -695,7 +647,6 @@ async function startServer() {
       "[ETransfer] Gmail API not configured — e-Transfer auto-matching disabled"
     );
   }
-
   // Poll Gmail for delivery/tracking notifications every 10 minutes
   const TRACKING_POLL_INTERVAL = parseInt(
     process.env.TRACKING_POLL_INTERVAL || "600000",
@@ -714,7 +665,6 @@ async function startServer() {
       }
     }, TRACKING_POLL_INTERVAL);
   }
-
   // Poll Canada Post tracking API for shipped orders every 15 minutes
   const CP_TRACKING_POLL = parseInt(
     process.env.CP_TRACKING_POLL_INTERVAL || "900000",
@@ -737,16 +687,13 @@ async function startServer() {
             orderNumber: o.orderNumber,
             trackingNumber: o.trackingNumber,
           }));
-
         if (ordersWithTracking.length === 0) return;
-
         const stats = await pollCanadaPostTracking(
           ordersWithTracking,
           async (orderId, data) => {
             if (data.delivered) {
               await updateOrder(orderId, { status: "delivered" } as any);
               const order = await getOrderById(orderId);
-
               // Award reward points
               const pointsResult = await awardOrderPoints(orderId);
               if (pointsResult) {
@@ -754,7 +701,6 @@ async function startServer() {
                   `[CanadaPost] Awarded ${pointsResult.points} points for delivered order #${order?.orderNumber}`
                 );
               }
-
               // Send delivery email
               if (order?.guestEmail) {
                 triggerOrderStatusUpdate({
@@ -771,7 +717,6 @@ async function startServer() {
                   )
                 );
               }
-
               await logAdminActivity({
                 adminId: 0,
                 adminName: "System (Canada Post)",
@@ -783,7 +728,6 @@ async function startServer() {
             }
           }
         );
-
         if (stats.delivered > 0) {
           console.log(
             `[CanadaPost] Poll: ${stats.checked} checked, ${stats.delivered} auto-delivered, ${stats.errors} errors`
@@ -797,7 +741,6 @@ async function startServer() {
       }
     }, CP_TRACKING_POLL);
   }
-
   // Run all jobs immediately on startup (after a short delay to let DB settle)
   setTimeout(async () => {
     try {
@@ -879,7 +822,6 @@ async function startServer() {
       console.error(`[Startup] Background job error: ${msg}`);
     }
   }, 5000);
-
   // ─── AI MEMORY & KNOWLEDGE SYNC BACKGROUND JOBS ───
   // Refresh AI user memories every 30 minutes (processes behavior events into profiles)
   if (USE_PERSISTENT_DB) {
@@ -897,7 +839,6 @@ async function startServer() {
       },
       30 * 60 * 1000
     ); // every 30 minutes
-
     // Run push win-back campaign daily (sends to subscribers inactive 30+ days)
     if (isPushServiceConfigured()) {
       setInterval(
@@ -918,7 +859,6 @@ async function startServer() {
         24 * 60 * 60 * 1000
       ); // every 24 hours
     }
-
     // Re-sync site knowledge every 2 hours (catches any drift)
     setInterval(
       async () => {
@@ -931,7 +871,6 @@ async function startServer() {
       },
       2 * 60 * 60 * 1000
     ); // every 2 hours
-
     // Run initial order back-fill and AI memory refresh 15s after startup
     setTimeout(async () => {
       try {
@@ -953,5 +892,4 @@ async function startServer() {
     }, 15000);
   }
 }
-
 startServer().catch(console.error);

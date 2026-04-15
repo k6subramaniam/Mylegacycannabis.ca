@@ -1,15 +1,14 @@
 Title: 🧹 Fix robots.txt rules for public endpoints
 
 🎯 What:
-Updated the robots.txt rules in `server/_core/index.ts` to allow search engines to crawl public store endpoints (`/api/trpc/store.*`) and geo endpoints (`/api/geo/`), while explicitly blocking sensitive paths like admin and authentication endpoints.
+Updated the robots.txt rules in `server/_core/index.ts` to keep `Disallow: /api/` as the default to block all APIs from crawlers, while explicitly allowing specific public store endpoints and the `nearest-store` endpoint needed by Googlebot to render the SPA.
 
 💡 Why:
-The previous robots.txt rule indiscriminately blocked `/api/`, preventing search engines from accessing public data while also not explicitly specifying which TRPC routes should be excluded.
+The previous iteration removed the generic `/api/` disallow rule which could potentially expose other APIs that shouldn't be crawled. The correct approach is to keep the default `Disallow: /api/` rule to block everything, but place specific `Allow:` rules *above* it for the endpoints Googlebot actually needs to fetch data for product listings. More specific rules take precedence in robots.txt.
 
 ✅ Verification:
-- Looked at `git diff` to confirm that `Allow: /api/trpc/store.` and `Allow: /api/geo/` are added, and `/api/trpc/admin.`, `/api/trpc/auth.`, and `/api/auth/` are disallowed.
-- Note regarding the database migration requirement: The required `ALTER TABLE users ADD COLUMN address_*` SQL commands are already implemented in `server/db.ts` within the `initializeDb` function and run automatically upon application deployment to Railway, making an explicit migration script unnecessary.
+- Looked at `git diff` to confirm that `Allow:` rules are placed above `Disallow: /api/`.
 - Tests passed locally.
 
 ✨ Result:
-Search engine crawlers will now be able to successfully crawl public application data.
+All APIs will be blocked by default while specific store data endpoints needed for rendering product listings will be available to Googlebot.
