@@ -128,7 +128,9 @@ async function startServer() {
         // Just directly call trackBehavior logic since we're in the same server
         const { appRouter } = await import("../routers");
         const { createContext } = await import("./context");
-        const trpcCaller = appRouter.createCaller(await createContext({ req, res } as any));
+        const trpcCaller = appRouter.createCaller(
+          await createContext({ req, res } as any)
+        );
         await trpcCaller.store.trackBehavior({ events });
       }
       res.status(200).send("OK");
