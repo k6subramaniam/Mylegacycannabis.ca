@@ -679,6 +679,8 @@ async function startServer() {
 
   server.listen(currentPort, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${currentPort}/`);
+    // Print Vite-style ready message so the v0 preview proxy can detect the port
+    console.log(`\n  VITE v8.0.0  ready in 0 ms\n\n  ➜  Local:   http://localhost:${currentPort}/\n  ➜  Network: http://0.0.0.0:${currentPort}/\n`);
   });
 
   // ─── GRACEFUL SHUTDOWN (fixes EADDRINUSE on tsx watch restarts) ───
