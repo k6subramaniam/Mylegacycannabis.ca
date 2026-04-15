@@ -1,0 +1,11 @@
+💡 What
+Added `cssCodeSplit: true` and extracted charting libraries (recharts, d3) into a `vendor-charts` chunk in `vite.config.ts`. Also updated `.jules/bolt.md` with these learnings.
+
+🎯 Why
+By isolating the heavy charting libraries used exclusively on admin dashboards, we prevent these dependencies from blocking the initial page load for public-facing users. Enabling CSS code splitting further decreases the time to load styles for pages that don't need the entire application's CSS at once.
+
+📊 Impact
+Improves performance metrics such as Largest Contentful Paint (LCP) and initial load times for standard users by reducing the size of the JavaScript and CSS chunks requested initially.
+
+🔬 Measurement
+Compared the dist output before and after. Prior to this change, the charting libraries were rolled into general chunks or main, unnecessarily increasing bundle size for non-admin pages.
