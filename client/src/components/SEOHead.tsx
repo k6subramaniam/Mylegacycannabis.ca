@@ -68,10 +68,11 @@ export default function SEOHead({
       link.setAttribute('href', canonical);
     }
 
-    // Hreflang tags for en-CA (helps Google serve right language version)
+    // Hreflang tags for en-CA / fr-CA (helps Google serve right language version)
     if (canonical) {
       const hreflangs = [
         { lang: 'en-CA', href: canonical },
+        { lang: 'fr-CA', href: canonical },
         { lang: 'x-default', href: canonical },
       ];
       // Remove stale hreflang links

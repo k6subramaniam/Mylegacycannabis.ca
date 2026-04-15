@@ -157,7 +157,7 @@ function CustomerModal({ userId, onClose }: { userId: number; onClose: () => voi
               </span>
             )}
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"><X size={18} /></button>
         </div>
 
         {/* Tabs */}
@@ -525,7 +525,7 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800 flex items-center gap-2"><UserPlus size={18} className="text-[#4B2D8E]" /> Add User</h2>
-          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{error}</div>}
@@ -711,7 +711,6 @@ export default function AdminCustomers() {
                       onClick={() => setSelectedId(user.id)}
                       className="p-2 rounded-lg hover:bg-[#4B2D8E]/10 text-[#4B2D8E] transition-colors"
                       title="View / manage customer"
-                      aria-label={`View / manage customer ${user.name || user.email}`}
                     >
                       <Eye size={15} />
                     </button>

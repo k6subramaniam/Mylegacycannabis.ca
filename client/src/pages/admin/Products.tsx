@@ -269,7 +269,6 @@ export default function AdminProducts() {
                       <button
                         onClick={() => toggleFeaturedMut.mutate({ id: product.id })}
                         title={product.featured ? "Remove from Homepage Featured" : "Add to Homepage Featured"}
-                        aria-label={product.featured ? "Remove from Homepage Featured" : "Add to Homepage Featured"}
                         className="p-0.5 rounded hover:bg-yellow-50 transition-colors"
                       >
                         <Star size={14} className={product.featured ? "text-yellow-500 fill-yellow-500" : "text-gray-300 hover:text-yellow-400"} />
@@ -278,11 +277,11 @@ export default function AdminProducts() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => openEdit(product)} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" title="Edit" aria-label={`Edit ${product.name}`}>
+                      <button onClick={() => openEdit(product)} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" title="Edit">
                         <Edit2 size={14} />
                       </button>
                       <button onClick={() => { if (confirm(`Delete "${product.name}"?`)) deleteMutation.mutate({ id: product.id }); }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete" aria-label={`Delete ${product.name}`}>
+                        className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -311,7 +310,7 @@ export default function AdminProducts() {
           <div className="bg-white rounded-2xl w-full max-w-2xl my-8 shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800">{editingProduct ? "Edit Product" : "Add Product"}</h2>
-              <button onClick={() => { setShowForm(false); setEditingProduct(null); }} aria-label="Close form" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => { setShowForm(false); setEditingProduct(null); }} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

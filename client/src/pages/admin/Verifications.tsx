@@ -129,7 +129,7 @@ export default function AdminVerifications() {
                   <td className="px-4 py-3">{statusBadge(v.status)}</td>
                   <td className="px-4 py-3 text-right text-gray-400 text-xs hidden sm:table-cell">{new Date(v.createdAt).toLocaleDateString("en-CA")}</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => setSelectedId(v.id)} aria-label="View verification details" className="p-2 rounded-lg hover:bg-blue-50 text-[#4B2D8E]"><Eye size={16} /></button>
+                    <button onClick={() => setSelectedId(v.id)} className="p-2 rounded-lg hover:bg-blue-50 text-[#4B2D8E]"><Eye size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -153,7 +153,7 @@ export default function AdminVerifications() {
           <div className="bg-white rounded-2xl w-full max-w-3xl my-8 shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800">Verification #{detail.id}</h2>
-              <button onClick={() => setSelectedId(null)} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => setSelectedId(null)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-6">
               {/* Customer Info */}

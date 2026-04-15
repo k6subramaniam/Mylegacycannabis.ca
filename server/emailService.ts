@@ -20,7 +20,7 @@ import { logSystem } from "./db";
  *   SMTP_HOST=smtp.gmail.com            <-- fallback
  *   SMTP_PORT=587
  *   SMTP_USER=k6subramaniam@gmail.com
- *   SMTP_PASS=<Gmail App Password>
+ *   SMTP_PASSWORD=<Gmail App Password>
  *   SMTP_FROM="My Legacy Cannabis <k6subramaniam@gmail.com>"
  *   ADMIN_EMAIL=k6subramaniam@gmail.com
  */
