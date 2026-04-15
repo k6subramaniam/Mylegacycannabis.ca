@@ -84,7 +84,10 @@ describe("admin routes", () => {
   it("admin.verifications.list returns verifications for admin users", async () => {
     const ctx = createAdminContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.admin.verifications.list({ page: 1, limit: 10 });
+    const result = await caller.admin.verifications.list({
+      page: 1,
+      limit: 10,
+    });
     expect(result).toHaveProperty("data");
     expect(result).toHaveProperty("total");
   });

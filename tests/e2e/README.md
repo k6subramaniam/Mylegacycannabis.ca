@@ -56,16 +56,16 @@ repo/
 
 ## Test Coverage Summary
 
-| File | Tests | What It Covers |
-|------|-------|----------------|
-| `smoke.smoke.spec.ts` | 10 | Homepage, shop, login, APIs, SEO, performance, console errors |
-| `auth.spec.ts` | 9 | Email OTP, Google OAuth, session guards, registration, age check |
-| `shop.spec.ts` | 9 | Product grid, detail page, Quick View, image carousel, cart, featured |
-| `checkout.spec.ts` | 5 | e-Transfer flow, unique cents, acknowledgment checkbox, cart persistence |
-| `admin.spec.ts` | 9 | Insights tabs, geo KPIs, province map, city table, period selector, orders |
-| `api.spec.ts` | 9 | Auth endpoints, geo endpoint, FreeIPAPI, rate limiting, PIPEDA compliance |
-| `a11y-perf.spec.ts` | 8 | Alt text, keyboard nav, focus styles, labels, performance, JS errors |
-| **Total** | **59** | |
+| File                  | Tests  | What It Covers                                                             |
+| --------------------- | ------ | -------------------------------------------------------------------------- |
+| `smoke.smoke.spec.ts` | 10     | Homepage, shop, login, APIs, SEO, performance, console errors              |
+| `auth.spec.ts`        | 9      | Email OTP, Google OAuth, session guards, registration, age check           |
+| `shop.spec.ts`        | 9      | Product grid, detail page, Quick View, image carousel, cart, featured      |
+| `checkout.spec.ts`    | 5      | e-Transfer flow, unique cents, acknowledgment checkbox, cart persistence   |
+| `admin.spec.ts`       | 9      | Insights tabs, geo KPIs, province map, city table, period selector, orders |
+| `api.spec.ts`         | 9      | Auth endpoints, geo endpoint, FreeIPAPI, rate limiting, PIPEDA compliance  |
+| `a11y-perf.spec.ts`   | 8      | Alt text, keyboard nav, focus styles, labels, performance, JS errors       |
+| **Total**             | **59** |                                                                            |
 
 ## Tags for Selective Execution
 
@@ -101,12 +101,12 @@ The GitHub Actions workflow (`.github/workflows/e2e.yml`) runs automatically:
 
 Add these in: **Settings → Secrets and variables → Actions**
 
-| Secret | Description |
-|--------|-------------|
-| `TEST_USER_EMAIL` | Email for the test user account |
-| `TEST_USER_OTP` | Fixed OTP for the test user (set in server config for test env) |
-| `TEST_ADMIN_EMAIL` | Email for the test admin account |
-| `TEST_ADMIN_OTP` | Fixed OTP for the test admin |
+| Secret             | Description                                                     |
+| ------------------ | --------------------------------------------------------------- |
+| `TEST_USER_EMAIL`  | Email for the test user account                                 |
+| `TEST_USER_OTP`    | Fixed OTP for the test user (set in server config for test env) |
+| `TEST_ADMIN_EMAIL` | Email for the test admin account                                |
+| `TEST_ADMIN_OTP`   | Fixed OTP for the test admin                                    |
 
 ## AI-Powered Testing with Playwright Agents
 
@@ -138,6 +138,7 @@ Same commands work in the VS Code Copilot chat when the Playwright extension is 
 ### Self-Healing Tests
 
 When your UI changes break tests, the Healer agent:
+
 1. Runs the failing test
 2. Takes a browser snapshot
 3. Identifies what changed (selector, layout, new element)
@@ -166,38 +167,46 @@ Add to your auth route for easier test automation:
 
 ```typescript
 // ONLY in development/test — never in production
-if (process.env.NODE_ENV !== 'production' && process.env.TEST_OTP_BYPASS === 'true') {
-  app.post('/api/auth/test-otp', async (req, res) => {
+if (
+  process.env.NODE_ENV !== "production" &&
+  process.env.TEST_OTP_BYPASS === "true"
+) {
+  app.post("/api/auth/test-otp", async (req, res) => {
     const { email } = req.body;
     // Return the current OTP for this email (from your OTP store)
     const otp = await getActiveOTP(email);
-    res.json({ code: otp || '123456' });
+    res.json({ code: otp || "123456" });
   });
 }
 ```
 
 ## Running Against Production vs. Local
 
-| Environment | Command | Auth |
-|-------------|---------|------|
-| Local dev | `npx playwright test` | Uses `webServer` auto-start |
-| Production smoke | `npx playwright test --project=production-smoke` | No auth needed |
-| Production full | `TEST_BASE_URL=https://...railway.app npx playwright test` | Needs test accounts |
+| Environment      | Command                                                    | Auth                        |
+| ---------------- | ---------------------------------------------------------- | --------------------------- |
+| Local dev        | `npx playwright test`                                      | Uses `webServer` auto-start |
+| Production smoke | `npx playwright test --project=production-smoke`           | No auth needed              |
+| Production full  | `TEST_BASE_URL=https://...railway.app npx playwright test` | Needs test accounts         |
 
 ## Troubleshooting
 
 ### Tests timeout on Railway
+
 Railway cold starts can take 10-20 seconds. Increase `navigationTimeout` in config to 30_000.
 
 ### Auth setup fails
+
 Ensure test user exists and the OTP is correct. Check Railway logs for auth errors.
 
 ### Flaky tests
+
 Run with traces: `npx playwright test --trace on`
 Then view: `npx playwright show-trace test-results/*/trace.zip`
 
 ### Codegen for new tests
+
 Record actions and auto-generate test code:
+
 ```bash
 npx playwright codegen https://mylegacycannabisca-production.up.railway.app
 ```
@@ -205,6 +214,7 @@ npx playwright codegen https://mylegacycannabisca-production.up.railway.app
 ## Cost
 
 **$0.** Everything is open source:
+
 - Playwright: MIT license, free
 - GitHub Actions: 2,000 free minutes/month on public repos
 - AI Agents: Work with Claude Code / GitHub Copilot (your existing tools)

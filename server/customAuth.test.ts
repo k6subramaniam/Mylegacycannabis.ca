@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Test the auth route structure and validation
 describe("Custom Auth Routes", () => {
@@ -60,7 +60,8 @@ describe("Custom Auth Routes", () => {
     expect(isPhoneValid).toBe(false);
 
     registrationData.phone = "4165550123";
-    const isPhoneValidNow = registrationData.phone.replace(/\D/g, "").length >= 10;
+    const isPhoneValidNow =
+      registrationData.phone.replace(/\D/g, "").length >= 10;
     expect(isPhoneValidNow).toBe(true);
   });
 

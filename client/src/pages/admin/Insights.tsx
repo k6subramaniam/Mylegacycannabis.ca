@@ -2,10 +2,28 @@ import { trpc } from "@/lib/trpc";
 import { CANADA_PATHS } from "@/data/canada-map-paths";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Brain, RefreshCw, Users, Eye, Search, ShoppingCart, TrendingUp,
-  ChevronDown, ChevronUp, BarChart3, Activity, Zap, Star,
-  Package, Clock, DollarSign, Heart, Target, X,
-  MapPin, Globe, Shield,
+  Brain,
+  RefreshCw,
+  Users,
+  Eye,
+  Search,
+  ShoppingCart,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  Activity,
+  Zap,
+  Star,
+  Package,
+  Clock,
+  DollarSign,
+  Heart,
+  Target,
+  X,
+  MapPin,
+  Globe,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,41 +44,79 @@ function useStealthMeta() {
 }
 
 // ─── Mini bar ───
-function MiniBar({ value, max, color = "bg-[#4B2D8E]" }: { value: number; max: number; color?: string }) {
+function MiniBar({
+  value,
+  max,
+  color = "bg-[#4B2D8E]",
+}: {
+  value: number;
+  max: number;
+  color?: string;
+}) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div className="w-full bg-gray-100 rounded-full h-2">
-      <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+      <div
+        className={`${color} h-2 rounded-full transition-all`}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
 
 // ─── Sparkline ───
-function Sparkline({ data, color = "#4B2D8E" }: { data: number[]; color?: string }) {
+function Sparkline({
+  data,
+  color = "#4B2D8E",
+}: {
+  data: number[];
+  color?: string;
+}) {
   if (!data.length) return null;
   const max = Math.max(...data, 1);
-  const w = 160, h = 40;
-  const pts = data.map((v, i) => {
-    const x = (i / Math.max(data.length - 1, 1)) * w;
-    const y = h - (v / max) * h;
-    return `${x},${y}`;
-  }).join(" ");
+  const w = 160,
+    h = 40;
+  const pts = data
+    .map((v, i) => {
+      const x = (i / Math.max(data.length - 1, 1)) * w;
+      const y = h - (v / max) * h;
+      return `${x},${y}`;
+    })
+    .join(" ");
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      className="overflow-visible"
+    >
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 // ─── Area Chart (for daily trend) ───
-function AreaChart({ data, dataKey, color = "#4B2D8E", height = 120 }: {
+function AreaChart({
+  data,
+  dataKey,
+  color = "#4B2D8E",
+  height = 120,
+}: {
   data: Array<{ date: string; [key: string]: any }>;
   dataKey: string;
   color?: string;
   height?: number;
 }) {
   if (!data.length) return null;
-  const w = 600, h = height;
+  const w = 600,
+    h = height;
   const values = data.map(d => d[dataKey] as number);
   const max = Math.max(...values, 1);
   const pts = values.map((v, i) => {
@@ -79,23 +135,57 @@ function AreaChart({ data, dataKey, color = "#4B2D8E", height = 120 }: {
         </linearGradient>
       </defs>
       <polygon points={area} fill={`url(#grad-${dataKey})`} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline
+        points={line}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 // ─── Event type friendly names ───
-const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: string }> = {
-  page_view:        { label: "Page Views",      icon: Eye,          color: "bg-blue-500" },
-  product_view:     { label: "Product Views",   icon: Package,      color: "bg-purple-500" },
-  category_view:    { label: "Category Views",  icon: BarChart3,    color: "bg-indigo-500" },
-  add_to_cart:      { label: "Add to Cart",     icon: ShoppingCart,  color: "bg-green-500" },
-  remove_from_cart: { label: "Remove from Cart", icon: ShoppingCart, color: "bg-red-400" },
-  search:           { label: "Searches",        icon: Search,       color: "bg-orange-500" },
-  click:            { label: "Clicks",          icon: Zap,          color: "bg-yellow-500" },
-  checkout_start:   { label: "Checkout Start",  icon: ShoppingCart,  color: "bg-teal-500" },
-  checkout_complete: { label: "Checkout Complete", icon: Star,      color: "bg-emerald-500" },
-  review_submit:    { label: "Reviews Posted",  icon: Heart,        color: "bg-pink-500" },
+const EVENT_LABELS: Record<
+  string,
+  { label: string; icon: typeof Eye; color: string }
+> = {
+  page_view: { label: "Page Views", icon: Eye, color: "bg-blue-500" },
+  product_view: {
+    label: "Product Views",
+    icon: Package,
+    color: "bg-purple-500",
+  },
+  category_view: {
+    label: "Category Views",
+    icon: BarChart3,
+    color: "bg-indigo-500",
+  },
+  add_to_cart: {
+    label: "Add to Cart",
+    icon: ShoppingCart,
+    color: "bg-green-500",
+  },
+  remove_from_cart: {
+    label: "Remove from Cart",
+    icon: ShoppingCart,
+    color: "bg-red-400",
+  },
+  search: { label: "Searches", icon: Search, color: "bg-orange-500" },
+  click: { label: "Clicks", icon: Zap, color: "bg-yellow-500" },
+  checkout_start: {
+    label: "Checkout Start",
+    icon: ShoppingCart,
+    color: "bg-teal-500",
+  },
+  checkout_complete: {
+    label: "Checkout Complete",
+    icon: Star,
+    color: "bg-emerald-500",
+  },
+  review_submit: { label: "Reviews Posted", icon: Heart, color: "bg-pink-500" },
 };
 
 // ─── Brand tokens for inline-styled geo components ───
@@ -115,14 +205,27 @@ const BRAND = {
 };
 
 // ─── Canada SVG Map — real geographic province outlines from SVG path data ───
-const PROVINCE_PATHS: Record<string, { name: string; abbr: string; path: string; labelX: number; labelY: number }> = Object.fromEntries(
+const PROVINCE_PATHS: Record<
+  string,
+  { name: string; abbr: string; path: string; labelX: number; labelY: number }
+> = Object.fromEntries(
   Object.entries(CANADA_PATHS).map(([code, data]) => [
     code,
-    { name: data.name, abbr: code, path: data.path, labelX: data.labelX, labelY: data.labelY },
+    {
+      name: data.name,
+      abbr: code,
+      path: data.path,
+      labelX: data.labelX,
+      labelY: data.labelY,
+    },
   ])
 );
 
-function getProvinceColor(value: number, maxValue: number, isSelected: boolean): string {
+function getProvinceColor(
+  value: number,
+  maxValue: number,
+  isSelected: boolean
+): string {
   if (isSelected) return BRAND.orange;
   if (!value || value === 0) return "#e8e6f0";
   const intensity = Math.max(0.15, Math.min(1, value / maxValue));
@@ -134,25 +237,44 @@ function getProvinceColor(value: number, maxValue: number, isSelected: boolean):
 
 // ─── Category label + color mapping ───
 const CATEGORY_COLORS: Record<string, string> = {
-  flower: "#4B2D8E", "pre-rolls": "#22c55e", edibles: "#f59e0b",
-  vapes: "#3b82f6", concentrates: "#ef4444", accessories: "#6b7280",
-  "ounce-deals": "#8b5cf6", "shake-n-bake": "#ec4899",
+  flower: "#4B2D8E",
+  "pre-rolls": "#22c55e",
+  edibles: "#f59e0b",
+  vapes: "#3b82f6",
+  concentrates: "#ef4444",
+  accessories: "#6b7280",
+  "ounce-deals": "#8b5cf6",
+  "shake-n-bake": "#ec4899",
 };
 function catLabel(cat: string): string {
-  return cat.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return cat
+    .split("-")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 // ─── User Memory Card ───
-function UserMemoryCard({ memory, onViewDetail }: { memory: any; onViewDetail: () => void }) {
+function UserMemoryCard({
+  memory,
+  onViewDetail,
+}: {
+  memory: any;
+  onViewDetail: () => void;
+}) {
   const cats = (memory.preferredCategories || []).slice(0, 3);
   const strains = (memory.preferredStrains || []).slice(0, 3);
   const orders = memory.liveOrders ?? memory.totalOrders ?? 0;
   const spent = parseFloat(memory.liveSpent || memory.totalSpent || "0");
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer" onClick={onViewDetail}>
+    <div
+      className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer"
+      onClick={onViewDetail}
+    >
       <div className="flex items-start justify-between mb-2">
         <div>
-          <p className="text-sm font-semibold text-gray-800">{memory.userName || `User #${memory.userId}`}</p>
+          <p className="text-sm font-semibold text-gray-800">
+            {memory.userName || `User #${memory.userId}`}
+          </p>
           <p className="text-[10px] text-gray-400">{memory.userEmail || ""}</p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -171,29 +293,55 @@ function UserMemoryCard({ memory, onViewDetail }: { memory: any; onViewDetail: (
       {cats.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-1.5">
           {cats.map((c: string) => (
-            <span key={c} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{c}</span>
+            <span
+              key={c}
+              className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
+            >
+              {c}
+            </span>
           ))}
         </div>
       )}
       {strains.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-1.5">
           {strains.map((s: string) => (
-            <span key={s} className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">{s}</span>
+            <span
+              key={s}
+              className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded"
+            >
+              {s}
+            </span>
           ))}
         </div>
       )}
       {memory.aiSummary && (
-        <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">{memory.aiSummary}</p>
+        <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">
+          {memory.aiSummary}
+        </p>
       )}
       <p className="text-[9px] text-gray-300 mt-2">
-        Updated {memory.lastUpdated ? new Date(memory.lastUpdated).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "never"}
+        Updated{" "}
+        {memory.lastUpdated
+          ? new Date(memory.lastUpdated).toLocaleDateString("en-CA", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "never"}
       </p>
     </div>
   );
 }
 
 // ─── Detail Modal ───
-function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => void }) {
+function MemoryDetailModal({
+  memory,
+  onClose,
+}: {
+  memory: any;
+  onClose: () => void;
+}) {
   const cats = memory.preferredCategories || [];
   const strains = memory.preferredStrains || [];
   const lastProducts = memory.lastProducts || [];
@@ -205,20 +353,39 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
     { enabled: !!memory.userId }
   );
 
-  const totalOrders = liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
-  const totalSpent = parseFloat(liveStats?.totalSpent ?? memory.liveSpent ?? memory.totalSpent ?? "0");
-  const avgOrder = parseFloat(liveStats?.avgOrderValue ?? memory.liveAvgOrder ?? memory.avgOrderValue ?? "0");
+  const totalOrders =
+    liveStats?.totalOrders ?? memory.liveOrders ?? memory.totalOrders ?? 0;
+  const totalSpent = parseFloat(
+    liveStats?.totalSpent ?? memory.liveSpent ?? memory.totalSpent ?? "0"
+  );
+  const avgOrder = parseFloat(
+    liveStats?.avgOrderValue ??
+      memory.liveAvgOrder ??
+      memory.avgOrderValue ??
+      "0"
+  );
   const orders = liveStats?.orders || [];
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">{memory.userName || `User #${memory.userId}`}</h3>
+            <h3 className="text-lg font-bold text-gray-800">
+              {memory.userName || `User #${memory.userId}`}
+            </h3>
             <p className="text-xs text-gray-400">{memory.userEmail}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          >
             <X size={18} />
           </button>
         </div>
@@ -228,7 +395,9 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
             <h4 className="text-xs font-semibold text-[#4B2D8E] uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Brain size={13} /> AI Profile Summary
             </h4>
-            <p className="text-sm text-gray-700 leading-relaxed">{memory.aiSummary}</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              {memory.aiSummary}
+            </p>
           </div>
         )}
 
@@ -236,20 +405,32 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-lg font-bold text-gray-800">{totalOrders}</p>
             <p className="text-[10px] text-gray-400 uppercase">Orders</p>
-            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
+            {liveStats && (
+              <p className="text-[8px] text-green-500 mt-0.5">Live</p>
+            )}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">${totalSpent.toFixed(0)}</p>
+            <p className="text-lg font-bold text-gray-800">
+              ${totalSpent.toFixed(0)}
+            </p>
             <p className="text-[10px] text-gray-400 uppercase">Spent</p>
-            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
+            {liveStats && (
+              <p className="text-[8px] text-green-500 mt-0.5">Live</p>
+            )}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">${avgOrder.toFixed(0)}</p>
+            <p className="text-lg font-bold text-gray-800">
+              ${avgOrder.toFixed(0)}
+            </p>
             <p className="text-[10px] text-gray-400 uppercase">Avg Order</p>
-            {liveStats && <p className="text-[8px] text-green-500 mt-0.5">Live</p>}
+            {liveStats && (
+              <p className="text-[8px] text-green-500 mt-0.5">Live</p>
+            )}
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold text-gray-800">{reviewHistory.length}</p>
+            <p className="text-lg font-bold text-gray-800">
+              {reviewHistory.length}
+            </p>
             <p className="text-[10px] text-gray-400 uppercase">Reviews</p>
           </div>
         </div>
@@ -258,7 +439,9 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
           <div className="mb-5">
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Package size={13} /> Order History
-              <span className="text-[8px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full font-normal">Real-time</span>
+              <span className="text-[8px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full font-normal">
+                Real-time
+              </span>
             </h4>
             <div className="space-y-1">
               {orders.map((o: any) => {
@@ -272,16 +455,32 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
                   refunded: "bg-gray-100 text-gray-600",
                 };
                 return (
-                  <div key={o.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2"
+                  >
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-gray-600">{o.orderNumber}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[o.status] || "bg-gray-100 text-gray-600"}`}>
+                      <span className="font-mono text-gray-600">
+                        {o.orderNumber}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[o.status] || "bg-gray-100 text-gray-600"}`}
+                      >
                         {o.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-semibold text-gray-800">${parseFloat(o.total || "0").toFixed(2)}</span>
-                      <span className="text-gray-400">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : ""}</span>
+                      <span className="font-semibold text-gray-800">
+                        ${parseFloat(o.total || "0").toFixed(2)}
+                      </span>
+                      <span className="text-gray-400">
+                        {o.createdAt
+                          ? new Date(o.createdAt).toLocaleDateString("en-CA", {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : ""}
+                      </span>
                     </div>
                   </div>
                 );
@@ -292,47 +491,92 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Preferred Categories</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Preferred Categories
+            </h4>
             {cats.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {cats.map((c: string) => (
-                  <span key={c} className="text-xs bg-[#4B2D8E]/10 text-[#4B2D8E] px-2.5 py-1 rounded-lg font-medium">{c}</span>
+                  <span
+                    key={c}
+                    className="text-xs bg-[#4B2D8E]/10 text-[#4B2D8E] px-2.5 py-1 rounded-lg font-medium"
+                  >
+                    {c}
+                  </span>
                 ))}
               </div>
-            ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
+            ) : (
+              <p className="text-xs text-gray-400 italic">No data yet</p>
+            )}
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Preferred Strains</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Preferred Strains
+            </h4>
             {strains.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {strains.map((s: string) => (
-                  <span key={s} className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-lg font-medium">{s}</span>
+                  <span
+                    key={s}
+                    className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-lg font-medium"
+                  >
+                    {s}
+                  </span>
                 ))}
               </div>
-            ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
+            ) : (
+              <p className="text-xs text-gray-400 italic">No data yet</p>
+            )}
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Price Range</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Price Range
+            </h4>
             {priceRange ? (
-              <p className="text-sm font-medium text-gray-700">${priceRange.min?.toFixed(2)} &ndash; ${priceRange.max?.toFixed(2)}</p>
-            ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
+              <p className="text-sm font-medium text-gray-700">
+                ${priceRange.min?.toFixed(2)} &ndash; $
+                {priceRange.max?.toFixed(2)}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No data yet</p>
+            )}
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Shopping Patterns</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Shopping Patterns
+            </h4>
             {memory.shoppingPatterns ? (
-              <p className="text-xs text-gray-600 leading-relaxed">{memory.shoppingPatterns}</p>
-            ) : <p className="text-xs text-gray-400 italic">No data yet</p>}
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {memory.shoppingPatterns}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No data yet</p>
+            )}
           </div>
         </div>
 
         {lastProducts.length > 0 && (
           <div className="mt-5">
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Recently Viewed Products</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Recently Viewed Products
+            </h4>
             <div className="space-y-1">
               {lastProducts.map((p: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-gray-700 font-medium">{p.name || p.slug}</span>
-                  <span className="text-gray-400">{p.viewedAt ? new Date(p.viewedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : ""}</span>
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2"
+                >
+                  <span className="text-gray-700 font-medium">
+                    {p.name || p.slug}
+                  </span>
+                  <span className="text-gray-400">
+                    {p.viewedAt
+                      ? new Date(p.viewedAt).toLocaleDateString("en-CA", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : ""}
+                  </span>
                 </div>
               ))}
             </div>
@@ -341,14 +585,29 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
 
         {reviewHistory.length > 0 && (
           <div className="mt-5">
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Review History</h4>
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Review History
+            </h4>
             <div className="space-y-1">
               {reviewHistory.map((r: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2"
+                >
                   <span className="text-gray-700">Product #{r.productId}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-yellow-500">{"*".repeat(r.rating)}{"*".repeat(5 - r.rating)}</span>
-                    <span className="text-gray-400">{r.date ? new Date(r.date).toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : ""}</span>
+                    <span className="text-yellow-500">
+                      {"*".repeat(r.rating)}
+                      {"*".repeat(5 - r.rating)}
+                    </span>
+                    <span className="text-gray-400">
+                      {r.date
+                        ? new Date(r.date).toLocaleDateString("en-CA", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : ""}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -357,7 +616,10 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
         )}
 
         <p className="text-[10px] text-gray-300 mt-4 text-right">
-          Last updated: {memory.lastUpdated ? new Date(memory.lastUpdated).toLocaleString("en-CA") : "never"}
+          Last updated:{" "}
+          {memory.lastUpdated
+            ? new Date(memory.lastUpdated).toLocaleString("en-CA")
+            : "never"}
         </p>
       </div>
     </div>
@@ -365,8 +627,20 @@ function MemoryDetailModal({ memory, onClose }: { memory: any; onClose: () => vo
 }
 
 // ─── Canada Province Map (real SVG geographic shapes with heat-map fill) ───
-function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = "events" }: {
-  data: Array<{ province: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number }>;
+function CanadaProvinceMap({
+  data,
+  selectedProvince,
+  onSelectProvince,
+  metric = "events",
+}: {
+  data: Array<{
+    province: string;
+    provinceCode: string;
+    events: number;
+    uniqueVisitors: number;
+    orders: number;
+    revenue: number;
+  }>;
   selectedProvince: string | null;
   onSelectProvince: (code: string | null) => void;
   metric?: string;
@@ -375,12 +649,17 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
 
   const dataMap = useMemo(() => {
     const map: Record<string, any> = {};
-    (data || []).forEach(d => { map[d.provinceCode] = d; });
+    (data || []).forEach(d => {
+      map[d.provinceCode] = d;
+    });
     return map;
   }, [data]);
 
   const maxValue = useMemo(() => {
-    return Math.max(1, ...Object.values(dataMap).map((d: any) => d[metric] || d.events || 0));
+    return Math.max(
+      1,
+      ...Object.values(dataMap).map((d: any) => d[metric] || d.events || 0)
+    );
   }, [dataMap, metric]);
 
   return (
@@ -392,10 +671,17 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
         role="img"
         aria-label="Canada province map showing traffic distribution"
       >
-        <rect x="-10" y="-10" width="813" height="1052" fill="#f0f4ff" rx="12" />
+        <rect
+          x="-10"
+          y="-10"
+          width="813"
+          height="1052"
+          fill="#f0f4ff"
+          rx="12"
+        />
         {Object.entries(PROVINCE_PATHS).map(([code, prov]) => {
           const d = dataMap[code];
-          const value = d ? (d[metric] || d.events || 0) : 0;
+          const value = d ? d[metric] || d.events || 0 : 0;
           const isSelected = selectedProvince === code;
           const isHovered = hoveredProvince === code;
           return (
@@ -403,28 +689,70 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
               <path
                 d={prov.path}
                 fill={getProvinceColor(value, maxValue, isSelected)}
-                stroke={isSelected ? BRAND.orange : isHovered ? BRAND.purple : "#b8b0c8"}
+                stroke={
+                  isSelected
+                    ? BRAND.orange
+                    : isHovered
+                      ? BRAND.purple
+                      : "#b8b0c8"
+                }
                 strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.5}
                 strokeLinejoin="round"
                 paintOrder="stroke fill"
                 cursor={value > 0 ? "pointer" : "default"}
-                onClick={() => value > 0 && onSelectProvince(isSelected ? null : code)}
+                onClick={() =>
+                  value > 0 && onSelectProvince(isSelected ? null : code)
+                }
                 onMouseEnter={() => setHoveredProvince(code)}
                 onMouseLeave={() => setHoveredProvince(null)}
-                style={{ transition: "fill 0.3s, stroke-width 0.2s", filter: isSelected ? "drop-shadow(0 2px 6px rgba(241,89,41,0.3))" : "none" }}
+                style={{
+                  transition: "fill 0.3s, stroke-width 0.2s",
+                  filter: isSelected
+                    ? "drop-shadow(0 2px 6px rgba(241,89,41,0.3))"
+                    : "none",
+                }}
               />
               <text
-                x={prov.labelX} y={prov.labelY}
-                textAnchor="middle" dominantBaseline="central"
-                style={{ fontSize: code === "PE" || code === "NB" || code === "NS" ? 14 : 18, fontWeight: 700, fill: value > maxValue * 0.5 ? "#fff" : isSelected ? "#fff" : "#4B2D8E", pointerEvents: "none", letterSpacing: 0.5, fontFamily: "system-ui, sans-serif" }}
+                x={prov.labelX}
+                y={prov.labelY}
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={{
+                  fontSize:
+                    code === "PE" || code === "NB" || code === "NS" ? 14 : 18,
+                  fontWeight: 700,
+                  fill:
+                    value > maxValue * 0.5
+                      ? "#fff"
+                      : isSelected
+                        ? "#fff"
+                        : "#4B2D8E",
+                  pointerEvents: "none",
+                  letterSpacing: 0.5,
+                  fontFamily: "system-ui, sans-serif",
+                }}
               >
                 {code}
               </text>
               {value > 0 && (
                 <text
-                  x={prov.labelX} y={prov.labelY + (code === "PE" || code === "NB" || code === "NS" ? 14 : 20)}
+                  x={prov.labelX}
+                  y={
+                    prov.labelY +
+                    (code === "PE" || code === "NB" || code === "NS" ? 14 : 20)
+                  }
                   textAnchor="middle"
-                  style={{ fontSize: code === "PE" || code === "NB" || code === "NS" ? 11 : 13, fontWeight: 600, fill: value > maxValue * 0.5 ? "rgba(255,255,255,0.85)" : "#6b7280", pointerEvents: "none", fontFamily: "system-ui, sans-serif" }}
+                  style={{
+                    fontSize:
+                      code === "PE" || code === "NB" || code === "NS" ? 11 : 13,
+                    fontWeight: 600,
+                    fill:
+                      value > maxValue * 0.5
+                        ? "rgba(255,255,255,0.85)"
+                        : "#6b7280",
+                    pointerEvents: "none",
+                    fontFamily: "system-ui, sans-serif",
+                  }}
                 >
                   {value.toLocaleString()}
                 </text>
@@ -436,27 +764,61 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
 
       {/* Hover tooltip card */}
       {hoveredProvince && dataMap[hoveredProvince] && (
-        <div style={{
-          position: "absolute", top: 8, right: 8,
-          background: "white", borderRadius: 10, padding: "10px 14px",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.12)", border: `1px solid ${BRAND.border}`,
-          minWidth: 160, zIndex: 10,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: BRAND.text, marginBottom: 6 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: "white",
+            borderRadius: 10,
+            padding: "10px 14px",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            border: `1px solid ${BRAND.border}`,
+            minWidth: 160,
+            zIndex: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: BRAND.text,
+              marginBottom: 6,
+            }}
+          >
             {PROVINCE_PATHS[hoveredProvince]?.name}
           </div>
           {(() => {
             const d = dataMap[hoveredProvince];
             return (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 11 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "4px 16px",
+                  fontSize: 11,
+                }}
+              >
                 <span style={{ color: BRAND.textMuted }}>Events</span>
-                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.events || 0).toLocaleString()}</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>
+                  {(d.events || 0).toLocaleString()}
+                </span>
                 <span style={{ color: BRAND.textMuted }}>Visitors</span>
-                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.uniqueVisitors || 0).toLocaleString()}</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>
+                  {(d.uniqueVisitors || 0).toLocaleString()}
+                </span>
                 <span style={{ color: BRAND.textMuted }}>Orders</span>
-                <span style={{ fontWeight: 600, textAlign: "right" }}>{(d.orders || 0).toLocaleString()}</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>
+                  {(d.orders || 0).toLocaleString()}
+                </span>
                 <span style={{ color: BRAND.textMuted }}>Revenue</span>
-                <span style={{ fontWeight: 600, textAlign: "right", color: BRAND.green }}>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    textAlign: "right",
+                    color: BRAND.green,
+                  }}
+                >
                   ${(d.revenue || 0).toLocaleString()}
                 </span>
               </div>
@@ -466,11 +828,29 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
       )}
 
       {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8, fontSize: 10, color: BRAND.textMuted }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          justifyContent: "center",
+          marginTop: 8,
+          fontSize: 10,
+          color: BRAND.textMuted,
+        }}
+      >
         <span>Less traffic</span>
         <div style={{ display: "flex", gap: 3 }}>
           {[0.1, 0.3, 0.5, 0.7, 0.9].map(i => (
-            <div key={i} style={{ width: 20, height: 12, borderRadius: 3, background: getProvinceColor(i * 100, 100, false) }} />
+            <div
+              key={i}
+              style={{
+                width: 20,
+                height: 12,
+                borderRadius: 3,
+                background: getProvinceColor(i * 100, 100, false),
+              }}
+            />
           ))}
         </div>
         <span>More traffic</span>
@@ -480,8 +860,18 @@ function CanadaProvinceMap({ data, selectedProvince, onSelectProvince, metric = 
 }
 
 // ─── Conversion Rate Table (sortable with Conv%, AOV, mini-bars) ───
-function ConversionTable({ data, provinceFilter }: {
-  data: Array<{ city: string; provinceCode: string; events: number; uniqueVisitors: number; orders: number; revenue: number }>;
+function ConversionTable({
+  data,
+  provinceFilter,
+}: {
+  data: Array<{
+    city: string;
+    provinceCode: string;
+    events: number;
+    uniqueVisitors: number;
+    orders: number;
+    revenue: number;
+  }>;
   provinceFilter: string | null;
 }) {
   const [sortBy, setSortBy] = useState<string>("conversion");
@@ -495,7 +885,7 @@ function ConversionTable({ data, provinceFilter }: {
         const visitors = d.uniqueVisitors || 0;
         const orders = d.orders || 0;
         const revenue = d.revenue || 0;
-        const conversion = visitors > 0 ? ((orders / visitors) * 100) : 0;
+        const conversion = visitors > 0 ? (orders / visitors) * 100 : 0;
         const aov = orders > 0 ? revenue / orders : 0;
         return { ...d, events, visitors, orders, revenue, conversion, aov };
       })
@@ -506,8 +896,11 @@ function ConversionTable({ data, provinceFilter }: {
   }, [data, provinceFilter, sortBy, sortDir]);
 
   const toggleSort = (col: string) => {
-    if (sortBy === col) setSortDir(d => d === "desc" ? "asc" : "desc");
-    else { setSortBy(col); setSortDir("desc"); }
+    if (sortBy === col) setSortDir(d => (d === "desc" ? "asc" : "desc"));
+    else {
+      setSortBy(col);
+      setSortDir("desc");
+    }
   };
 
   const getConversionColor = (rate: number) => {
@@ -517,12 +910,26 @@ function ConversionTable({ data, provinceFilter }: {
     return BRAND.red;
   };
 
-  const SortHeader = ({ col, label, align = "right" }: { col: string; label: string; align?: string }) => (
+  const SortHeader = ({
+    col,
+    label,
+    align = "right",
+  }: {
+    col: string;
+    label: string;
+    align?: string;
+  }) => (
     <th
       onClick={() => toggleSort(col)}
       style={{
-        padding: "8px 10px", textAlign: align as any, cursor: "pointer", userSelect: "none",
-        fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" as const,
+        padding: "8px 10px",
+        textAlign: align as any,
+        cursor: "pointer",
+        userSelect: "none",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        textTransform: "uppercase" as const,
         color: sortBy === col ? BRAND.purple : BRAND.textMuted,
         borderBottom: `2px solid ${sortBy === col ? BRAND.purple : BRAND.border}`,
         whiteSpace: "nowrap" as const,
@@ -534,10 +941,25 @@ function ConversionTable({ data, provinceFilter }: {
 
   return (
     <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <table
+        style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
+      >
         <thead>
           <tr>
-            <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: BRAND.textMuted, borderBottom: `2px solid ${BRAND.border}` }}>City</th>
+            <th
+              style={{
+                padding: "8px 10px",
+                textAlign: "left",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                color: BRAND.textMuted,
+                borderBottom: `2px solid ${BRAND.border}`,
+              }}
+            >
+              City
+            </th>
             <SortHeader col="events" label="Events" />
             <SortHeader col="visitors" label="Visitors" />
             <SortHeader col="orders" label="Orders" />
@@ -550,33 +972,127 @@ function ConversionTable({ data, provinceFilter }: {
           {enriched.map((row, i) => (
             <tr
               key={row.city + row.provinceCode}
-              style={{ background: i % 2 === 0 ? "transparent" : "#f9fafb", transition: "background 0.15s" }}
+              style={{
+                background: i % 2 === 0 ? "transparent" : "#f9fafb",
+                transition: "background 0.15s",
+              }}
               onMouseEnter={e => (e.currentTarget.style.background = "#f3f0ff")}
-              onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "#f9fafb")}
+              onMouseLeave={e =>
+                (e.currentTarget.style.background =
+                  i % 2 === 0 ? "transparent" : "#f9fafb")
+              }
             >
-              <td style={{ padding: "10px 10px", fontWeight: 600, color: BRAND.text }}>
+              <td
+                style={{
+                  padding: "10px 10px",
+                  fontWeight: 600,
+                  color: BRAND.text,
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span>{row.city}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, background: "#f3f0ff", color: BRAND.purple, padding: "1px 5px", borderRadius: 4 }}>{row.provinceCode}</span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      background: "#f3f0ff",
+                      color: BRAND.purple,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {row.provinceCode}
+                  </span>
                 </div>
               </td>
-              <td style={{ padding: "10px", textAlign: "right", color: BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>{row.events.toLocaleString()}</td>
-              <td style={{ padding: "10px", textAlign: "right", color: BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>{row.visitors.toLocaleString()}</td>
-              <td style={{ padding: "10px", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.orders.toLocaleString()}</td>
+              <td
+                style={{
+                  padding: "10px",
+                  textAlign: "right",
+                  color: BRAND.textMuted,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {row.events.toLocaleString()}
+              </td>
+              <td
+                style={{
+                  padding: "10px",
+                  textAlign: "right",
+                  color: BRAND.textMuted,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {row.visitors.toLocaleString()}
+              </td>
+              <td
+                style={{
+                  padding: "10px",
+                  textAlign: "right",
+                  fontWeight: 600,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {row.orders.toLocaleString()}
+              </td>
               <td style={{ padding: "10px", textAlign: "right" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                  <div style={{ width: 40, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: `${Math.min(100, row.conversion * 3)}%`, height: "100%", borderRadius: 3, background: getConversionColor(row.conversion), transition: "width 0.4s ease" }} />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 6,
+                      background: "#e5e7eb",
+                      borderRadius: 3,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.min(100, row.conversion * 3)}%`,
+                        height: "100%",
+                        borderRadius: 3,
+                        background: getConversionColor(row.conversion),
+                        transition: "width 0.4s ease",
+                      }}
+                    />
                   </div>
-                  <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: getConversionColor(row.conversion) }}>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                      color: getConversionColor(row.conversion),
+                    }}
+                  >
                     {row.conversion.toFixed(1)}%
                   </span>
                 </div>
               </td>
-              <td style={{ padding: "10px", textAlign: "right", fontWeight: 700, color: row.revenue > 0 ? BRAND.green : BRAND.textMuted, fontVariantNumeric: "tabular-nums" }}>
+              <td
+                style={{
+                  padding: "10px",
+                  textAlign: "right",
+                  fontWeight: 700,
+                  color: row.revenue > 0 ? BRAND.green : BRAND.textMuted,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 ${row.revenue.toLocaleString()}
               </td>
-              <td style={{ padding: "10px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: row.aov > 0 ? BRAND.text : BRAND.textMuted }}>
+              <td
+                style={{
+                  padding: "10px",
+                  textAlign: "right",
+                  fontVariantNumeric: "tabular-nums",
+                  color: row.aov > 0 ? BRAND.text : BRAND.textMuted,
+                }}
+              >
                 ${row.aov.toFixed(0)}
               </td>
             </tr>
@@ -584,7 +1100,14 @@ function ConversionTable({ data, provinceFilter }: {
         </tbody>
       </table>
       {enriched.length === 0 && (
-        <div style={{ textAlign: "center", padding: 24, color: BRAND.textMuted, fontSize: 13 }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: 24,
+            color: BRAND.textMuted,
+            fontSize: 13,
+          }}
+        >
           No city data for selected period
         </div>
       )}
@@ -593,16 +1116,21 @@ function ConversionTable({ data, provinceFilter }: {
 }
 
 // ─── Conversion Funnel visualization ───
-function ConversionFunnel({ data }: {
+function ConversionFunnel({
+  data,
+}: {
   data: Array<{ events: number; uniqueVisitors: number; orders: number }>;
 }) {
   const totals = useMemo(() => {
     if (!data?.length) return { visitors: 0, events: 0, orders: 0 };
-    return data.reduce((acc, d) => ({
-      visitors: acc.visitors + (d.uniqueVisitors || 0),
-      events: acc.events + (d.events || 0),
-      orders: acc.orders + (d.orders || 0),
-    }), { visitors: 0, events: 0, orders: 0 });
+    return data.reduce(
+      (acc, d) => ({
+        visitors: acc.visitors + (d.uniqueVisitors || 0),
+        events: acc.events + (d.events || 0),
+        orders: acc.orders + (d.orders || 0),
+      }),
+      { visitors: 0, events: 0, orders: 0 }
+    );
   }, [data]);
 
   const steps = [
@@ -617,28 +1145,67 @@ function ConversionFunnel({ data }: {
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {steps.map((step, i) => {
         const barWidth = Math.max(8, (step.value / maxVal) * 100);
-        const dropoff = i > 0 ? ((1 - step.value / steps[i - 1].value) * 100) : 0;
+        const dropoff = i > 0 ? (1 - step.value / steps[i - 1].value) * 100 : 0;
         return (
           <div key={step.label}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: BRAND.text }}>{step.label}</span>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 4,
+              }}
+            >
+              <span
+                style={{ fontSize: 11, fontWeight: 600, color: BRAND.text }}
+              >
+                {step.label}
+              </span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: step.color, fontVariantNumeric: "tabular-nums" }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: step.color,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
                   {step.value.toLocaleString()}
                 </span>
                 {i > 0 && dropoff > 0 && (
-                  <span style={{ fontSize: 9, fontWeight: 600, color: BRAND.red, background: "#fef2f2", padding: "1px 6px", borderRadius: 4 }}>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: BRAND.red,
+                      background: "#fef2f2",
+                      padding: "1px 6px",
+                      borderRadius: 4,
+                    }}
+                  >
                     -{dropoff.toFixed(0)}%
                   </span>
                 )}
               </div>
             </div>
-            <div style={{ width: "100%", height: 12, background: "#f3f4f6", borderRadius: 6, overflow: "hidden" }}>
-              <div style={{
-                width: `${barWidth}%`, height: "100%", borderRadius: 6,
-                background: `linear-gradient(90deg, ${step.color}90, ${step.color})`,
-                transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)",
-              }} />
+            <div
+              style={{
+                width: "100%",
+                height: 12,
+                background: "#f3f4f6",
+                borderRadius: 6,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${barWidth}%`,
+                  height: "100%",
+                  borderRadius: 6,
+                  background: `linear-gradient(90deg, ${step.color}90, ${step.color})`,
+                  transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)",
+                }}
+              />
             </div>
           </div>
         );
@@ -658,14 +1225,24 @@ export default function AdminInsights() {
   const [activeTab, setActiveTab] = useState<"behavior" | "geo">("behavior");
   const [geoPeriod, setGeoPeriod] = useState(30);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
-  const [trendMetric, setTrendMetric] = useState<"events" | "visitors" | "orders">("visitors");
+  const [trendMetric, setTrendMetric] = useState<
+    "events" | "visitors" | "orders"
+  >("visitors");
   // citySortBy removed — ConversionTable handles its own sorting
 
   // ─── Existing data fetching ───
-  const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    refetch: refetchAnalytics,
+  } = trpc.admin.aiMemory.aggregateAnalytics.useQuery(undefined, {
     refetchOnWindowFocus: true,
   });
-  const { data: memories, isLoading: memoriesLoading, refetch: refetchMemories } = trpc.admin.aiMemory.allMemories.useQuery(undefined, {
+  const {
+    data: memories,
+    isLoading: memoriesLoading,
+    refetch: refetchMemories,
+  } = trpc.admin.aiMemory.allMemories.useQuery(undefined, {
     refetchOnWindowFocus: true,
   });
 
@@ -678,10 +1255,11 @@ export default function AdminInsights() {
     { days: geoPeriod, province: selectedProvince || undefined },
     { enabled: activeTab === "geo" }
   );
-  const { data: geoProducts } = trpc.admin.geoAnalytics.productsByRegion.useQuery(
-    { days: geoPeriod },
-    { enabled: activeTab === "geo" }
-  );
+  const { data: geoProducts } =
+    trpc.admin.geoAnalytics.productsByRegion.useQuery(
+      { days: geoPeriod },
+      { enabled: activeTab === "geo" }
+    );
   const { data: proxyStats } = trpc.admin.geoAnalytics.proxyStats.useQuery(
     { days: geoPeriod },
     { enabled: activeTab === "geo" }
@@ -694,9 +1272,13 @@ export default function AdminInsights() {
   const refreshAllMut = trpc.admin.aiMemory.refreshAllMemories.useMutation({
     onSuccess: (res: any) => {
       if (res.refreshed > 0) {
-        toast.success(`Updated ${res.refreshed} user profile${res.refreshed !== 1 ? 's' : ''} with new data`);
+        toast.success(
+          `Updated ${res.refreshed} user profile${res.refreshed !== 1 ? "s" : ""} with new data`
+        );
       } else {
-        toast.info('All profiles are already up to date — no new activity to process');
+        toast.info(
+          "All profiles are already up to date — no new activity to process"
+        );
       }
       refetchMemories();
       refetchAnalytics();
@@ -705,36 +1287,77 @@ export default function AdminInsights() {
   });
 
   const isLoading = analyticsLoading || memoriesLoading;
-  const sortedMemories = [...(memories || [])].sort((a: any, b: any) =>
-    parseFloat(b.liveSpent || b.totalSpent || "0") - parseFloat(a.liveSpent || a.totalSpent || "0")
+  const sortedMemories = [...(memories || [])].sort(
+    (a: any, b: any) =>
+      parseFloat(b.liveSpent || b.totalSpent || "0") -
+      parseFloat(a.liveSpent || a.totalSpent || "0")
   );
 
   const totalEvents = analytics?.totalEvents ?? 0;
-  const maxEventCount = Math.max(...Object.values(analytics?.eventCounts ?? { _: 1 }), 1);
+  const maxEventCount = Math.max(
+    ...Object.values(analytics?.eventCounts ?? { _: 1 }),
+    1
+  );
 
   // ─── Geo computed: conversion metrics ───
   const geoConversionMetrics = useMemo(() => {
-    if (!geoProvinces?.length) return { convRate: 0, aov: 0, bestCity: "-", bestCityConv: 0, topCity: "-", topCityEvents: 0, totalVisitors: 0, totalOrders: 0, totalRevenue: 0 };
-    const totalVisitors = geoProvinces.reduce((s, p) => s + (p.uniqueVisitors || 0), 0);
+    if (!geoProvinces?.length)
+      return {
+        convRate: 0,
+        aov: 0,
+        bestCity: "-",
+        bestCityConv: 0,
+        topCity: "-",
+        topCityEvents: 0,
+        totalVisitors: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+      };
+    const totalVisitors = geoProvinces.reduce(
+      (s, p) => s + (p.uniqueVisitors || 0),
+      0
+    );
     const totalOrders = geoProvinces.reduce((s, p) => s + (p.orders || 0), 0);
     const totalRevenue = geoProvinces.reduce((s, p) => s + (p.revenue || 0), 0);
-    const convRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
+    const convRate =
+      totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
     const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     // Best converting and highest traffic city
-    let bestCity = "-", bestCityConv = 0, topCity = "-", topCityEvents = 0;
+    let bestCity = "-",
+      bestCityConv = 0,
+      topCity = "-",
+      topCityEvents = 0;
     if (geoCities?.length) {
       for (const c of geoCities) {
-        const cv = c.uniqueVisitors > 0 ? (c.orders / c.uniqueVisitors) * 100 : 0;
-        if (cv > bestCityConv) { bestCityConv = cv; bestCity = c.city; }
-        if (c.events > topCityEvents) { topCityEvents = c.events; topCity = c.city; }
+        const cv =
+          c.uniqueVisitors > 0 ? (c.orders / c.uniqueVisitors) * 100 : 0;
+        if (cv > bestCityConv) {
+          bestCityConv = cv;
+          bestCity = c.city;
+        }
+        if (c.events > topCityEvents) {
+          topCityEvents = c.events;
+          topCity = c.city;
+        }
       }
     }
-    return { convRate, aov, bestCity, bestCityConv, topCity, topCityEvents, totalVisitors, totalOrders, totalRevenue };
+    return {
+      convRate,
+      aov,
+      bestCity,
+      bestCityConv,
+      topCity,
+      topCityEvents,
+      totalVisitors,
+      totalOrders,
+      totalRevenue,
+    };
   }, [geoProvinces, geoCities]);
 
   // Group products by province for category breakdown
   const productsByProvince = useMemo(() => {
-    if (!geoProducts) return new Map<string, Array<{ category: string; orders: number }>>();
+    if (!geoProducts)
+      return new Map<string, Array<{ category: string; orders: number }>>();
     const map = new Map<string, Array<{ category: string; orders: number }>>();
     for (const r of geoProducts) {
       if (!map.has(r.province)) map.set(r.province, []);
@@ -743,7 +1366,11 @@ export default function AdminInsights() {
     return map;
   }, [geoProducts]);
 
-  const trendColors = { events: "#4B2D8E", visitors: "#0ea5e9", orders: "#22c55e" };
+  const trendColors = {
+    events: "#4B2D8E",
+    visitors: "#0ea5e9",
+    orders: "#22c55e",
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -767,7 +1394,10 @@ export default function AdminInsights() {
             disabled={refreshAllMut.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
           >
-            <RefreshCw size={14} className={refreshAllMut.isPending ? "animate-spin" : ""} />
+            <RefreshCw
+              size={14}
+              className={refreshAllMut.isPending ? "animate-spin" : ""}
+            />
             {refreshAllMut.isPending ? "Refreshing..." : "Refresh All Profiles"}
           </button>
         </div>
@@ -812,52 +1442,78 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Events</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{totalEvents.toLocaleString()}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Events
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {totalEvents.toLocaleString()}
+                  </p>
                 </div>
                 <div className="bg-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Activity size={18} className="text-white" />
                 </div>
               </div>
-              {analytics?.recentActivity && analytics.recentActivity.length > 1 && (
-                <div className="mt-3">
-                  <Sparkline data={analytics.recentActivity.map(d => d.events)} color="#4B2D8E" />
-                  <p className="text-[10px] text-gray-400 mt-1">Last 14 days</p>
-                </div>
-              )}
+              {analytics?.recentActivity &&
+                analytics.recentActivity.length > 1 && (
+                  <div className="mt-3">
+                    <Sparkline
+                      data={analytics.recentActivity.map(d => d.events)}
+                      color="#4B2D8E"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Last 14 days
+                    </p>
+                  </div>
+                )}
             </div>
 
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.activeUsers ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Active Users
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {analytics?.activeUsers ?? 0}
+                  </p>
                 </div>
                 <div className="bg-teal-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Users size={18} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">With tracked behavior</p>
+              <p className="text-xs text-gray-400 mt-3">
+                With tracked behavior
+              </p>
             </div>
 
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">AI Profiles</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{sortedMemories.length}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AI Profiles
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {sortedMemories.length}
+                  </p>
                 </div>
                 <div className="bg-[#4B2D8E] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Brain size={18} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">Personalization-ready</p>
+              <p className="text-xs text-gray-400 mt-3">
+                Personalization-ready
+              </p>
             </div>
 
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Events / User</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.avgEventsPerUser ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Avg Events / User
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {analytics?.avgEventsPerUser ?? 0}
+                  </p>
                 </div>
                 <div className="bg-orange-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <TrendingUp size={18} className="text-white" />
@@ -878,28 +1534,47 @@ export default function AdminInsights() {
                   <Activity size={15} className="text-blue-500" />
                   Event Breakdown
                 </h3>
-                {showEventBreakdown ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                {showEventBreakdown ? (
+                  <ChevronUp size={14} className="text-gray-400" />
+                ) : (
+                  <ChevronDown size={14} className="text-gray-400" />
+                )}
               </button>
-              {(showEventBreakdown || Object.keys(analytics?.eventCounts ?? {}).length <= 6) && (
+              {(showEventBreakdown ||
+                Object.keys(analytics?.eventCounts ?? {}).length <= 6) && (
                 <div className="space-y-2.5">
-                  {Object.entries(analytics?.eventCounts ?? {}).map(([type, count]) => {
-                    const meta = EVENT_LABELS[type] || { label: type, icon: Zap, color: "bg-gray-400" };
-                    const Icon = meta.icon;
-                    return (
-                      <div key={type}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="flex items-center gap-1.5 text-gray-600">
-                            <span className={`w-5 h-5 rounded flex items-center justify-center ${meta.color}`}>
-                              <Icon size={10} className="text-white" />
+                  {Object.entries(analytics?.eventCounts ?? {}).map(
+                    ([type, count]) => {
+                      const meta = EVENT_LABELS[type] || {
+                        label: type,
+                        icon: Zap,
+                        color: "bg-gray-400",
+                      };
+                      const Icon = meta.icon;
+                      return (
+                        <div key={type}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="flex items-center gap-1.5 text-gray-600">
+                              <span
+                                className={`w-5 h-5 rounded flex items-center justify-center ${meta.color}`}
+                              >
+                                <Icon size={10} className="text-white" />
+                              </span>
+                              {meta.label}
                             </span>
-                            {meta.label}
-                          </span>
-                          <span className="font-mono text-gray-500">{(count as number).toLocaleString()}</span>
+                            <span className="font-mono text-gray-500">
+                              {(count as number).toLocaleString()}
+                            </span>
+                          </div>
+                          <MiniBar
+                            value={count as number}
+                            max={maxEventCount}
+                            color={meta.color}
+                          />
                         </div>
-                        <MiniBar value={count as number} max={maxEventCount} color={meta.color} />
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               )}
             </div>
@@ -917,18 +1592,28 @@ export default function AdminInsights() {
                       <div key={c.category}>
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="text-gray-700 font-medium flex items-center gap-1.5">
-                            <span className="text-gray-400 font-mono w-4">{i + 1}.</span>
+                            <span className="text-gray-400 font-mono w-4">
+                              {i + 1}.
+                            </span>
                             {c.category}
                           </span>
-                          <span className="font-mono text-gray-500">{c.views}</span>
+                          <span className="font-mono text-gray-500">
+                            {c.views}
+                          </span>
                         </div>
-                        <MiniBar value={c.views} max={maxViews} color="bg-[#4B2D8E]" />
+                        <MiniBar
+                          value={c.views}
+                          max={maxViews}
+                          color="bg-[#4B2D8E]"
+                        />
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic py-4 text-center">No category browsing data yet</p>
+                <p className="text-xs text-gray-400 italic py-4 text-center">
+                  No category browsing data yet
+                </p>
               )}
             </div>
 
@@ -940,17 +1625,26 @@ export default function AdminInsights() {
               {(analytics?.topSearches ?? []).length > 0 ? (
                 <div className="space-y-2">
                   {analytics!.topSearches.map((s, i) => (
-                    <div key={s.query} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                    <div
+                      key={s.query}
+                      className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2"
+                    >
                       <span className="text-gray-700 flex items-center gap-1.5">
-                        <span className="text-gray-400 font-mono w-4">{i + 1}.</span>
+                        <span className="text-gray-400 font-mono w-4">
+                          {i + 1}.
+                        </span>
                         "{s.query}"
                       </span>
-                      <span className="font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{s.count}x</span>
+                      <span className="font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        {s.count}x
+                      </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic py-4 text-center">No search data yet</p>
+                <p className="text-xs text-gray-400 italic py-4 text-center">
+                  No search data yet
+                </p>
               )}
             </div>
           </div>
@@ -966,13 +1660,26 @@ export default function AdminInsights() {
                 {analytics!.topProducts.map((p, i) => {
                   const maxViews = analytics!.topProducts[0]?.views || 1;
                   return (
-                    <div key={p.slug} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5">
-                      <span className="text-xs font-mono text-gray-400 w-5 shrink-0">{i + 1}.</span>
+                    <div
+                      key={p.slug}
+                      className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5"
+                    >
+                      <span className="text-xs font-mono text-gray-400 w-5 shrink-0">
+                        {i + 1}.
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-700 truncate">{p.slug.replace(/-/g, " ")}</p>
-                        <MiniBar value={p.views} max={maxViews} color="bg-indigo-500" />
+                        <p className="text-xs font-medium text-gray-700 truncate">
+                          {p.slug.replace(/-/g, " ")}
+                        </p>
+                        <MiniBar
+                          value={p.views}
+                          max={maxViews}
+                          color="bg-indigo-500"
+                        />
                       </div>
-                      <span className="text-xs font-mono text-gray-500 shrink-0">{p.views}</span>
+                      <span className="text-xs font-mono text-gray-500 shrink-0">
+                        {p.views}
+                      </span>
                     </div>
                   );
                 })}
@@ -988,7 +1695,9 @@ export default function AdminInsights() {
                 AI User Profiles
               </h3>
               <p className="text-xs text-gray-400">
-                {sortedMemories.length} profile{sortedMemories.length !== 1 ? "s" : ""} &middot; sorted by total spent
+                {sortedMemories.length} profile
+                {sortedMemories.length !== 1 ? "s" : ""} &middot; sorted by
+                total spent
               </p>
             </div>
 
@@ -1005,10 +1714,14 @@ export default function AdminInsights() {
             ) : (
               <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
                 <Brain size={48} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 font-medium">No AI profiles generated yet</p>
+                <p className="text-gray-500 font-medium">
+                  No AI profiles generated yet
+                </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Profiles are auto-generated from user behavior every 30 minutes.
-                  <br />Click "Refresh All Profiles" to generate them now.
+                  Profiles are auto-generated from user behavior every 30
+                  minutes.
+                  <br />
+                  Click "Refresh All Profiles" to generate them now.
                 </p>
               </div>
             )}
@@ -1026,20 +1739,42 @@ export default function AdminInsights() {
                   <thead>
                     <tr className="text-gray-400 uppercase tracking-wider">
                       <th className="text-left py-2 px-3 font-medium">Date</th>
-                      <th className="text-right py-2 px-3 font-medium">Events</th>
-                      <th className="py-2 px-3 font-medium text-left w-2/3">Activity</th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Events
+                      </th>
+                      <th className="py-2 px-3 font-medium text-left w-2/3">
+                        Activity
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {[...analytics!.recentActivity].reverse().map(d => {
-                      const maxDay = Math.max(...analytics!.recentActivity.map(a => a.events), 1);
+                      const maxDay = Math.max(
+                        ...analytics!.recentActivity.map(a => a.events),
+                        1
+                      );
                       return (
                         <tr key={d.date} className="hover:bg-gray-50/50">
                           <td className="py-2 px-3 text-gray-600 font-medium whitespace-nowrap">
-                            {new Date(d.date + "T12:00:00").toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}
+                            {new Date(d.date + "T12:00:00").toLocaleDateString(
+                              "en-CA",
+                              {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
                           </td>
-                          <td className="py-2 px-3 text-right font-mono text-gray-700">{d.events}</td>
-                          <td className="py-2 px-3"><MiniBar value={d.events} max={maxDay} color="bg-[#4B2D8E]" /></td>
+                          <td className="py-2 px-3 text-right font-mono text-gray-700">
+                            {d.events}
+                          </td>
+                          <td className="py-2 px-3">
+                            <MiniBar
+                              value={d.events}
+                              max={maxDay}
+                              color="bg-[#4B2D8E]"
+                            />
+                          </td>
                         </tr>
                       );
                     })}
@@ -1078,8 +1813,12 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Events</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{totalEvents.toLocaleString()}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Events
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {totalEvents.toLocaleString()}
+                  </p>
                 </div>
                 <div className="bg-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Activity size={18} className="text-white" />
@@ -1089,8 +1828,12 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cities Reached</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.uniqueCities ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cities Reached
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {analytics?.uniqueCities ?? 0}
+                  </p>
                 </div>
                 <div className="bg-emerald-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <MapPin size={18} className="text-white" />
@@ -1100,8 +1843,12 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Provinces</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{analytics?.activeProvinces ?? 0}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Active Provinces
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {analytics?.activeProvinces ?? 0}
+                  </p>
                 </div>
                 <div className="bg-[#4B2D8E] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Globe size={18} className="text-white" />
@@ -1111,14 +1858,20 @@ export default function AdminInsights() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Proxy / VPN</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{proxyStats?.rate ?? analytics?.proxyRate ?? 0}%</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Proxy / VPN
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {proxyStats?.rate ?? analytics?.proxyRate ?? 0}%
+                  </p>
                 </div>
                 <div className="bg-orange-500 w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <Shield size={18} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">{proxyStats?.proxy ?? 0} of {proxyStats?.total ?? 0} sessions</p>
+              <p className="text-xs text-gray-400 mt-3">
+                {proxyStats?.proxy ?? 0} of {proxyStats?.total ?? 0} sessions
+              </p>
             </div>
           </div>
 
@@ -1130,7 +1883,9 @@ export default function AdminInsights() {
                   <Globe size={15} className="text-[#4B2D8E]" />
                   Traffic by Province
                 </h3>
-                <p className="text-[10px] text-gray-400 mt-1">Click a province to filter &middot; Hover for details</p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Click a province to filter &middot; Hover for details
+                </p>
               </div>
               {selectedProvince && (
                 <button
@@ -1152,7 +1907,9 @@ export default function AdminInsights() {
               <div className="flex items-center justify-center py-16">
                 <div className="text-center">
                   <Globe size={36} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-xs text-gray-400">No geo data yet. Events will appear as visitors browse.</p>
+                  <p className="text-xs text-gray-400">
+                    No geo data yet. Events will appear as visitors browse.
+                  </p>
                 </div>
               </div>
             )}
@@ -1179,13 +1936,21 @@ export default function AdminInsights() {
                       label: "Overall Conv. Rate",
                       value: `${geoConversionMetrics.convRate.toFixed(1)}%`,
                       sub: `${geoConversionMetrics.totalOrders} orders / ${geoConversionMetrics.totalVisitors} visitors`,
-                      color: geoConversionMetrics.convRate >= 15 ? BRAND.green : geoConversionMetrics.convRate >= 5 ? BRAND.yellow : BRAND.red,
+                      color:
+                        geoConversionMetrics.convRate >= 15
+                          ? BRAND.green
+                          : geoConversionMetrics.convRate >= 5
+                            ? BRAND.yellow
+                            : BRAND.red,
                     },
                     {
                       label: "Avg Order Value",
                       value: `$${geoConversionMetrics.aov.toFixed(0)}`,
                       sub: "Across all orders",
-                      color: geoConversionMetrics.aov > 0 ? BRAND.green : BRAND.textMuted,
+                      color:
+                        geoConversionMetrics.aov > 0
+                          ? BRAND.green
+                          : BRAND.textMuted,
                     },
                     {
                       label: "Best Converting City",
@@ -1200,14 +1965,42 @@ export default function AdminInsights() {
                       color: BRAND.purple,
                     },
                   ].map((card, i) => (
-                    <div key={i} style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: BRAND.textMuted, marginBottom: 6 }}>
+                    <div
+                      key={i}
+                      style={{
+                        background: "#f9fafb",
+                        borderRadius: 12,
+                        padding: "12px 14px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          color: BRAND.textMuted,
+                          marginBottom: 6,
+                        }}
+                      >
                         {card.label}
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: card.color }}>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 800,
+                          color: card.color,
+                        }}
+                      >
                         {card.value}
                       </div>
-                      <div style={{ fontSize: 10, color: BRAND.textMuted, marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: BRAND.textMuted,
+                          marginTop: 2,
+                        }}
+                      >
                         {card.sub}
                       </div>
                     </div>
@@ -1229,7 +2022,10 @@ export default function AdminInsights() {
                   </span>
                 )}
               </h3>
-              <p className="text-[10px] text-gray-400 mt-1">Click column headers to sort &middot; Conv% = Orders &divide; Visitors &middot; AOV = Revenue &divide; Orders</p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Click column headers to sort &middot; Conv% = Orders &divide;
+                Visitors &middot; AOV = Revenue &divide; Orders
+              </p>
             </div>
             <ConversionTable
               data={geoCities || []}
@@ -1282,31 +2078,54 @@ export default function AdminInsights() {
                 Category Preferences by Province
               </h3>
               <div className="space-y-4">
-                {Array.from(productsByProvince.entries()).slice(0, 6).map(([province, cats]: [string, Array<{ category: string; orders: number }>]) => {
-                  const maxCat = Math.max(...cats.map((c: { category: string; orders: number }) => c.orders), 1);
-                  return (
-                    <div key={province}>
-                      <p className="text-xs font-semibold text-gray-700 mb-1.5">{province}</p>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {cats.slice(0, 6).map((c: { category: string; orders: number }) => (
-                          <div key={c.category} className="flex items-center gap-1.5">
-                            <div
-                              className="h-4 rounded"
-                              style={{
-                                width: `${Math.max(16, (c.orders / maxCat) * 120)}px`,
-                                backgroundColor: CATEGORY_COLORS[c.category] || "#9ca3af",
-                                opacity: 0.8,
-                              }}
-                            />
-                            <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                              {catLabel(c.category)} ({c.orders})
-                            </span>
+                {Array.from(productsByProvince.entries())
+                  .slice(0, 6)
+                  .map(
+                    ([province, cats]: [
+                      string,
+                      Array<{ category: string; orders: number }>,
+                    ]) => {
+                      const maxCat = Math.max(
+                        ...cats.map(
+                          (c: { category: string; orders: number }) => c.orders
+                        ),
+                        1
+                      );
+                      return (
+                        <div key={province}>
+                          <p className="text-xs font-semibold text-gray-700 mb-1.5">
+                            {province}
+                          </p>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {cats
+                              .slice(0, 6)
+                              .map(
+                                (c: { category: string; orders: number }) => (
+                                  <div
+                                    key={c.category}
+                                    className="flex items-center gap-1.5"
+                                  >
+                                    <div
+                                      className="h-4 rounded"
+                                      style={{
+                                        width: `${Math.max(16, (c.orders / maxCat) * 120)}px`,
+                                        backgroundColor:
+                                          CATEGORY_COLORS[c.category] ||
+                                          "#9ca3af",
+                                        opacity: 0.8,
+                                      }}
+                                    />
+                                    <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                                      {catLabel(c.category)} ({c.orders})
+                                    </span>
+                                  </div>
+                                )
+                              )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    }
+                  )}
               </div>
             </div>
           )}
@@ -1319,24 +2138,39 @@ export default function AdminInsights() {
                 Revenue by Province
               </h3>
               <div className="space-y-2">
-                {geoProvinces!.filter(p => p.revenue > 0 || p.orders > 0).map(p => {
-                  const maxRev = Math.max(...geoProvinces!.map(x => x.revenue), 1);
-                  return (
-                    <div key={p.provinceCode}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-gray-700 font-medium flex items-center gap-1.5">
-                          <span className="text-[#4B2D8E] font-mono w-6">{p.provinceCode}</span>
-                          {p.province}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-400">{p.orders} orders</span>
-                          <span className="font-mono text-gray-700 font-semibold">${p.revenue.toLocaleString()}</span>
+                {geoProvinces!
+                  .filter(p => p.revenue > 0 || p.orders > 0)
+                  .map(p => {
+                    const maxRev = Math.max(
+                      ...geoProvinces!.map(x => x.revenue),
+                      1
+                    );
+                    return (
+                      <div key={p.provinceCode}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-700 font-medium flex items-center gap-1.5">
+                            <span className="text-[#4B2D8E] font-mono w-6">
+                              {p.provinceCode}
+                            </span>
+                            {p.province}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400">
+                              {p.orders} orders
+                            </span>
+                            <span className="font-mono text-gray-700 font-semibold">
+                              ${p.revenue.toLocaleString()}
+                            </span>
+                          </div>
                         </div>
+                        <MiniBar
+                          value={p.revenue}
+                          max={maxRev}
+                          color="bg-emerald-500"
+                        />
                       </div>
-                      <MiniBar value={p.revenue} max={maxRev} color="bg-emerald-500" />
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -1345,7 +2179,10 @@ export default function AdminInsights() {
 
       {/* Detail Modal */}
       {detailMemory && (
-        <MemoryDetailModal memory={detailMemory} onClose={() => setDetailMemory(null)} />
+        <MemoryDetailModal
+          memory={detailMemory}
+          onClose={() => setDetailMemory(null)}
+        />
       )}
     </div>
   );
