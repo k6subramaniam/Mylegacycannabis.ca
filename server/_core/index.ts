@@ -114,6 +114,30 @@ async function startServer() {
     });
   });
 
+  // Endpoint for navigator.sendBeacon used in useBehaviorTracker
+  app.post("/api/analytics/track", async (req, res) => {
+    try {
+      let payload = req.body;
+
+      // SendBeacon with Blob often ends up as a string if no parser handles it.
+      // We'll just handle it properly by passing it through our trpc caller
+      // Actually express.json() is used above, so req.body should be parsed json if content-type is application/json.
+
+      const events = payload?.events;
+      if (events && Array.isArray(events) && events.length > 0) {
+        // Just directly call trackBehavior logic since we're in the same server
+        const { appRouter } = await import("../routers");
+        const { createContext } = await import("./context");
+        const trpcCaller = appRouter.createCaller(await createContext({ req, res } as any));
+        await trpcCaller.store.trackBehavior({ events });
+      }
+      res.status(200).send("OK");
+    } catch (e) {
+      console.error("[Analytics Track] Error processing beacon:", e);
+      res.status(500).send("Error");
+    }
+  });
+
   // ─── STEALTH HEADERS: prevent search engines from indexing admin / API routes ───
   app.use((req, res, next) => {
     if (req.path.startsWith("/admin") || req.path.startsWith("/api/")) {

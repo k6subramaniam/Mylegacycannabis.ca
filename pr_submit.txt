@@ -1,5 +1,1 @@
-{
-  "title": "⚡ Bolt: [performance improvement] Enable compression middleware",
-  "body": "💡 What\nAdded compression middleware to Express server.\n\n🎯 Why\nTo reduce the size of the payloads sent to clients, drastically improving First Contentful Paint (FCP) and reducing bandwidth consumption.\n\n📊 Impact\nCSS bundle from 163 KB to ~25 KB, vendor JS from ~745 KB to ~200 KB over the wire. FCP improvement from 7.5s to approximately 3-4s.\n\n🔬 Measurement\nCompared payload sizes with and without compression.",
-  "head": "jules-16347819894917743257-babf6973"
-}
+jules-2155225464988963792-4a942ac6
