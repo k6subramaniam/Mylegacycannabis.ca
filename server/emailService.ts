@@ -8,7 +8,7 @@ import { logSystem } from "./db";
  * Email service — sends OTP codes and notifications.
  *
  * Primary:  Resend API (HTTPS, works on Railway — set RESEND_API_KEY)
- * Fallback: SMTP/Gmail (set SMTP_HOST, SMTP_USER, SMTP_PASS)
+
  *
  * Every send attempt is recorded by the Email Health Monitor for
  * outage detection and admin visibility.
@@ -20,7 +20,7 @@ import { logSystem } from "./db";
  *   SMTP_HOST=smtp.gmail.com            <-- fallback
  *   SMTP_PORT=587
  *   SMTP_USER=k6subramaniam@gmail.com
- *   SMTP_PASSWORD=<Gmail App Password>
+
  *   SMTP_FROM="My Legacy Cannabis <k6subramaniam@gmail.com>"
  *   ADMIN_EMAIL=k6subramaniam@gmail.com
  */

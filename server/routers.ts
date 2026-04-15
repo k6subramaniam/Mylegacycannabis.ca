@@ -1,5 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { isbot } from "isbot";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
@@ -73,7 +74,11 @@ const MLC_BRAND_DNA = `BRANDING DNA / CORPORATE VISUAL IDENTITY:
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(async (opts) => {
+    me: publicProcedure.query(async opts => {
+      const userAgent = opts.ctx.req.headers["user-agent"] || "";
+      if (isbot(userAgent)) {
+        return null;
+      }
       const sessionUser = opts.ctx.user;
       if (!sessionUser) return null;
       // Look up the full user from DB to return enriched data
