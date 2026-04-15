@@ -1,12 +1,4 @@
 node_modules/
 dist/
-client/public/uploads/
 .env
-.env.local
-*.log
-# This project uses pnpm — ignore npm's lock file to avoid stale Dependabot alerts
-package-lock.json
-.manus-logs/
-extracted_source/
-*.pid
-core
+.pnpm-store/

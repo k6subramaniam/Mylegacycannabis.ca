@@ -8,11 +8,7 @@
  * IMPORTANT: The shared layout (header, footer, accent stripe, shell) lives in
  * `emailLayout.ts`. Edit that file to change the look of ALL emails at once.
  */
-import {
-  emailShell,
-  CUSTOMER_FOOTER,
-  ADMIN_FOOTER,
-} from './emailLayout';
+import { emailShell, CUSTOMER_FOOTER, ADMIN_FOOTER } from "./emailLayout";
 
 export interface EmailTemplateSeed {
   slug: string;
@@ -33,7 +29,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "welcome-email",
     name: "Welcome Email",
     subject: "Welcome to MyLegacy Cannabis, {{customer_name}}!",
-    bodyHtml: emailShell("Welcome to MyLegacy Cannabis", `
+    bodyHtml: emailShell(
+      "Welcome to MyLegacy Cannabis",
+      `
                     <!-- HEADING -->
                     <tr>
                         <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
@@ -84,8 +82,17 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                                 Questions? Reply to this email or contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a>
                             </p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","account_url","logo_url","unsubscribe_url","privacy_url","terms_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "account_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+      "terms_url",
+    ],
     isActive: true,
   },
 
@@ -96,7 +103,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "admin-id-pending",
     name: "Admin: ID Verification Pending",
     subject: "New ID Verification Required — {{customer_name}}",
-    bodyHtml: emailShell("New ID Verification Pending", `
+    bodyHtml: emailShell(
+      "New ID Verification Pending",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:22px; font-weight:bold;">New ID Verification Required</h1>
@@ -126,8 +135,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated notification from your MyLegacy Cannabis admin dashboard.</p>
                         </td>
-                    </tr>`, ADMIN_FOOTER),
-    variables: ["customer_name","customer_email","user_id","submission_date","id_type","admin_review_url","logo_url"],
+                    </tr>`,
+      ADMIN_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "customer_email",
+      "user_id",
+      "submission_date",
+      "id_type",
+      "admin_review_url",
+      "logo_url",
+    ],
     isActive: true,
   },
 
@@ -138,7 +157,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "id-rejected",
     name: "ID Verification Rejected",
     subject: "ID Verification Update — MyLegacy Cannabis",
-    bodyHtml: emailShell("ID Verification Failed - MyLegacy Cannabis", `
+    bodyHtml: emailShell(
+      "ID Verification Failed - MyLegacy Cannabis",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F44336 0%, #E91E63 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">ID Verification Failed</h1>
@@ -179,8 +200,17 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Need help? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","rejection_reason","resubmit_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "rejection_reason",
+      "resubmit_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -191,7 +221,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "id-verified",
     name: "ID Verification Approved",
     subject: "Your Account is Verified — MyLegacy Cannabis",
-    bodyHtml: emailShell("Account Verified - MyLegacy Cannabis", `
+    bodyHtml: emailShell(
+      "Account Verified - MyLegacy Cannabis",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Your Account is Verified!</h1>
@@ -229,8 +261,16 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","shop_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "shop_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -241,7 +281,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "order-confirmation",
     name: "Order Confirmation",
     subject: "Order Confirmed — #{{order_id}}",
-    bodyHtml: emailShell("Order Confirmation", `
+    bodyHtml: emailShell(
+      "Order Confirmation",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Confirmed!</h1>
@@ -278,8 +320,23 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","order_items","delivery_address","payment_amount","payment_reference","payment_email","payment_instructions","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "order_items",
+      "delivery_address",
+      "payment_amount",
+      "payment_reference",
+      "payment_email",
+      "payment_instructions",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -290,7 +347,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "payment-received-customer",
     name: "Payment Received (Customer)",
     subject: "Payment Received — Order #{{order_id}}",
-    bodyHtml: emailShell("Payment Received", `
+    bodyHtml: emailShell(
+      "Payment Received",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Payment Received</h1>
@@ -318,8 +377,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -330,7 +399,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "payment-received-admin",
     name: "Admin: Payment Received",
     subject: "New Payment Received — Order #{{order_id}}",
-    bodyHtml: emailShell("New Payment Received", `
+    bodyHtml: emailShell(
+      "New Payment Received",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">New Payment Received</h1>
@@ -358,8 +429,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
                         </td>
-                    </tr>`, ADMIN_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      ADMIN_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -370,7 +451,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-order-placed",
     name: "Guest Order Placed",
     subject: "Order Received — #{{order_id}}",
-    bodyHtml: emailShell("Order Received", `
+    bodyHtml: emailShell(
+      "Order Received",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Received</h1>
@@ -405,8 +488,22 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","payment_amount","payment_reference","payment_email","payment_instructions","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "payment_amount",
+      "payment_reference",
+      "payment_email",
+      "payment_instructions",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -416,7 +513,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-id-pending-admin",
     name: "Admin: Guest ID Pending",
     subject: "New Guest ID Verification — Order #{{order_id}}",
-    bodyHtml: emailShell("New Guest Order", `
+    bodyHtml: emailShell(
+      "New Guest Order",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:22px; font-weight:bold;">New Guest Order</h1>
@@ -443,8 +542,21 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
                         </td>
-                    </tr>`, ADMIN_FOOTER),
-    variables: ["customer_name","customer_email","submission_date","id_type","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      ADMIN_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "customer_email",
+      "submission_date",
+      "id_type",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -455,7 +567,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-id-rejected",
     name: "Guest ID Verification Rejected",
     subject: "ID Verification Failed — MyLegacy Cannabis",
-    bodyHtml: emailShell("ID Verification Failed", `
+    bodyHtml: emailShell(
+      "ID Verification Failed",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F44336 0%, #E91E63 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">ID Verification Failed</h1>
@@ -486,8 +600,19 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","rejection_reason","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "rejection_reason",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -498,7 +623,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-id-verified",
     name: "Guest ID Verified",
     subject: "ID Verified — Your Order is Being Processed",
-    bodyHtml: emailShell("ID Verified", `
+    bodyHtml: emailShell(
+      "ID Verified",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">ID Verified</h1>
@@ -519,8 +646,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -531,7 +668,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-payment-received",
     name: "Guest Payment Received",
     subject: "Payment Received — Order #{{order_id}}",
-    bodyHtml: emailShell("Payment Received", `
+    bodyHtml: emailShell(
+      "Payment Received",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Payment Received</h1>
@@ -559,8 +698,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -571,7 +720,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "guest-payment-admin",
     name: "Admin: Guest Payment Received",
     subject: "Guest Payment Received — Order #{{order_id}}",
-    bodyHtml: emailShell("Guest Payment Received", `
+    bodyHtml: emailShell(
+      "Guest Payment Received",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #F19929 0%, #E8792B 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Guest Payment Received</h1>
@@ -598,8 +749,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </table>
                             <p style="color:#666; font-size:13px; line-height:1.5; margin:20px 0 0 0;">This is an automated admin notification from MyLegacy Cannabis.</p>
                         </td>
-                    </tr>`, ADMIN_FOOTER),
-    variables: ["customer_name","order_id","order_total","action_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      ADMIN_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_total",
+      "action_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -610,7 +771,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "order-shipped",
     name: "Order Shipped",
     subject: "Your Order Has Shipped — #{{order_id}}",
-    bodyHtml: emailShell("Order Shipped", `
+    bodyHtml: emailShell(
+      "Order Shipped",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #2196F3 0%, #03A9F4 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Your Order Has Shipped!</h1>
@@ -638,8 +801,18 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             </div>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","tracking_number","tracking_url","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "tracking_number",
+      "tracking_url",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 
@@ -650,7 +823,9 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
     slug: "order-status-update",
     name: "Order Status Update",
     subject: "Order Update — #{{order_id}} is now {{order_status}}",
-    bodyHtml: emailShell("Order Status Update", `
+    bodyHtml: emailShell(
+      "Order Status Update",
+      `
                     <tr>
                         <td style="background:linear-gradient(135deg, #4B2DBE 0%, #3A2270 100%); padding:20px 30px; text-align:center;">
                             <h1 style="color:#FFFFFF; margin:0; font-size:24px; font-weight:bold;">Order Update</h1>
@@ -670,8 +845,19 @@ export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
                             <p style="color:#666; font-size:14px; line-height:1.6; margin:20px 0;">{{status_message}}</p>
                             <p style="color:#333; font-size:16px; line-height:1.6; margin:20px 0 0 0;">Questions? Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color:#4B2DBE; text-decoration:none; font-weight:500;">support@mylegacycannabis.ca</a></p>
                         </td>
-                    </tr>`, CUSTOMER_FOOTER),
-    variables: ["customer_name","order_id","order_status","update_date","status_message","logo_url","unsubscribe_url","privacy_url"],
+                    </tr>`,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "customer_name",
+      "order_id",
+      "order_status",
+      "update_date",
+      "status_message",
+      "logo_url",
+      "unsubscribe_url",
+      "privacy_url",
+    ],
     isActive: true,
   },
 ];

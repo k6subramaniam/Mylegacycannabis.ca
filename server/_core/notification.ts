@@ -15,9 +15,7 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
 const buildEndpointUrl = (baseUrl: string): string => {
-  const normalizedBase = baseUrl.endsWith("/")
-    ? baseUrl
-    : `${baseUrl}/`;
+  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return new URL(
     "webdevtoken.v1.WebDevService/SendNotification",
     normalizedBase
@@ -79,7 +77,9 @@ export async function notifyOwner(
   try {
     emailSent = await Promise.race([
       sendAdminNotification(title, content),
-      new Promise<false>((resolve) => setTimeout(() => resolve(false), NOTIFICATION_TIMEOUT_MS)),
+      new Promise<false>(resolve =>
+        setTimeout(() => resolve(false), NOTIFICATION_TIMEOUT_MS)
+      ),
     ]);
   } catch (err) {
     console.warn("[Notification] Email notification failed:", err);
@@ -90,7 +90,10 @@ export async function notifyOwner(
     try {
       const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), NOTIFICATION_TIMEOUT_MS);
+      const timeout = setTimeout(
+        () => controller.abort(),
+        NOTIFICATION_TIMEOUT_MS
+      );
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -115,7 +118,9 @@ export async function notifyOwner(
       }
     } catch (error: any) {
       if (error?.name === "AbortError") {
-        console.warn(`[Notification] Forge API timed out after ${NOTIFICATION_TIMEOUT_MS / 1000}s`);
+        console.warn(
+          `[Notification] Forge API timed out after ${NOTIFICATION_TIMEOUT_MS / 1000}s`
+        );
       } else {
         console.warn("[Notification] Forge API error:", error);
       }
@@ -123,7 +128,9 @@ export async function notifyOwner(
   }
 
   if (!emailSent && !forgeSent) {
-    console.warn(`[Notification] All channels failed for: "${title}". SMTP_PASS may be missing — set a Gmail App Password in .env for real email delivery.`);
+    console.warn(
+      `[Notification] All channels failed for: "${title}". SMTP_PASS may be missing — set a Gmail App Password in .env for real email delivery.`
+    );
   }
 
   return emailSent || forgeSent;
@@ -135,7 +142,7 @@ export async function notifyOwner(
  * so the user gets an instant response.
  */
 export function notifyOwnerAsync(payload: NotificationPayload): void {
-  notifyOwner(payload).catch((err) =>
+  notifyOwner(payload).catch(err =>
     console.error("[Notification] Background send failed:", err)
   );
 }

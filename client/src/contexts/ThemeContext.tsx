@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -54,9 +60,14 @@ export function ThemeProvider({
   //          causing all consuming components to re-render unnecessarily even when theme state didn't change.
   // 📊 Impact: Reduces unnecessary re-renders of all components consuming useTheme().
   // 🔬 Measurement: Verify with React DevTools Profiler.
-  const contextValue = useMemo(() => ({
-    theme, toggleTheme, switchable
-  }), [theme, toggleTheme, switchable]);
+  const contextValue = useMemo(
+    () => ({
+      theme,
+      toggleTheme,
+      switchable,
+    }),
+    [theme, toggleTheme, switchable]
+  );
 
   return (
     <ThemeContext.Provider value={contextValue}>
