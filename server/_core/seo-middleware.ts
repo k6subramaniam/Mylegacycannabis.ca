@@ -1,3 +1,4 @@
+import { getProductBySlug, getProductReviewStats } from "../db";
 /**
  * Express middleware that performs server-side SEO injection for bots.
  *
@@ -22,6 +23,7 @@ const SITE_URL = process.env.SITE_URL || "https://mylegacycannabisca-production.
 interface RouteMeta {
   title: string;
   description: string;
+  jsonLd?: string;
 }
 
 const ROUTE_META: Record<string, RouteMeta> = {
@@ -79,7 +81,7 @@ const CATEGORY_META: Record<string, RouteMeta> = {
   accessories: { title: "Cannabis Accessories \u2014 Papers, Pipes & Grinders | My Legacy Cannabis", description: "Shop cannabis accessories at My Legacy Cannabis." },
 };
 
-function getMetaForPath(path: string): RouteMeta | null {
+async function getMetaForPath(path: string): Promise<RouteMeta | null> {
   // Exact match
   if (ROUTE_META[path]) return ROUTE_META[path];
 
@@ -87,11 +89,24 @@ function getMetaForPath(path: string): RouteMeta | null {
   const catMatch = path.match(/^\/shop\/([a-z0-9-]+)$/);
   if (catMatch && CATEGORY_META[catMatch[1]]) return CATEGORY_META[catMatch[1]];
 
-  // Product match: /product/:slug — will be handled dynamically later
-  // For now, return a sensible default
+  // Product match: /product/:slug
   if (path.startsWith("/product/")) {
-    const slug = path.replace("/product/", "").replace(/-/g, " ");
-    const name = slug.replace(/\b\w/g, l => l.toUpperCase());
+    const slug = path.replace("/product/", "");
+    const name = slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+
+    try {
+      const product = await getProductBySlug(slug);
+      if (product) {
+        return {
+          title: `${product.name} | My Legacy Cannabis`,
+          description: product.description || `Shop ${product.name} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`,
+          jsonLd: await buildProductJsonLd(product, slug)
+        };
+      }
+    } catch (err) {
+      console.error("Error fetching product for SEO", err);
+    }
+
     return {
       title: `${name} | My Legacy Cannabis`,
       description: `Shop ${name} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`,
@@ -109,8 +124,88 @@ function escapeHtml(str: string): string {
  * Inject per-route <title>, <meta description>, OG tags, and canonical
  * into the HTML template before sending to the browser/bot.
  */
-export function injectSeoMeta(html: string, requestPath: string): string {
-  const meta = getMetaForPath(requestPath);
+
+async function buildProductJsonLd(product: any, slug: string) {
+  let price = 0;
+  if (product.variants && product.variants.length > 0) {
+    price = product.variants[0].price;
+  } else if (product.price) {
+    price = product.price;
+  } else {
+    price = 0;
+  }
+
+  const stats = await getProductReviewStats(product.id);
+
+  const jsonLd: any = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.imageUrl ? (product.imageUrl.startsWith("http") ? product.imageUrl : `${SITE_URL}${product.imageUrl}`) : `${SITE_URL}/logo.webp`,
+    "description": product.description || `Shop ${product.name} at My Legacy Cannabis.`,
+    "sku": product.sku || product.id.toString(),
+    "brand": {
+      "@type": "Brand",
+      "name": "My Legacy Cannabis"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": `${SITE_URL}/product/${slug}`,
+      "priceCurrency": "CAD",
+      "price": (price / 100).toFixed(2),
+      "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "itemCondition": "https://schema.org/NewCondition",
+      "shippingDetails": {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "0",
+          "currency": "CAD"
+        },
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "CA"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "d"
+          },
+          "transitTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 1,
+            "maxValue": 5,
+            "unitCode": "d"
+          }
+        }
+      },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "CA",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 14,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/FreeReturn"
+      }
+    }
+  };
+
+  if (stats.count > 0) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      "ratingValue": stats.average.toFixed(1),
+      "reviewCount": stats.count
+    };
+  }
+
+  return `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+}
+
+export async function injectSeoMeta(html: string, requestPath: string): Promise<string> {
+  const meta = await getMetaForPath(requestPath);
   const canonicalUrl = `${SITE_URL}${requestPath === "/" ? "/" : requestPath}`;
 
 
@@ -169,6 +264,14 @@ export function injectSeoMeta(html: string, requestPath: string): string {
       /<!--seo:twitter:description--><meta name="twitter:description" content="[^"]*"/,
       `<!--seo:twitter:description--><meta name="twitter:description" content="${safeDesc}"`
     );
+
+    // 10) Inject JSON-LD
+    if (meta.jsonLd) {
+      result = result.replace(
+        /<\/head>/i,
+        `${meta.jsonLd}\n</head>`
+      );
+    }
   } else {
     // No per-route meta — just replace __SITE_URL__ (already done above)
   }
