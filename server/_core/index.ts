@@ -4,6 +4,7 @@ import dns from "dns";
 // so nodemailer and any other net connections resolve to IPv4 addresses.
 dns.setDefaultResultOrder("ipv4first");
 import express from "express";
+import compression from "compression";
 import helmet from "helmet";
 import { createServer } from "http";
 import fs from "fs";
@@ -76,6 +77,9 @@ async function startServer() {
   initPushService();
 
   const app = express();
+
+  // First middleware — before everything else
+  app.use(compression({ level: 6, threshold: 1024 }));
   const server = createServer(app);
 
   // Add security headers
