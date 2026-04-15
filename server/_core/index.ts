@@ -649,10 +649,36 @@ async function startServer() {
   // Railway (and most PaaS platforms) assign a PORT env var and expect the server
   // to bind EXACTLY to that port on 0.0.0.0. Port-scanning to a fallback causes
   // Railway to return 502 because traffic is routed only to the assigned PORT.
-  const port = parseInt(process.env.PORT || "3000", 10);
+  const basePort = parseInt(process.env.PORT || "3000", 10);
+  let currentPort = basePort;
+  const maxPortAttempts = 10;
 
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${port}/`);
+  // Handle EADDRINUSE gracefully during development
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      // In production or with explicit PORT, don't try other ports
+      if (process.env.PORT || process.env.NODE_ENV !== "development") {
+        console.error(
+          `[Server] Port ${currentPort} is in use. Exiting.`
+        );
+        process.exit(1);
+      }
+      
+      // In dev mode, immediately try next port (no retries on same port)
+      currentPort++;
+      if (currentPort > basePort + maxPortAttempts) {
+        console.error(`[Server] No available ports in range ${basePort}-${currentPort - 1}. Exiting.`);
+        process.exit(1);
+      }
+      console.log(`[Server] Port ${currentPort - 1} in use, trying ${currentPort}...`);
+      server.listen(currentPort, "0.0.0.0");
+    } else {
+      throw err;
+    }
+  });
+
+  server.listen(currentPort, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${currentPort}/`);
   });
 
   // ─── GRACEFUL SHUTDOWN (fixes EADDRINUSE on tsx watch restarts) ───
