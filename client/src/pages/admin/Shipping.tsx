@@ -96,12 +96,11 @@ export default function AdminShipping() {
                     {editingId === zone.id ? (
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => updateMutation.mutate({ id: zone.id, ...editForm })}
-                          aria-label="Save changes"
                           className="p-2 rounded-lg hover:bg-green-50 text-green-600"><Save size={14} /></button>
-                        <button onClick={() => setEditingId(null)} aria-label="Cancel editing" className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={14} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={14} /></button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(zone)} aria-label={`Edit ${zone.zoneName}`} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                      <button onClick={() => startEdit(zone)} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
                     )}
                   </td>
                 </tr>
@@ -117,7 +116,7 @@ export default function AdminShipping() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800">Add Shipping Zone</h2>
-              <button onClick={() => setShowNew(false)} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => setShowNew(false)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...newForm, provinces: newForm.provinces.split(",").map(p => p.trim()) }); }} className="p-5 space-y-4">
               <div>
