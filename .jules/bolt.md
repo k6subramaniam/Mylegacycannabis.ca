@@ -8,7 +8,6 @@
 ## 2025-02-20 - Bulk Update Queries using Drizzle
 **Learning:** Drizzle ORM lacks a native `bulkUpdate` feature. When modifying multiple rows based on unique IDs (e.g., restoring stock for an order), a `for` loop executing `.update()` leads to severe N+1 query latency.
 **Action:** Use Drizzle's `sql` literal helper to construct a single `UPDATE ... SET col = CASE id WHEN ... THEN ... ELSE col END` query with an `inArray(schema.id, ids)` filter. Always reduce/aggregate duplicate entries first before constructing the SQL chunks.
-
-## 2025-02-28 - Google Analytics 4 Script Execution
-**Learning:** Placing third-party tracking scripts like GA4 high in the `<head>` with `async` can block First Contentful Paint (FCP) and degrade Lighthouse scores, as the browser attempts to fetch and execute them during critical rendering path.
-**Action:** Always `defer` non-critical analytics scripts, load them with `send_page_view: false`, and trigger the initial `page_view` event on `window.addEventListener('load')` to push the script execution off the critical rendering path.
+## 2025-04-15 - Enable Express Compression
+ **Learning:** Express server by default does not compress assets, leading to large payloads sent to clients and slow FCP.
+ **Action:** Add `compression` middleware as the first middleware in the Express application to compress all responses.

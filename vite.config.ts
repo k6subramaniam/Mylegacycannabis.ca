@@ -18,30 +18,51 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Charts — only loaded on admin pages
+          if (
+            id.includes("node_modules/recharts/") ||
+            id.includes("node_modules/d3")
+          ) {
+            return "vendor-charts";
+          }
           // React core — loaded on every page, cache long-term
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/scheduler/')) {
-            return 'vendor-react';
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) {
+            return "vendor-react";
           }
           // UI framework libs (radix, lucide icons, class-variance)
-          if (id.includes('node_modules/@radix-ui/') || id.includes('node_modules/lucide-react') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) {
-            return 'vendor-ui';
+          if (
+            id.includes("node_modules/@radix-ui/") ||
+            id.includes("node_modules/lucide-react") ||
+            id.includes("node_modules/class-variance-authority") ||
+            id.includes("node_modules/clsx") ||
+            id.includes("node_modules/tailwind-merge")
+          ) {
+            return "vendor-ui";
           }
           // Animation (framer-motion) — only used on some pages
-          if (id.includes('node_modules/framer-motion')) {
-            return 'vendor-motion';
+          if (id.includes("node_modules/framer-motion")) {
+            return "vendor-motion";
           }
           // tRPC + tanstack query
-          if (id.includes('node_modules/@trpc/') || id.includes('node_modules/@tanstack/')) {
-            return 'vendor-data';
+          if (
+            id.includes("node_modules/@trpc/") ||
+            id.includes("node_modules/@tanstack/")
+          ) {
+            return "vendor-data";
           }
           // Everything else in node_modules that isn't already chunked
           // (wouter, sonner, embla, recharts, etc.)
-          if (id.includes('node_modules/')) {
-            return 'vendor-misc';
+          if (id.includes("node_modules/")) {
+            return "vendor-misc";
           }
         },
       },
