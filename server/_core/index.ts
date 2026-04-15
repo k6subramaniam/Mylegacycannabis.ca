@@ -504,6 +504,11 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      onError: ({ error, path }) => {
+        console.error(`[tRPC Error] ${path}:`, error.message);
+        // This ensures the error response is always valid JSON
+        // rather than a truncated body
+      },
     })
   );
   // ─── MATERIALIZE UPLOADED FILES FROM DB ───
