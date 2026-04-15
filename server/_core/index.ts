@@ -68,25 +68,33 @@ async function startServer() {
 
   // ─── ROBOTS.TXT ───
   app.get("/robots.txt", (_req, res) => {
-    const SITE = process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app";
-    res.type("text/plain").send(
-      `User-agent: *\n` +
-      `Allow: /\n` +
-      `Disallow: /admin\n` +
-      `Disallow: /admin/*\n` +
-      `Disallow: /api/\n` +
-      `Disallow: /cart\n` +
-      `Disallow: /checkout\n` +
-      `Disallow: /account\n` +
-      `Disallow: /account/*\n` +
-      `Disallow: /verify-id\n` +
-      `Disallow: /verify-mobile\n` +
-      `Disallow: /login\n` +
-      `Disallow: /register\n` +
-      `Disallow: /complete-profile\n\n` +
-      `# Sitemap\n` +
-      `Sitemap: ${SITE}/sitemap.xml\n`
-    );
+    const SITE =
+      process.env.SITE_URL ||
+      "https://mylegacycannabisca-production.up.railway.app";
+    res
+      .type("text/plain")
+      .send(
+        `User-agent: *\n` +
+          `Allow: /\n` +
+          `Disallow: /admin\n` +
+          `Disallow: /admin/*\n` +
+          `Allow: /api/trpc/store.\n` +
+          `Allow: /api/geo/\n` +
+          `Disallow: /api/trpc/admin.\n` +
+          `Disallow: /api/trpc/auth.\n` +
+          `Disallow: /api/auth/\n` +
+          `Disallow: /cart\n` +
+          `Disallow: /checkout\n` +
+          `Disallow: /account\n` +
+          `Disallow: /account/*\n` +
+          `Disallow: /verify-id\n` +
+          `Disallow: /verify-mobile\n` +
+          `Disallow: /login\n` +
+          `Disallow: /register\n` +
+          `Disallow: /complete-profile\n\n` +
+          `# Sitemap\n` +
+          `Sitemap: ${SITE}/sitemap.xml\n`
+      );
   });
 
   // ─── XML SITEMAP ───
