@@ -78,11 +78,6 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Add security headers
-  app.use(
-    helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })
-  );
-
   // Trust the first proxy hop (Railway, Cloudflare, etc.)
   // This makes req.ip use the real client IP from X-Forwarded-For
   // instead of always returning the proxy/load-balancer IP

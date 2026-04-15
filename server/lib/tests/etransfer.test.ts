@@ -61,6 +61,10 @@ describe('e-Transfer Parsing Logic', () => {
   });
 
   describe('extractOrderNumber', () => {
+    it('extracts alphanumeric ML- prefixed order code', () => {
+      expect(extractOrderNumber('Payment for ML-1r4k8f2a-x9bZ')).toBe('ML-1r4k8f2a-x9bZ');
+    });
+
     it('extracts order with pound sign', () => {
       expect(extractOrderNumber('Payment for #1234')).toBe('1234');
     });

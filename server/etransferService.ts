@@ -364,13 +364,17 @@ export function extractMemo(body: string): string {
 }
 
 const ORDER_PATTERNS = [
+  /order\s*#?\s*(MLC?[-#]?[A-Za-z0-9-]{6,30})/i,
+  /#\s*(MLC?[-#]?[A-Za-z0-9-]{6,30})/i,
+  /Payment for\s*#?\s*(MLC?[-#]?[A-Za-z0-9-]{6,30})/i,
+  /(MLC?[-#]?[A-Za-z0-9-]{6,30})/i,
+  /order\s*#?\s*([A-Za-z0-9-]{6,30})/i,
+  /#\s*([A-Za-z0-9-]{6,30})/i,
+  /Payment for\s*#?\s*([A-Za-z0-9-]{6,30})/i,
   /(?:order|commande|invoice|facture)\s*[:：#]?\s*(\d{3,})/i,
   /numero.*?(?:de\s+commande)?\s*[:：#]?\s*(\d{3,})/i,
   /ord\s*(\d{3,})/i,
-  /cmd\s*(\d{3,})/i,
-  /order\s*#?\s*(\d{3,})/i,
-  /#\s*(\d{3,})/i,
-  /Payment for\s*#?\s*(\d{3,})/i
+  /cmd\s*(\d{3,})/i
 ];
 
 export function extractOrderNumber(subject: string, body?: string): string | null {

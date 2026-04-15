@@ -62,7 +62,6 @@ describe("admin routes", () => {
     expect(typeof stats.totalOrders).toBe("number");
     expect(typeof stats.totalRevenue).toBe("number");
   });
-});
 
   it("admin.products.list returns products for admin users", async () => {
     const ctx = createAdminContext();
@@ -119,6 +118,7 @@ describe("admin routes", () => {
     const caller = appRouter.createCaller(ctx);
     await expect(caller.admin.stats()).rejects.toThrow();
   });
+});
 
 describe("store routes", () => {
   it("store.products returns active products", async () => {

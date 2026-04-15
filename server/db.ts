@@ -2336,17 +2336,6 @@ export async function getProductReviews(productId: number) {
     .orderBy(desc(schema.productReviews.createdAt));
 }
 
-
-export async function getProductReviewStats(productId: number) {
-  if (!USE_PERSISTENT_DB) return _mem_getProductReviewStats(productId);
-  const reviews = await getDb()
-    .select()
-    .from(schema.productReviews)
-    .where(eq(schema.productReviews.productId, productId));
-  if (reviews.length === 0) return { average: 0, count: 0 };
-  const sum = reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
-  return { average: sum / reviews.length, count: reviews.length };
-}
 export async function getUserReviews(userId: number) {
   if (!USE_PERSISTENT_DB) return _mem_getUserReviews(userId);
   return getDb()
@@ -6680,13 +6669,6 @@ function _mem_getProductReviews(productId: number) {
   return _productReviews
     .filter((r: any) => r.productId === productId)
     .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
-}
-
-function _mem_getProductReviewStats(productId: number) {
-  const reviews = _productReviews.filter((r: any) => r.productId === productId);
-  if (reviews.length === 0) return { average: 0, count: 0 };
-  const sum = reviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
-  return { average: sum / reviews.length, count: reviews.length };
 }
 function _mem_getUserReviews(userId: number) {
   return _productReviews
