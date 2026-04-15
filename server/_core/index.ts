@@ -138,7 +138,11 @@ async function startServer() {
           `Allow: /\n` +
           `Disallow: /admin\n` +
           `Disallow: /admin/*\n` +
-          `Disallow: /api/\n` +
+          `Allow: /api/trpc/store.\n` +
+          `Allow: /api/geo/\n` +
+          `Disallow: /api/trpc/admin.\n` +
+          `Disallow: /api/trpc/auth.\n` +
+          `Disallow: /api/auth/\n` +
           `Disallow: /cart\n` +
           `Disallow: /checkout\n` +
           `Disallow: /account\n` +
