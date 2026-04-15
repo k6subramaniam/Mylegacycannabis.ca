@@ -1,5 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { isbot } from "isbot";
 import { systemRouter } from "./_core/systemRouter";
 import {
   publicProcedure,
@@ -112,6 +113,10 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(async opts => {
+      const userAgent = opts.ctx.req.headers["user-agent"] || "";
+      if (isbot(userAgent)) {
+        return null;
+      }
       const sessionUser = opts.ctx.user;
       if (!sessionUser) return null;
       // Look up the full user from DB to return enriched data
