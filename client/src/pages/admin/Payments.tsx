@@ -1128,7 +1128,7 @@ export default function AdminPayments() {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-gray-800 text-lg">Payment Details #{p.id}</h3>
-                    <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+                    <button onClick={() => setExpandedId(null)} aria-label="Close details" className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 gap-3">

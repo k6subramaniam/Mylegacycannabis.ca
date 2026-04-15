@@ -8,7 +8,6 @@
 ## 2025-02-20 - Bulk Update Queries using Drizzle
 **Learning:** Drizzle ORM lacks a native `bulkUpdate` feature. When modifying multiple rows based on unique IDs (e.g., restoring stock for an order), a `for` loop executing `.update()` leads to severe N+1 query latency.
 **Action:** Use Drizzle's `sql` literal helper to construct a single `UPDATE ... SET col = CASE id WHEN ... THEN ... ELSE col END` query with an `inArray(schema.id, ids)` filter. Always reduce/aggregate duplicate entries first before constructing the SQL chunks.
-
-## 2025-02-23 - Vite Bundle Split Optimization
-**Learning:** Admin-only charting libraries (like recharts and d3) being bundled into main app chunks can negatively impact the initial load times and overall performance for public users.
-**Action:** Always optimize Vite build configurations by leveraging `cssCodeSplit: true` and adding conditional statements in `manualChunks` to extract heavy, route-specific libraries into separate vendor files.
+## 2025-04-15 - Enable Express Compression
+ **Learning:** Express server by default does not compress assets, leading to large payloads sent to clients and slow FCP.
+ **Action:** Add `compression` middleware as the first middleware in the Express application to compress all responses.
