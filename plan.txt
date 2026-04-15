@@ -1,2 +1,0 @@
-1. Write a fix for SEO json-ld
-2. complete pre-commit checks

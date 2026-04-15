@@ -1,22 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-  useMemo,
-} from "react";
-import { WELCOME_BONUS } from "@/lib/data";
-
-export interface SavedAddress {
-  street: string;
-  city: string;
-  province: string;
-  provinceCode: string;
-  postalCode: string;
-  country: string;
-}
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { WELCOME_BONUS } from '@/lib/data';
 
 export interface User {
   id: string;
@@ -26,14 +9,13 @@ export interface User {
   name?: string;
   phone?: string;
   birthday?: string;
-  role?: "user" | "admin";
+  role?: 'user' | 'admin';
   idVerified: boolean;
-  idVerificationStatus: "none" | "pending" | "approved" | "rejected";
+  idVerificationStatus: 'none' | 'pending' | 'approved' | 'rejected';
   rewardsPoints: number;
   rewardsHistory: RewardsHistoryEntry[];
   referralCode: string;
   orders: Order[];
-  savedAddress?: SavedAddress | null;
 }
 
 /**
@@ -41,8 +23,8 @@ export interface User {
  * Sensitive fields (such as birthday) are omitted from persistent storage.
  */
 function persistUserToLocalStorage(user: User | null) {
-  if (typeof window === "undefined") return;
-  const key = "mlc-user";
+  if (typeof window === 'undefined') return;
+  const key = 'mlc-user';
   if (!user) {
     try {
       window.localStorage.removeItem(key);
@@ -62,7 +44,7 @@ function persistUserToLocalStorage(user: User | null) {
 export interface RewardsHistoryEntry {
   id: string;
   date: string;
-  type: "earned" | "redeemed" | "bonus";
+  type: 'earned' | 'redeemed' | 'bonus';
   points: number;
   description: string;
 }
@@ -70,7 +52,7 @@ export interface RewardsHistoryEntry {
 export interface Order {
   id: string;
   date: string;
-  status: "processing" | "shipped" | "delivered" | "cancelled";
+  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   items: { name: string; quantity: number; price: number }[];
   trackingNumber?: string;
@@ -82,20 +64,10 @@ interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<true | string>;
-  register: (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    birthday: string;
-  }) => Promise<true | string>;
+  register: (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }) => Promise<true | string>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<true | string>;
-  submitIdVerification: (
-    frontFile: File,
-    selfieFile?: File | null
-  ) => Promise<true | string>;
+  submitIdVerification: (frontFile: File, selfieFile?: File | null) => Promise<true | string>;
   addOrder: (order: Order) => void;
   refreshUser: () => Promise<void>;
 }
@@ -117,35 +89,30 @@ function unwrapTrpcResponse(responseJson: any): any {
   return data;
 }
 
-function transformBackendUser(
-  userData: Record<string, unknown>,
-  fallbackEmail?: string
-): User {
-  const name = (userData.name as string) || "";
+function transformBackendUser(userData: Record<string, unknown>, fallbackEmail?: string): User {
+  const name = (userData.name as string) || '';
   return {
-    id: userData.id?.toString() || "u" + Date.now(),
-    email: (userData.email as string) || fallbackEmail || "",
-    firstName: name.split(" ")[0] || "",
-    lastName: name.split(" ").slice(1).join(" ") || "",
+    id: userData.id?.toString() || 'u' + Date.now(),
+    email: (userData.email as string) || fallbackEmail || '',
+    firstName: name.split(' ')[0] || '',
+    lastName: name.split(' ').slice(1).join(' ') || '',
     name,
-    phone: (userData.phone as string) || "",
-    birthday: (userData.birthday as string) || "",
-    role: (userData.role as "user" | "admin") || "user",
+    phone: (userData.phone as string) || '',
+    birthday: (userData.birthday as string) || '',
+    role: (userData.role as 'user' | 'admin') || 'user',
     idVerified: (userData.idVerified as boolean) || false,
-    idVerificationStatus:
-      (userData.idVerificationStatus as User["idVerificationStatus"]) || "none",
+    idVerificationStatus: (userData.idVerificationStatus as User['idVerificationStatus']) || 'none',
     rewardsPoints: (userData.rewardsPoints as number) || 0,
     rewardsHistory: (userData.rewardsHistory as RewardsHistoryEntry[]) || [],
-    referralCode: (userData.referralCode as string) || "",
+    referralCode: (userData.referralCode as string) || '',
     orders: (userData.orders as Order[]) || [],
-    savedAddress: (userData.savedAddress as SavedAddress | null) || null,
   };
 }
 
 // Age gate helper — shared across client
 function isAtLeast19(dob: string): boolean {
   if (!dob) return true; // no birthday = skip check (optional field)
-  const parts = dob.split("-");
+  const parts = dob.split('-');
   if (parts.length !== 3) return true;
   const birthYear = parseInt(parts[0], 10);
   const birthMonth = parseInt(parts[1], 10) - 1;
@@ -153,38 +120,30 @@ function isAtLeast19(dob: string): boolean {
   if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return true;
   const today = new Date();
   let age = today.getFullYear() - birthYear;
-  if (
-    today.getMonth() < birthMonth ||
-    (today.getMonth() === birthMonth && today.getDate() < birthDay)
-  )
-    age--;
+  if (today.getMonth() < birthMonth || (today.getMonth() === birthMonth && today.getDate() < birthDay)) age--;
   return age >= 19;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem("mlc-user");
+      const saved = localStorage.getItem('mlc-user');
       if (!saved) return null;
       const parsed = JSON.parse(saved);
       // Clear invalid underage birthday from cached profile
       if (parsed?.birthday && !isAtLeast19(parsed.birthday)) {
-        parsed.birthday = "";
-        localStorage.setItem("mlc-user", JSON.stringify(parsed));
+        parsed.birthday = '';
+        localStorage.setItem('mlc-user', JSON.stringify(parsed));
       }
       return parsed;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   });
 
   // True until the first /api/trpc/auth.me check completes.
   // Prevents pages like Account.tsx from redirecting to /login before
   // the session cookie is verified (race condition after Google OAuth redirect).
   const [isLoading, setIsLoading] = useState(true);
-  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
    * Fetch the latest user data from the server.
@@ -200,9 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const refreshUser = useCallback(async () => {
     try {
-      const response = await fetch("/api/trpc/auth.me", {
-        credentials: "include",
-      });
+      const response = await fetch('/api/trpc/auth.me', { credentials: 'include' });
 
       if (response.ok) {
         const result = await response.json();
@@ -215,9 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const transformedUser = transformBackendUser(userData);
         setUser(prev => {
-          const merged = prev
-            ? { ...prev, ...transformedUser }
-            : transformedUser;
+          const merged = prev ? { ...prev, ...transformedUser } : transformedUser;
           persistUserToLocalStorage(merged);
           return merged;
         });
@@ -234,17 +189,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 500, 502, 503, etc. — server issue, NOT an auth issue.
       // Preserve existing user state; the session cookie is still valid.
-      console.warn(
-        `[Auth] Server error ${response.status} checking session — preserving existing state`
-      );
+      console.warn(`[Auth] Server error ${response.status} checking session — preserving existing state`);
     } catch (err) {
       // Network failure (timeout, DNS, dead zone, CORS, etc.)
       // The session cookie is almost certainly still valid — don't wipe the user.
       // This prevents spurious logouts on mobile with flaky connectivity.
-      console.warn(
-        "[Auth] Network error checking session — preserving existing state:",
-        (err as Error)?.message || err
-      );
+      console.warn('[Auth] Network error checking session — preserving existing state:', (err as Error)?.message || err);
     }
   }, []);
 
@@ -267,7 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Only poll if user has pending verification (to catch admin approval)
-    if (user.idVerificationStatus === "pending" || !user.idVerified) {
+    if (user.idVerificationStatus === 'pending' || !user.idVerified) {
       refreshIntervalRef.current = setInterval(refreshUser, 60_000); // every 60s
     }
 
@@ -279,109 +229,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.idVerificationStatus, user?.idVerified, refreshUser]);
 
-  const login = useCallback(
-    async (email: string, _password: string): Promise<true | string> => {
-      try {
-        const response = await fetch("/api/trpc/auth.loginEmail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: trpcBody({ email }),
-          credentials: "include",
-        });
+  const login = useCallback(async (email: string, _password: string): Promise<true | string> => {
+    try {
+      const response = await fetch('/api/trpc/auth.loginEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: trpcBody({ email }),
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          const data = unwrapTrpcResponse(result);
-          if (!data?.success || !data?.user) {
-            return data?.error || "Account not found. Please register first.";
-          }
-          const transformedUser = transformBackendUser(data.user, email);
-          setUser(transformedUser);
-          persistUserToLocalStorage(transformedUser);
-          return true;
+      if (response.ok) {
+        const result = await response.json();
+        const data = unwrapTrpcResponse(result);
+        if (!data?.success || !data?.user) {
+          return data?.error || 'Account not found. Please register first.';
         }
-        return "Login failed. Please try again.";
-      } catch (error) {
-        console.error("Login error:", error);
-        return "Login failed. Please try again.";
+        const transformedUser = transformBackendUser(data.user, email);
+        setUser(transformedUser);
+        persistUserToLocalStorage(transformedUser);
+        return true;
       }
-    },
-    []
-  );
+      return 'Login failed. Please try again.';
+    } catch (error) {
+      console.error('Login error:', error);
+      return 'Login failed. Please try again.';
+    }
+  }, []);
 
-  const register = useCallback(
-    async (data: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-      phone: string;
-      birthday: string;
-    }): Promise<true | string> => {
-      // Client-side age guard before making any network request
-      if (!data.birthday || !isAtLeast19(data.birthday)) {
-        return "You must be 19 years of age or older to create an account.";
-      }
-      try {
-        const response = await fetch("/api/trpc/auth.register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: trpcBody({
-            email: data.email,
-            name: `${data.firstName} ${data.lastName}`,
-            phone: data.phone,
-            birthday: data.birthday,
-          }),
-          credentials: "include",
-        });
+  const register = useCallback(async (data: { email: string; password: string; firstName: string; lastName: string; phone: string; birthday: string }): Promise<true | string> => {
+    // Client-side age guard before making any network request
+    if (!data.birthday || !isAtLeast19(data.birthday)) {
+      return 'You must be 19 years of age or older to create an account.';
+    }
+    try {
+      const response = await fetch('/api/trpc/auth.register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: trpcBody({
+          email: data.email,
+          name: `${data.firstName} ${data.lastName}`,
+          phone: data.phone,
+          birthday: data.birthday,
+        }),
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          const resData = unwrapTrpcResponse(result);
-          if (!resData?.success || !resData?.user) {
-            return resData?.error || "Registration failed. Please try again.";
-          }
-          const newUser: User = {
-            ...transformBackendUser(resData.user, data.email),
-            firstName: data.firstName,
-            lastName: data.lastName,
-            phone: data.phone,
-            birthday: data.birthday,
-            rewardsPoints: resData.user.rewardsPoints ?? WELCOME_BONUS,
-            rewardsHistory: [
-              {
-                id: "rh-welcome",
-                date: new Date().toISOString().split("T")[0],
-                type: "bonus",
-                points: WELCOME_BONUS,
-                description: "Welcome Bonus — Thanks for joining!",
-              },
-            ],
-            referralCode:
-              data.firstName.toUpperCase().slice(0, 4) +
-              Date.now().toString().slice(-4),
-          };
-          setUser(newUser);
-          persistUserToLocalStorage(newUser);
-          return true;
+      if (response.ok) {
+        const result = await response.json();
+        const resData = unwrapTrpcResponse(result);
+        if (!resData?.success || !resData?.user) {
+          return resData?.error || 'Registration failed. Please try again.';
         }
-        return "Registration failed. Please try again.";
-      } catch (error) {
-        console.error("Register error:", error);
-        return "Registration failed. Please try again.";
+        const newUser: User = {
+          ...transformBackendUser(resData.user, data.email),
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          birthday: data.birthday,
+          rewardsPoints: resData.user.rewardsPoints ?? WELCOME_BONUS,
+          rewardsHistory: [
+            { id: 'rh-welcome', date: new Date().toISOString().split('T')[0], type: 'bonus', points: WELCOME_BONUS, description: 'Welcome Bonus — Thanks for joining!' },
+          ],
+          referralCode: data.firstName.toUpperCase().slice(0, 4) + Date.now().toString().slice(-4),
+        };
+        setUser(newUser);
+        persistUserToLocalStorage(newUser);
+        return true;
       }
-    },
-    []
-  );
+      return 'Registration failed. Please try again.';
+    } catch (error) {
+      console.error('Register error:', error);
+      return 'Registration failed. Please try again.';
+    }
+  }, []);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("mlc-user");
-    fetch("/api/trpc/auth.logout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    localStorage.removeItem('mlc-user');
+    fetch('/api/trpc/auth.logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: trpcBody({}),
-      credentials: "include",
+      credentials: 'include',
     }).catch(console.error);
   }, []);
 
@@ -389,154 +318,136 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Update profile — persists to server (store.updateProfile) AND updates local state.
    * Returns true on success, or an error string on failure.
    */
-  const updateProfile = useCallback(
-    async (data: Partial<User>): Promise<true | string> => {
-      // Block saving an underage birthday
-      if (data.birthday && !isAtLeast19(data.birthday)) {
-        return "You must be 19 years of age or older.";
-      }
+  const updateProfile = useCallback(async (data: Partial<User>): Promise<true | string> => {
+    // Block saving an underage birthday
+    if (data.birthday && !isAtLeast19(data.birthday)) {
+      return 'You must be 19 years of age or older.';
+    }
 
-      // Build the server payload
-      const serverPayload: Record<string, unknown> = {};
-      if (
-        data.firstName !== undefined ||
-        data.lastName !== undefined ||
-        data.name !== undefined
-      ) {
-        // Combine first + last name for server (server stores single "name" field)
-        const firstName = data.firstName ?? user?.firstName ?? "";
-        const lastName = data.lastName ?? user?.lastName ?? "";
-        serverPayload.name = data.name || `${firstName} ${lastName}`.trim();
-      }
-      if (data.phone !== undefined) serverPayload.phone = data.phone;
-      if (data.birthday !== undefined) serverPayload.birthday = data.birthday;
+    // Build the server payload
+    const serverPayload: Record<string, unknown> = {};
+    if (data.firstName !== undefined || data.lastName !== undefined || data.name !== undefined) {
+      // Combine first + last name for server (server stores single "name" field)
+      const firstName = data.firstName ?? user?.firstName ?? '';
+      const lastName = data.lastName ?? user?.lastName ?? '';
+      serverPayload.name = data.name || `${firstName} ${lastName}`.trim();
+    }
+    if (data.phone !== undefined) serverPayload.phone = data.phone;
+    if (data.birthday !== undefined) serverPayload.birthday = data.birthday;
 
-      // Persist to server
-      try {
-        const response = await fetch("/api/trpc/store.updateProfile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: trpcBody(serverPayload),
-          credentials: "include",
-        });
+    // Persist to server
+    try {
+      const response = await fetch('/api/trpc/store.updateProfile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: trpcBody(serverPayload),
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          const resData = unwrapTrpcResponse(result);
-          if (resData?.success && resData?.user) {
-            // Use the server-returned user data as the source of truth
-            const updatedUser = transformBackendUser(resData.user);
-            // Merge with any local-only fields
-            setUser(prev => {
-              const merged = prev ? { ...prev, ...updatedUser } : updatedUser;
-              persistUserToLocalStorage(merged);
-              return merged;
-            });
-            return true;
-          }
+      if (response.ok) {
+        const result = await response.json();
+        const resData = unwrapTrpcResponse(result);
+        if (resData?.success && resData?.user) {
+          // Use the server-returned user data as the source of truth
+          const updatedUser = transformBackendUser(resData.user);
+          // Merge with any local-only fields
+          setUser(prev => {
+            const merged = prev ? { ...prev, ...updatedUser } : updatedUser;
+            persistUserToLocalStorage(merged);
+            return merged;
+          });
+          return true;
         }
-
-        // Server call failed — still update localStorage as fallback
-        setUser(prev => {
-          if (!prev) return prev;
-          const updated = { ...prev, ...data };
-          persistUserToLocalStorage(updated);
-          return updated;
-        });
-        return true;
-      } catch (error) {
-        console.error("Profile update error:", error);
-        // Fallback: update locally
-        setUser(prev => {
-          if (!prev) return prev;
-          const updated = { ...prev, ...data };
-          persistUserToLocalStorage(updated);
-          return updated;
-        });
-        return true;
       }
-    },
-    [user]
-  );
+
+      // Server call failed — still update localStorage as fallback
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...data };
+        persistUserToLocalStorage(updated);
+        return updated;
+      });
+      return true;
+    } catch (error) {
+      console.error('Profile update error:', error);
+      // Fallback: update locally
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...data };
+        persistUserToLocalStorage(updated);
+        return updated;
+      });
+      return true;
+    }
+  }, [user]);
 
   const addOrder = useCallback((order: Order) => {
     setUser(prev => {
       if (!prev) return prev;
       // Avoid duplicates by order id
       const exists = prev.orders.some(o => o.id === order.id);
-      const updated = exists
-        ? prev
-        : { ...prev, orders: [order, ...prev.orders] };
+      const updated = exists ? prev : { ...prev, orders: [order, ...prev.orders] };
       persistUserToLocalStorage(updated);
       return updated;
     });
   }, []);
 
-  const submitIdVerification = useCallback(
-    async (
-      frontFile: File,
-      selfieFile?: File | null
-    ): Promise<true | string> => {
-      try {
-        // Convert files to base64
-        const toBase64 = (file: File): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              // Strip the data URL prefix (e.g., "data:image/jpeg;base64,")
-              const base64 = result.split(",")[1];
-              resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        };
-
-        const frontBase64 = await toBase64(frontFile);
-        const payload: Record<string, unknown> = {
-          frontImageBase64: frontBase64,
-          contentType: frontFile.type || "image/jpeg",
-          guestEmail: user?.email || "",
-          guestName: user?.name || "",
-        };
-
-        if (selfieFile) {
-          payload.selfieImageBase64 = await toBase64(selfieFile);
-        }
-
-        const response = await fetch("/api/trpc/store.submitVerification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: trpcBody(payload),
-          credentials: "include",
+  const submitIdVerification = useCallback(async (frontFile: File, selfieFile?: File | null): Promise<true | string> => {
+    try {
+      // Convert files to base64
+      const toBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Strip the data URL prefix (e.g., "data:image/jpeg;base64,")
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+      };
 
-        if (response.ok) {
-          const result = await response.json();
-          const data = unwrapTrpcResponse(result);
-          if (data?.id) {
-            setUser(prev => {
-              if (!prev) return prev;
-              const updated = {
-                ...prev,
-                idVerificationStatus: "pending" as const,
-              };
-              persistUserToLocalStorage(updated);
-              return updated;
-            });
-            return true;
-          }
-          return data?.error || "Verification submission failed.";
-        }
-        return "Verification submission failed. Please try again.";
-      } catch (error) {
-        console.error("ID verification error:", error);
-        return "Verification submission failed. Please try again.";
+      const frontBase64 = await toBase64(frontFile);
+      const payload: Record<string, unknown> = {
+        frontImageBase64: frontBase64,
+        contentType: frontFile.type || 'image/jpeg',
+        guestEmail: user?.email || '',
+        guestName: user?.name || '',
+      };
+
+      if (selfieFile) {
+        payload.selfieImageBase64 = await toBase64(selfieFile);
       }
-    },
-    [user]
-  );
+
+      const response = await fetch('/api/trpc/store.submitVerification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: trpcBody(payload),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const data = unwrapTrpcResponse(result);
+        if (data?.id) {
+          setUser(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, idVerificationStatus: 'pending' as const };
+            persistUserToLocalStorage(updated);
+            return updated;
+          });
+          return true;
+        }
+        return data?.error || 'Verification submission failed.';
+      }
+      return 'Verification submission failed. Please try again.';
+    } catch (error) {
+      console.error('ID verification error:', error);
+      return 'Verification submission failed. Please try again.';
+    }
+  }, [user]);
 
   // ⚡ Bolt Performance Optimization:
   // 💡 What: Memoized the AuthContext value object using useMemo.
@@ -546,42 +457,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   //             during global state updates or layout shifts.
   // 🔬 Measurement: Verify with React DevTools Profiler that components consuming useAuth()
   //                  no longer re-render unless auth state actually changes.
-  const contextValue = useMemo(
-    () => ({
-      user,
-      isAuthenticated: !!user,
-      isAdmin: !!user && user.role === "admin",
-      isLoading,
-      login,
-      register,
-      logout,
-      updateProfile,
-      submitIdVerification,
-      addOrder,
-      refreshUser,
-    }),
-    [
-      user,
-      isLoading,
-      login,
-      register,
-      logout,
-      updateProfile,
-      submitIdVerification,
-      addOrder,
-      refreshUser,
-    ]
-  );
+  const contextValue = useMemo(() => ({
+    user,
+    isAuthenticated: !!user,
+    isAdmin: !!user && user.role === 'admin',
+    isLoading,
+    login,
+    register,
+    logout,
+    updateProfile,
+    submitIdVerification,
+    addOrder,
+    refreshUser,
+  }), [
+    user,
+    isLoading,
+    login,
+    register,
+    logout,
+    updateProfile,
+    submitIdVerification,
+    addOrder,
+    refreshUser,
+  ]);
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 }

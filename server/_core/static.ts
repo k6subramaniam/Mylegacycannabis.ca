@@ -53,14 +53,14 @@ export function serveStatic(app: Express) {
   }));
 
   // SPA fallback: inject per-route SEO metadata into index.html
-  app.use("*", async (req, res) => {
+  app.use("*", (req, res) => {
     // HTML must never be cached so browsers always get the latest hashed asset references
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
     const requestPath = req.originalUrl.split("?")[0];
-    const html = await injectSeoMeta(getIndexHtml(), requestPath);
+    const html = injectSeoMeta(getIndexHtml(), requestPath);
     res.status(200).set({ "Content-Type": "text/html" }).send(html);
   });
 }
