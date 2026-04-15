@@ -2691,82 +2691,80 @@ Return ONLY the JSON object.`;
       cacheStats: adminProcedure.query(() => {
         return getGeoCacheStats();
       }),
-    }),
 
-    // ─── SEO: Search Console API ───
-    seo: router({
-      /** Dashboard: latest metrics, trend, alerts, top keywords */
-      dashboard: adminProcedure.query(async () => {
-        const { getSeoDashboard, isGscConfigured } = await import(
-          "./searchConsoleService"
-        );
-        return {
-          configured: isGscConfigured(),
-          ...(await getSeoDashboard()),
-        };
-      }),
-
-      /** Top keywords with full details */
-      keywords: adminProcedure
-        .input(
-          z
-            .object({
-              limit: z.number().default(50),
-            })
-            .optional()
-        )
+      /** Sales by province (from orders table shipping_address) for Canada map */
+      salesByProvince: adminProcedure
+        .input(z.object({ days: z.number().default(30) }).optional())
         .query(async ({ input }) => {
-          const metrics = await db.getSeoMetrics("search_analytics", 1);
-          const latest = metrics[0]?.data as any;
-          return (latest?.topQueries || []).slice(0, input?.limit ?? 50);
+          return db.getSalesByProvince(input?.days ?? 30);
         }),
 
-      /** Top pages with performance data */
-      pages: adminProcedure
-        .input(
-          z
-            .object({
-              limit: z.number().default(50),
-            })
-            .optional()
-        )
-        .query(async ({ input }) => {
-          const metrics = await db.getSeoMetrics("search_analytics", 1);
-          const latest = metrics[0]?.data as any;
-          return (latest?.topPages || []).slice(0, input?.limit ?? 50);
-        }),
-
-      /** Unacknowledged alerts */
-      alerts: adminProcedure.query(async () => {
-        return db.getUnacknowledgedSeoAlerts(50);
-      }),
-
-      /** Acknowledge an alert */
-      acknowledgeAlert: adminProcedure
+      /** AI-powered map insight using configured LLM */
+      aiMapInsight: adminProcedure
         .input(
           z.object({
-            alertId: z.number(),
+            salesData: z.record(
+              z.string(),
+              z.object({
+                revenue: z.number(),
+                orders: z.number(),
+                province: z.string(),
+              })
+            ),
           })
         )
-        .mutation(async ({ input, ctx }) => {
-          await db.acknowledgeSeoAlert(
-            input.alertId,
-            ctx.user?.name || ctx.user?.email || "admin"
-          );
-          return { success: true };
+        .mutation(async ({ input }) => {
+          try {
+            const { invokeLLM } = await import("./_core/llm");
+            type ProvData = {
+              revenue: number;
+              orders: number;
+              province: string;
+            };
+            const dataStr = Object.entries(
+              input.salesData as Record<string, ProvData>
+            )
+              .sort(([, a], [, b]) => b.revenue - a.revenue)
+              .map(
+                ([code, d]) =>
+                  `${d.province} (${code}): $${d.revenue.toFixed(2)} revenue, ${d.orders} orders`
+              )
+              .join("\n");
+
+            const result = await invokeLLM({
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are a cannabis e-commerce analytics expert for My Legacy Cannabis (Canada-based, serving GTA & Ottawa). " +
+                    "Provide a concise 2-3 sentence insight about the provincial sales distribution. " +
+                    "Focus on actionable recommendations: which provinces to target for growth, " +
+                    "any surprising patterns, and opportunities. Keep it brief and business-focused.",
+                },
+                {
+                  role: "user",
+                  content: `Here is our sales data by province:\n${dataStr}\n\nProvide a brief actionable insight.`,
+                },
+              ],
+              maxTokens: 300,
+            });
+
+            const text =
+              typeof result.choices[0]?.message?.content === "string"
+                ? result.choices[0].message.content
+                : "";
+            return { insight: text.trim() };
+          } catch (err: any) {
+            console.error(
+              "[aiMapInsight] LLM error:",
+              err.message?.slice(0, 200)
+            );
+            return {
+              insight:
+                "AI insight unavailable. Check your AI configuration in Admin > Settings.",
+            };
+          }
         }),
-
-      /** Manually trigger sitemap ping */
-      pingSitemap: adminProcedure.mutation(async () => {
-        const { pingSitemap } = await import("./searchConsoleService");
-        return pingSitemap();
-      }),
-
-      /** Manually trigger metrics collection */
-      collectNow: adminProcedure.mutation(async () => {
-        const { collectSeoMetrics } = await import("./searchConsoleService");
-        return collectSeoMetrics();
-      }),
     }),
   }),
   store: router({
@@ -2794,6 +2792,40 @@ Return ONLY the JSON object.`;
           "Profile changes are locked. Please contact support@mylegacycannabis.ca to update your details."
         );
       }),
+
+    // ─── SAVE SHIPPING ADDRESS (users can update their own saved address for checkout autofill) ───
+    saveAddress: protectedProcedure
+      .input(
+        z.object({
+          street: z.string().min(1),
+          city: z.string().min(1),
+          province: z.string().min(1),
+          provinceCode: z.string().max(5).optional(),
+          postalCode: z.string().min(1),
+          country: z.string().max(2).default("CA"),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const userId = ctx.user?.id;
+        if (!userId) throw new Error("Not authenticated");
+        await db.updateUserAddress(userId, {
+          addressStreet: input.street,
+          addressCity: input.city,
+          addressProvince: input.province,
+          addressProvinceCode: input.provinceCode || "",
+          addressPostalCode: input.postalCode,
+          addressCountry: input.country,
+        });
+        return { success: true };
+      }),
+
+    /** Remove the authenticated user's saved shipping address */
+    clearAddress: protectedProcedure.mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new Error("Not authenticated");
+      await db.clearUserAddress(userId);
+      return { success: true };
+    }),
 
     // ─── REFRESH USER (authenticated users — re-fetch latest data incl. ID verification status) ───
     refreshUser: protectedProcedure.query(async ({ ctx }) => {
@@ -2981,7 +3013,8 @@ Return ONLY the JSON object.`;
           page: 1,
         });
         // Filter out current product's base name group, pick random sample
-        const others = ((all as any).products || all).filter(
+        const productsList = (all as any).data || (all as any).products || (Array.isArray(all) ? all : []);
+        const others = productsList.filter(
           (p: any) => p.id !== input.productId
         );
         // Shuffle and take the requested amount

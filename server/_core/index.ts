@@ -4,6 +4,7 @@ import dns from "dns";
 // so nodemailer and any other net connections resolve to IPv4 addresses.
 dns.setDefaultResultOrder("ipv4first");
 import express from "express";
+import helmet from "helmet";
 import { createServer } from "http";
 import fs from "fs";
 import path from "path";
@@ -77,10 +78,23 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // Add security headers
+  app.use(
+    helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })
+  );
+
   // Trust the first proxy hop (Railway, Cloudflare, etc.)
   // This makes req.ip use the real client IP from X-Forwarded-For
   // instead of always returning the proxy/load-balancer IP
   app.set("trust proxy", 1);
+
+  // Add security headers using helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Don't block inline scripts/styles for now
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
@@ -422,12 +436,83 @@ async function startServer() {
     res.json(validatePostalCode(code));
   });
 
+  // ─── CANADA POST ADDRESSCOMPLETE PROXY ───
+  // Proxies requests to Canada Post AddressComplete API to keep the API key server-side.
+  // Requires CANADA_POST_ADDRESS_KEY env var.
+  const CANADA_POST_ADDRESS_KEY = process.env.CANADA_POST_ADDRESS_KEY || "";
+
+  app.get("/api/address-lookup", async (req, res) => {
+    if (!CANADA_POST_ADDRESS_KEY) {
+      return res.json({ Items: [] });
+    }
+    try {
+      const searchTerm = req.query.SearchTerm as string;
+      const lastId = req.query.LastId as string;
+      const country = req.query.Country || "CAN";
+      if (!searchTerm)
+        return res.status(400).json({ error: "SearchTerm is required" });
+
+      const params = new URLSearchParams({
+        Key: CANADA_POST_ADDRESS_KEY,
+        SearchTerm: searchTerm,
+        Country: String(country),
+        MaxSuggestions: "7",
+        MaxResults: "7",
+      });
+      if (lastId) params.set("LastId", lastId);
+
+      const apiRes = await fetch(
+        `https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Find/v2.10/json3.ws?${params}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!apiRes.ok)
+        throw new Error(`AddressComplete Find returned ${apiRes.status}`);
+      const data = await apiRes.json();
+      res.json(data);
+    } catch (err) {
+      console.error("[AddressLookup] Find error:", (err as Error).message);
+      res.json({ Items: [] });
+    }
+  });
+
+  app.get("/api/address-lookup/retrieve", async (req, res) => {
+    if (!CANADA_POST_ADDRESS_KEY) {
+      return res.json({ Items: [] });
+    }
+    try {
+      const id = req.query.Id as string;
+      if (!id) return res.status(400).json({ error: "Id is required" });
+
+      const params = new URLSearchParams({
+        Key: CANADA_POST_ADDRESS_KEY,
+        Id: id,
+      });
+
+      const apiRes = await fetch(
+        `https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Retrieve/v2.11/json3.ws?${params}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!apiRes.ok)
+        throw new Error(`AddressComplete Retrieve returned ${apiRes.status}`);
+      const data = await apiRes.json();
+      res.json(data);
+    } catch (err) {
+      console.error("[AddressLookup] Retrieve error:", (err as Error).message);
+      res.json({ Items: [] });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      onError: ({ error, path }) => {
+        console.error(`[tRPC Error] ${path}:`, error.message);
+        // This ensures the error response is always valid JSON
+        // rather than a truncated body
+      },
     })
   );
   // ─── MATERIALIZE UPLOADED FILES FROM DB ───
@@ -843,32 +928,6 @@ async function startServer() {
       },
       2 * 60 * 60 * 1000
     ); // every 2 hours
-
-    // ─── SEO METRICS COLLECTION ───
-    // Collect Google Search Console data every 6 hours (GSC data has 48-72h delay,
-    // so hourly polling is unnecessary; 6h ensures we catch daily updates).
-    setInterval(
-      async () => {
-        try {
-          const { collectSeoMetrics, isGscConfigured } = await import(
-            "../searchConsoleService"
-          );
-          if (!isGscConfigured()) return;
-          const result = await collectSeoMetrics();
-          if (result.collected) {
-            console.log(
-              `[Cron] SEO metrics collected, ${result.alertsGenerated} alert(s) generated`
-            );
-          }
-        } catch (err) {
-          console.error(
-            "[Cron] SEO metrics collection error:",
-            (err as Error).message
-          );
-        }
-      },
-      6 * 60 * 60 * 1000
-    ); // every 6 hours
 
     // Run initial order back-fill and AI memory refresh 15s after startup
     setTimeout(async () => {

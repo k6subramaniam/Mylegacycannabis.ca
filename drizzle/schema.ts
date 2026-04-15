@@ -109,6 +109,13 @@ export const users = pgTable("users", {
   lastGeoRegion: varchar("last_geo_region", { length: 100 }),
   lastGeoCountry: varchar("last_geo_country", { length: 2 }),
   registrationIp: varchar("registration_ip", { length: 45 }),
+  // ─── Saved shipping address (for "Use my account address" at checkout) ───
+  addressStreet: varchar("address_street", { length: 500 }),
+  addressCity: varchar("address_city", { length: 255 }),
+  addressProvince: varchar("address_province", { length: 100 }),
+  addressProvinceCode: varchar("address_province_code", { length: 5 }),
+  addressPostalCode: varchar("address_postal_code", { length: 10 }),
+  addressCountry: varchar("address_country", { length: 2 }).default("CA"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
@@ -673,35 +680,3 @@ export const unmatchedPayments = pgTable("unmatched_payments", {
 
 export type UnmatchedPayment = typeof unmatchedPayments.$inferSelect;
 export type InsertUnmatchedPayment = typeof unmatchedPayments.$inferInsert;
-
-// ─── SEO METRICS (Google Search Console data) ───
-// Stores daily snapshots of search analytics, index coverage, and sitemap status.
-// Populated by a daily cron job via the Search Console API service.
-export const seoMetrics = pgTable("seo_metrics", {
-  id: serial("id").primaryKey(),
-  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
-  metricType: varchar("metric_type", { length: 50 }).notNull(), // "search_analytics", "index_coverage", "sitemap_status"
-  data: json("data").notNull(), // Raw JSON from GSC API
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type SeoMetric = typeof seoMetrics.$inferSelect;
-export type InsertSeoMetric = typeof seoMetrics.$inferInsert;
-
-// ─── SEO ALERTS (regression detection) ───
-// Stores alerts triggered by the SEO monitoring cron job when
-// key metrics degrade (keyword drops, crawl decline, index drops).
-export const seoAlerts = pgTable("seo_alerts", {
-  id: serial("id").primaryKey(),
-  alertType: varchar("alert_type", { length: 50 }).notNull(), // "keyword_drop", "crawl_decline", "index_drop", "ctr_decline"
-  severity: varchar("severity", { length: 20 }).notNull(), // "warning", "critical"
-  message: text("message").notNull(),
-  data: json("data"), // Additional context (affected keywords, metrics, etc.)
-  acknowledged: boolean("acknowledged").default(false).notNull(),
-  acknowledgedBy: text("acknowledged_by"),
-  acknowledgedAt: timestamp("acknowledged_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type SeoAlert = typeof seoAlerts.$inferSelect;
-export type InsertSeoAlert = typeof seoAlerts.$inferInsert;
