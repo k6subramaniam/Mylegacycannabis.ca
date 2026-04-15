@@ -1,60 +1,37 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
-import SEOHead from "@/components/SEOHead";
-import { Breadcrumbs } from "@/components/Layout";
-import { useCart } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { trpc } from "@/lib/trpc";
-import { canadianProvinces, MINIMUM_ORDER } from "@/lib/data";
-import {
-  Lock,
-  Gift,
-  AlertCircle,
-  CheckCircle,
-  CreditCard,
-  Shield,
-  Camera,
-  FileText,
-  Clock,
-  Tag,
-  X,
-  Home,
-} from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
-import { useT } from "@/i18n";
-import { useBehavior } from "@/contexts/BehaviorContext";
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'wouter';
+import SEOHead from '@/components/SEOHead';
+import { Breadcrumbs } from '@/components/Layout';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { trpc } from '@/lib/trpc';
+import { canadianProvinces, MINIMUM_ORDER } from '@/lib/data';
+import { Lock, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Camera, FileText, Clock, Tag, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { useT } from '@/i18n';
+import { useBehavior } from '@/contexts/BehaviorContext';
 
 /* ================================================================
    GUEST ID VERIFICATION INLINE COMPONENT
    Guests submit their ID — order is placed immediately but held
    until My Legacy reviews and approves the submission.
    ================================================================ */
-function GuestIDVerification({
-  onSubmitted,
-  guestEmail,
-}: {
-  onSubmitted: (verificationId: number) => void;
-  guestEmail?: string;
-}) {
+function GuestIDVerification({ onSubmitted, guestEmail }: { onSubmitted: (verificationId: number) => void; guestEmail?: string }) {
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!frontFile) {
-      toast.error("Please upload a photo of your government-issued ID");
-      return;
-    }
+    if (!frontFile) { toast.error('Please upload a photo of your government-issued ID'); return; }
     setSubmitting(true);
     try {
       // Convert to base64 and submit to the verify API
       const toBase64 = (file: File): Promise<string> =>
         new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () =>
-            resolve((reader.result as string).split(",")[1]);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
@@ -63,20 +40,17 @@ function GuestIDVerification({
       const selfieBase64 = selfieFile ? await toBase64(selfieFile) : undefined;
 
       const fd = new FormData();
-      fd.append("id_document", frontFile);
-      fd.append(
-        "email",
-        guestEmail || `guest-${Date.now()}@checkout.mylegacycannabis.ca`
-      );
-      if (selfieFile) fd.append("selfieImage", selfieFile);
+      fd.append('id_document', frontFile);
+      fd.append('email', guestEmail || `guest-${Date.now()}@checkout.mylegacycannabis.ca`);
+      if (selfieFile) fd.append('selfieImage', selfieFile);
 
-      const res = await fetch("/api/verify/submit", {
-        method: "POST",
+      const res = await fetch('/api/verify/submit', {
+        method: 'POST',
         body: fd,
       });
       const json = await res.json();
       const verificationId = json.verificationId ?? 0;
-      toast.success("ID submitted for review!");
+      toast.success('ID submitted for review!');
       onSubmitted(verificationId);
     } catch (err) {
       // Fallback: call tRPC submitVerification if REST fails
@@ -84,29 +58,22 @@ function GuestIDVerification({
         const toBase64Fallback = (file: File): Promise<string> =>
           new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () =>
-              resolve((reader.result as string).split(",")[1]);
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
         const frontBase64Fb = await toBase64Fallback(frontFile);
-        const trpcRes = await fetch("/api/trpc/store.submitVerification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            json: {
-              frontImageBase64: frontBase64Fb,
-              guestEmail: guestEmail || "",
-              contentType: frontFile.type || "image/jpeg",
-            },
-          }),
+        const trpcRes = await fetch('/api/trpc/store.submitVerification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: { frontImageBase64: frontBase64Fb, guestEmail: guestEmail || '', contentType: frontFile.type || 'image/jpeg' } }),
         });
         const trpcJson = await trpcRes.json();
         const vId = trpcJson?.result?.data?.json?.id ?? 0;
-        toast.success("ID submitted for review!");
+        toast.success('ID submitted for review!');
         onSubmitted(vId);
       } catch {
-        toast.error("ID submission failed. Please try again.");
+        toast.error('ID submission failed. Please try again.');
       }
     } finally {
       setSubmitting(false);
@@ -120,140 +87,79 @@ function GuestIDVerification({
           <Shield size={20} className="text-white" />
         </div>
         <div>
-          <h2 className="font-display text-lg text-[#4B2D8E]">
-            GUEST ID VERIFICATION
-          </h2>
-          <p className="text-xs text-gray-500 font-body">
-            Required every checkout — you must be 19+
-          </p>
+          <h2 className="font-display text-lg text-[#4B2D8E]">GUEST ID VERIFICATION</h2>
+          <p className="text-xs text-gray-500 font-body">Required every checkout — you must be 19+</p>
         </div>
       </div>
 
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
         <p className="text-xs font-body text-orange-700">
-          <strong>Guest checkout requires ID verification each time.</strong>{" "}
-          Create an account to verify once and skip this step on future orders.
+          <strong>Guest checkout requires ID verification each time.</strong> Create an account to verify once and skip this step on future orders.
         </p>
       </div>
 
       <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/10 rounded-xl p-3 mb-4">
-        <p className="font-display text-xs text-[#4B2D8E] mb-1.5">
-          ACCEPTED ID TYPES
-        </p>
+        <p className="font-display text-xs text-[#4B2D8E] mb-1.5">ACCEPTED ID TYPES</p>
         <ul className="text-xs font-body text-gray-600 space-y-1">
-          <li className="flex items-center gap-1.5">
-            <CheckCircle size={12} className="text-green-500" /> Canadian
-            Driver's License
-          </li>
-          <li className="flex items-center gap-1.5">
-            <CheckCircle size={12} className="text-green-500" /> Canadian
-            Passport
-          </li>
-          <li className="flex items-center gap-1.5">
-            <CheckCircle size={12} className="text-green-500" /> Provincial
-            Health Card (with photo)
-          </li>
-          <li className="flex items-center gap-1.5">
-            <CheckCircle size={12} className="text-green-500" /> Canadian
-            Citizenship Card
-          </li>
+          <li className="flex items-center gap-1.5"><CheckCircle size={12} className="text-green-500" /> Canadian Driver's License</li>
+          <li className="flex items-center gap-1.5"><CheckCircle size={12} className="text-green-500" /> Canadian Passport</li>
+          <li className="flex items-center gap-1.5"><CheckCircle size={12} className="text-green-500" /> Provincial Health Card (with photo)</li>
+          <li className="flex items-center gap-1.5"><CheckCircle size={12} className="text-green-500" /> Canadian Citizenship Card</li>
         </ul>
       </div>
 
       <div className="space-y-3 mb-4">
         <div>
-          <label className="font-display text-xs text-[#4B2D8E] mb-1.5 block">
-            GOVERNMENT-ISSUED ID (FRONT) *
-          </label>
-          <label
-            className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${frontFile ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-[#4B2D8E] bg-[#F5F5F5]"}`}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={e => setFrontFile(e.target.files?.[0] || null)}
-            />
+          <label className="font-display text-xs text-[#4B2D8E] mb-1.5 block">GOVERNMENT-ISSUED ID (FRONT) *</label>
+          <label className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${frontFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-[#4B2D8E] bg-[#F5F5F5]'}`}>
+            <input type="file" accept="image/*" className="hidden" onChange={e => setFrontFile(e.target.files?.[0] || null)} />
             {frontFile ? (
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle size={20} className="text-green-500" />
                 <div className="text-left">
-                  <p className="font-display text-xs text-green-700">
-                    {frontFile.name}
-                  </p>
-                  <p className="text-[10px] text-green-600 font-body">
-                    Tap to change
-                  </p>
+                  <p className="font-display text-xs text-green-700">{frontFile.name}</p>
+                  <p className="text-[10px] text-green-600 font-body">Tap to change</p>
                 </div>
               </div>
             ) : (
               <>
                 <FileText size={24} className="text-gray-400 mx-auto mb-1" />
-                <p className="font-display text-xs text-gray-500">
-                  TAP TO UPLOAD ID PHOTO
-                </p>
-                <p className="text-[10px] text-gray-400 font-body mt-0.5">
-                  JPG, PNG — Max 10MB
-                </p>
+                <p className="font-display text-xs text-gray-500">TAP TO UPLOAD ID PHOTO</p>
+                <p className="text-[10px] text-gray-400 font-body mt-0.5">JPG, PNG — Max 10MB</p>
               </>
             )}
           </label>
         </div>
 
         <div>
-          <label className="font-display text-xs text-[#4B2D8E] mb-1.5 block">
-            SELFIE WITH ID (OPTIONAL)
-          </label>
-          <label
-            className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${selfieFile ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-[#4B2D8E] bg-[#F5F5F5]"}`}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={e => setSelfieFile(e.target.files?.[0] || null)}
-            />
+          <label className="font-display text-xs text-[#4B2D8E] mb-1.5 block">SELFIE WITH ID (OPTIONAL)</label>
+          <label className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${selfieFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-[#4B2D8E] bg-[#F5F5F5]'}`}>
+            <input type="file" accept="image/*" className="hidden" onChange={e => setSelfieFile(e.target.files?.[0] || null)} />
             {selfieFile ? (
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle size={20} className="text-green-500" />
                 <div className="text-left">
-                  <p className="font-display text-xs text-green-700">
-                    {selfieFile.name}
-                  </p>
-                  <p className="text-[10px] text-green-600 font-body">
-                    Tap to change
-                  </p>
+                  <p className="font-display text-xs text-green-700">{selfieFile.name}</p>
+                  <p className="text-[10px] text-green-600 font-body">Tap to change</p>
                 </div>
               </div>
             ) : (
               <>
                 <Camera size={24} className="text-gray-400 mx-auto mb-1" />
-                <p className="font-display text-xs text-gray-500">
-                  TAP TO UPLOAD SELFIE
-                </p>
-                <p className="text-[10px] text-gray-400 font-body mt-0.5">
-                  Hold your ID next to your face
-                </p>
+                <p className="font-display text-xs text-gray-500">TAP TO UPLOAD SELFIE</p>
+                <p className="text-[10px] text-gray-400 font-body mt-0.5">Hold your ID next to your face</p>
               </>
             )}
           </label>
         </div>
       </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={!frontFile || submitting}
-        className={`w-full font-display text-sm py-3 rounded-full transition-all flex items-center justify-center gap-2 ${frontFile && !submitting ? "bg-[#4B2D8E] hover:bg-[#3a2270] text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
-      >
+      <button onClick={handleSubmit} disabled={!frontFile || submitting}
+        className={`w-full font-display text-sm py-3 rounded-full transition-all flex items-center justify-center gap-2 ${frontFile && !submitting ? 'bg-[#4B2D8E] hover:bg-[#3a2270] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
         {submitting ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{" "}
-            SUBMITTING...
-          </>
+          <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> SUBMITTING...</>
         ) : (
-          <>
-            <Shield size={16} /> SUBMIT ID & CONTINUE
-          </>
+          <><Shield size={16} /> SUBMIT ID & CONTINUE</>
         )}
       </button>
     </div>
@@ -265,31 +171,17 @@ function GuestIDVerification({
    ================================================================ */
 export default function Checkout() {
   const { t } = useT();
-  const {
-    items,
-    subtotal,
-    shippingRate,
-    shippingProvince,
-    setShippingProvince,
-    total,
-    isFreeShipping,
-    pointsToEarn,
-    meetsMinimum,
-    rewardDiscount,
-    clearCart,
-  } = useCart();
+  const { items, subtotal, shippingRate, shippingProvince, setShippingProvince, total, isFreeShipping, pointsToEarn, meetsMinimum, rewardDiscount, clearCart } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
   const { idVerificationEnabled, paymentEmail } = useSiteConfig();
   const { trackCheckoutStart, trackCheckoutComplete } = useBehavior();
 
   // Track checkout start
-  useEffect(() => {
-    trackCheckoutStart();
-  }, []);
+  useEffect(() => { trackCheckoutStart(); }, []);
   const [, navigate] = useLocation();
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [orderNumber, setOrderNumber] = useState("");
-  const [orderAdjustedTotal, setOrderAdjustedTotal] = useState("");
+  const [orderNumber, setOrderNumber] = useState('');
+  const [orderAdjustedTotal, setOrderAdjustedTotal] = useState('');
   const [savedPointsEarned, setSavedPointsEarned] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [etransferAcknowledged, setEtransferAcknowledged] = useState(false);
@@ -297,74 +189,25 @@ export default function Checkout() {
   const [guestIdSubmitted, setGuestIdSubmitted] = useState(false);
   const [guestVerificationId, setGuestVerificationId] = useState<number>(0);
   const submitOrder = trpc.store.submitOrder.useMutation();
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string;
-    discount: number;
-    type?: string;
-  } | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; type?: string } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState("");
-  // "Use my account address" toggle state
-  const hasSavedAddress = isAuthenticated && !!user?.savedAddress?.street?.trim();
-  const [useAccountAddress, setUseAccountAddress] = useState(false);
-  const [saveAddressToAccount, setSaveAddressToAccount] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [form, setForm] = useState({
-    email: user?.email || "",
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    phone: user?.phone || "",
-    address: "",
-    city: "",
-    province: shippingProvince,
-    postalCode: "",
-    notes: "",
+    email: user?.email || '', firstName: user?.firstName || '', lastName: user?.lastName || '',
+    phone: user?.phone || '', address: '', city: '', province: shippingProvince, postalCode: '', notes: '',
   });
-
-  // When the toggle is switched, fill or clear the address fields
-  useEffect(() => {
-    if (useAccountAddress && user?.savedAddress) {
-      const sa = user.savedAddress;
-      const provinceVal = sa.provinceCode || sa.province || shippingProvince;
-      setForm(prev => ({
-        ...prev,
-        address: sa.street,
-        city: sa.city,
-        province: provinceVal,
-        postalCode: sa.postalCode,
-      }));
-      setShippingProvince(provinceVal);
-    } else if (!useAccountAddress) {
-      setForm(prev => ({
-        ...prev,
-        address: "",
-        city: "",
-        province: shippingProvince,
-        postalCode: "",
-      }));
-    }
-  }, [useAccountAddress]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When ID verification is disabled, everyone can place orders freely
   const idCheckRequired = idVerificationEnabled;
   // Registered + approved: full green pass (check both idVerified flag and idVerificationStatus)
-  const isRegisteredAndVerified =
-    isAuthenticated &&
-    user &&
-    (user.idVerified || user.idVerificationStatus === "approved");
+  const isRegisteredAndVerified = isAuthenticated && user && (user.idVerified || user.idVerificationStatus === 'approved');
   // Registered + pending: allow order, hold for admin
-  const isRegisteredPending =
-    isAuthenticated && user && user.idVerificationStatus === "pending";
+  const isRegisteredPending = isAuthenticated && user && user.idVerificationStatus === 'pending';
   // Guest can place order once they've submitted ID for review
-  const canPlaceOrder =
-    !idCheckRequired ||
-    isRegisteredAndVerified ||
-    isRegisteredPending ||
-    guestIdSubmitted;
+  const canPlaceOrder = !idCheckRequired || isRegisteredAndVerified || isRegisteredPending || guestIdSubmitted;
   // Whether the order will be held pending ID review
-  const orderHeldForIdReview =
-    idCheckRequired &&
-    (isRegisteredPending || (!isAuthenticated && guestIdSubmitted));
+  const orderHeldForIdReview = idCheckRequired && (isRegisteredPending || (!isAuthenticated && guestIdSubmitted));
 
   if (!meetsMinimum && !orderPlaced) {
     return (
@@ -372,21 +215,9 @@ export default function Checkout() {
         <SEOHead title="Checkout" description="Complete your order." noindex />
         <section className="container py-20 text-center">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">
-            {t.checkout.minimumNotMet}
-          </h1>
-          <p className="text-gray-500 font-body mb-6">
-            {t.checkout.minimumNotMetDesc.replace(
-              "{min}",
-              String(MINIMUM_ORDER)
-            )}
-          </p>
-          <Link
-            href="/shop"
-            className="inline-flex items-center gap-2 bg-[#F15929] text-white font-display py-3 px-8 rounded-full"
-          >
-            {t.common.continueShopping}
-          </Link>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-2">{t.checkout.minimumNotMet}</h1>
+          <p className="text-gray-500 font-body mb-6">{t.checkout.minimumNotMetDesc.replace('{min}', String(MINIMUM_ORDER))}</p>
+          <Link href="/shop" className="inline-flex items-center gap-2 bg-[#F15929] text-white font-display py-3 px-8 rounded-full">{t.common.continueShopping}</Link>
         </section>
       </>
     );
@@ -395,22 +226,12 @@ export default function Checkout() {
   if (orderPlaced) {
     return (
       <>
-        <SEOHead
-          title="Order Confirmed"
-          description="Your order has been placed successfully."
-          noindex
-        />
+        <SEOHead title="Order Confirmed" description="Your order has been placed successfully." noindex />
         <section className="container py-20 text-center max-w-lg mx-auto">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"
-          >
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} className="text-green-600" />
           </motion.div>
-          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">
-            {t.checkout.orderReceived}
-          </h1>
+          <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">{t.checkout.orderReceived}</h1>
           <p className="text-gray-600 font-body mb-2">Order #{orderNumber}</p>
 
           {orderHeldForIdReview ? (
@@ -418,13 +239,9 @@ export default function Checkout() {
               <div className="flex items-start gap-3">
                 <Clock size={18} className="text-yellow-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-body text-yellow-800 font-semibold">
-                    Your order will be processed once your age is verified
-                  </p>
+                  <p className="text-sm font-body text-yellow-800 font-semibold">Your order will be processed once your age is verified</p>
                   <p className="text-xs font-body text-yellow-700 mt-1">
-                    Our team is reviewing your submitted ID. You'll receive a
-                    confirmation once approved and your e-Transfer payment is
-                    received.
+                    Our team is reviewing your submitted ID. You'll receive a confirmation once approved and your e-Transfer payment is received.
                   </p>
                 </div>
               </div>
@@ -436,72 +253,38 @@ export default function Checkout() {
           )}
 
           <div className="bg-[#F5F5F5] rounded-xl p-4 mb-6 text-left">
-            <h3 className="font-display text-sm text-[#4B2D8E] mb-2">
-              E-TRANSFER DETAILS
-            </h3>
-            <p className="text-sm font-body text-gray-600">
-              Email: <strong>{paymentEmail}</strong>
-            </p>
-            <p className="text-sm font-body text-gray-600">
-              Amount: <strong>${orderAdjustedTotal || total.toFixed(2)}</strong>
-            </p>
+            <h3 className="font-display text-sm text-[#4B2D8E] mb-2">E-TRANSFER DETAILS</h3>
+            <p className="text-sm font-body text-gray-600">Email: <strong>{paymentEmail}</strong></p>
+            <p className="text-sm font-body text-gray-600">Amount: <strong>${orderAdjustedTotal || total.toFixed(2)}</strong></p>
             {orderAdjustedTotal && orderAdjustedTotal !== total.toFixed(2) && (
               <p className="text-xs text-[#F15929] font-body font-semibold mt-1">
-                Note: The cents have been adjusted for automatic payment
-                matching. Please send the exact amount shown.
+                Note: The cents have been adjusted for automatic payment matching. Please send the exact amount shown.
               </p>
             )}
             <div className="mt-3 bg-[#4B2D8E]/10 border border-[#4B2D8E]/20 rounded-lg p-3">
-              <p className="text-xs font-display text-[#4B2D8E] mb-1">
-                IMPORTANT — INCLUDE THIS IN THE MEMO:
-              </p>
+              <p className="text-xs font-display text-[#4B2D8E] mb-1">IMPORTANT — INCLUDE THIS IN THE MEMO:</p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 bg-white rounded-lg px-3 py-2 font-mono text-sm text-[#4B2D8E] font-bold tracking-wide border">
-                  {orderNumber}
-                </code>
+                <code className="flex-1 bg-white rounded-lg px-3 py-2 font-mono text-sm text-[#4B2D8E] font-bold tracking-wide border">{orderNumber}</code>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(orderNumber);
-                    toast.success("Order number copied!");
-                  }}
+                  onClick={() => { navigator.clipboard.writeText(orderNumber); toast.success('Order number copied!'); }}
                   className="shrink-0 bg-[#F15929] text-white text-xs font-display px-3 py-2 rounded-lg hover:bg-[#d94d22] transition-all"
                 >
                   COPY
                 </button>
               </div>
-              <p className="text-xs text-gray-500 font-body mt-2">
-                Including your order number ensures your payment is matched
-                instantly. If you forget the memo, send the{" "}
-                <strong>exact amount</strong> and our system will still match it
-                automatically.
-              </p>
+              <p className="text-xs text-gray-500 font-body mt-2">Including your order number ensures your payment is matched instantly. If you forget the memo, send the <strong>exact amount</strong> and our system will still match it automatically.</p>
             </div>
           </div>
 
           {isAuthenticated && (
             <div className="bg-[#4B2D8E]/5 rounded-xl p-4 mb-6 flex items-center gap-3">
               <Gift size={18} className="text-[#F15929] shrink-0" />
-              <p className="text-sm font-body text-[#4B2D8E]">
-                You earned <strong>{savedPointsEarned} points</strong> with this
-                order!
-              </p>
+              <p className="text-sm font-body text-[#4B2D8E]">You earned <strong>{savedPointsEarned} points</strong> with this order!</p>
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/shop"
-              className="bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all"
-            >
-              {t.common.continueShopping}
-            </Link>
-            {isAuthenticated && (
-              <Link
-                href="/account/orders"
-                className="bg-[#4B2D8E] text-white font-display py-3 px-8 rounded-full hover:bg-[#3a2270] transition-all"
-              >
-                {t.checkout.viewOrders}
-              </Link>
-            )}
+            <Link href="/shop" className="bg-[#F15929] text-white font-display py-3 px-8 rounded-full hover:bg-[#d94d22] transition-all">{t.common.continueShopping}</Link>
+            {isAuthenticated && <Link href="/account/orders" className="bg-[#4B2D8E] text-white font-display py-3 px-8 rounded-full hover:bg-[#3a2270] transition-all">{t.checkout.viewOrders}</Link>}
           </div>
         </section>
       </>
@@ -511,90 +294,56 @@ export default function Checkout() {
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
-    setCouponError("");
+    setCouponError('');
     try {
-      const queryInput = encodeURIComponent(
-        JSON.stringify({
-          json: {
-            code: couponCode.trim(),
-            subtotal,
-            email: form.email || "guest@checkout.com",
-          },
-        })
-      );
-      const res = await fetch(
-        "/api/trpc/store.validateCoupon?input=" + queryInput
-      );
+      const queryInput = encodeURIComponent(JSON.stringify({ json: { code: couponCode.trim(), subtotal, email: form.email || 'guest@checkout.com' } }));
+      const res = await fetch('/api/trpc/store.validateCoupon?input=' + queryInput);
       const json = await res.json();
       const result = json?.result?.data?.json;
       if (result?.valid) {
-        setAppliedCoupon({
-          code: couponCode.trim().toUpperCase(),
-          discount: result.discount,
-          type: result.coupon?.type,
-        });
+        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), discount: result.discount, type: result.coupon?.type });
         toast.success(`Coupon applied! -$${result.discount.toFixed(2)}`);
       } else {
-        setCouponError(result?.error || "Invalid coupon code.");
+        setCouponError(result?.error || 'Invalid coupon code.');
       }
     } catch {
-      setCouponError("Unable to validate coupon. Please try again.");
+      setCouponError('Unable to validate coupon. Please try again.');
     } finally {
       setCouponLoading(false);
     }
   };
 
   const couponDiscount = appliedCoupon?.discount || 0;
-  const adjustedTotal =
-    subtotal -
-    rewardDiscount -
-    couponDiscount +
-    (appliedCoupon?.type === "free_shipping" ? 0 : shippingRate);
+  const adjustedTotal = subtotal - rewardDiscount - couponDiscount + (appliedCoupon?.type === 'free_shipping' ? 0 : shippingRate);
 
   const handlePlaceOrder = async () => {
-    if (
-      !form.email ||
-      !form.firstName ||
-      !form.lastName ||
-      !form.address ||
-      !form.city ||
-      !form.postalCode
-    ) {
-      toast.error("Please fill in all required fields");
+    if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.postalCode) {
+      toast.error('Please fill in all required fields');
       return;
     }
     if (!canPlaceOrder) {
-      toast.error(
-        "Please submit your ID for verification before placing an order"
-      );
+      toast.error('Please submit your ID for verification before placing an order');
       return;
     }
     setSubmitting(true);
     try {
       // Build admin notes to flag orders held for ID review
       const idNote = orderHeldForIdReview
-        ? `[ID VERIFICATION PENDING] Guest ID submission #${guestVerificationId || "submitted"} — hold order until age verified.`
+        ? `[ID VERIFICATION PENDING] Guest ID submission #${guestVerificationId || 'submitted'} — hold order until age verified.`
         : undefined;
 
-      const finalShipping =
-        appliedCoupon?.type === "free_shipping" ? 0 : shippingRate;
-      const finalTotal =
-        subtotal - rewardDiscount - couponDiscount + finalShipping;
+      const finalShipping = appliedCoupon?.type === 'free_shipping' ? 0 : shippingRate;
+      const finalTotal = subtotal - rewardDiscount - couponDiscount + finalShipping;
       const result = await submitOrder.mutateAsync({
         guestEmail: form.email,
         guestName: `${form.firstName} ${form.lastName}`.trim(),
         guestPhone: form.phone || undefined,
         items: items.map(item => ({
-          productId: isNaN(Number(item.product.id))
-            ? undefined
-            : Number(item.product.id),
+          productId: isNaN(Number(item.product.id)) ? undefined : Number(item.product.id),
           productName: item.product.name,
           productImage: item.product.image || undefined,
           quantity: item.quantity,
-          price: (typeof item.product.price === "string"
-            ? parseFloat(item.product.price) || 0
-            : item.product.price
-          ).toFixed(2),
+          price: (typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price).toFixed(2),
         })),
         subtotal: subtotal.toFixed(2),
         shippingCost: finalShipping.toFixed(2),
@@ -606,11 +355,11 @@ export default function Checkout() {
           city: form.city,
           province: form.province,
           postalCode: form.postalCode,
-          country: "Canada",
+          country: 'Canada',
         },
         shippingZone: form.province,
-        shippingDestPostal: form.postalCode.replace(/\s/g, "").toUpperCase(),
-        notes: [form.notes, idNote].filter(Boolean).join("\n") || undefined,
+        shippingDestPostal: form.postalCode.replace(/\s/g, '').toUpperCase(),
+        notes: [form.notes, idNote].filter(Boolean).join('\n') || undefined,
         couponCode: appliedCoupon?.code || undefined,
       });
       setOrderNumber(result.orderNumber);
@@ -627,54 +376,26 @@ export default function Checkout() {
         addOrder({
           id: result.orderNumber,
           date: new Date().toISOString(),
-          status: "processing",
+          status: 'processing',
           total: total,
           items: items.map(item => ({
             name: item.product.name,
             quantity: item.quantity,
-            price:
-              typeof item.product.price === "string"
-                ? parseFloat(item.product.price) || 0
-                : item.product.price,
+            price: typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price,
           })),
         });
       }
 
-      // Save address to account if user opted in
-      if (saveAddressToAccount && isAuthenticated) {
-        try {
-          await fetch("/api/trpc/store.saveAddress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              json: {
-                street: form.address,
-                city: form.city,
-                province: form.province,
-                provinceCode: form.province,
-                postalCode: form.postalCode,
-                country: "CA",
-              },
-            }),
-            credentials: "include",
-          });
-        } catch {
-          // Non-critical — don't block order confirmation
-          console.warn("[Checkout] Failed to save address to account");
-        }
-      }
-
       clearCart();
-      toast.success("Order placed successfully!");
+      toast.success('Order placed successfully!');
     } catch (err: any) {
-      const raw = err?.message || "";
+      const raw = err?.message || '';
       // tRPC JSON parse failures (e.g. 503 "Service Unavailable") produce ugly messages
-      const friendly =
-        raw.includes("not valid JSON") || raw.includes("Unexpected token")
-          ? "Our server is temporarily unavailable. Please try again in a moment."
-          : raw.includes("Out of stock")
-            ? raw
-            : raw || "Failed to place order. Please try again.";
+      const friendly = raw.includes('not valid JSON') || raw.includes('Unexpected token')
+        ? 'Our server is temporarily unavailable. Please try again in a moment.'
+        : raw.includes('Out of stock')
+          ? raw
+          : raw || 'Failed to place order. Please try again.';
       toast.error(friendly);
     } finally {
       setSubmitting(false);
@@ -683,61 +404,31 @@ export default function Checkout() {
 
   return (
     <>
-      <SEOHead
-        title="Checkout"
-        description="Complete your cannabis order with e-Transfer payment."
-        noindex
-      />
+      <SEOHead title="Checkout" description="Complete your cannabis order with e-Transfer payment." noindex />
       <section className="bg-white py-6 md:py-10">
         <div className="container">
-          <Breadcrumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Cart", href: "/cart" },
-              { label: "Checkout" },
-            ]}
-          />
-          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">
-            {t.checkout.checkout}
-          </h1>
+          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
+          <h1 className="font-display text-2xl md:text-3xl text-[#4B2D8E] mb-6">{t.checkout.checkout}</h1>
 
           {/* Registered user — ID NOT yet verified/submitted */}
-          {idCheckRequired &&
-            isAuthenticated &&
-            user &&
-            !user.idVerified &&
-            user.idVerificationStatus === "none" && (
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-                <Shield size={20} className="text-orange-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-body text-orange-700 font-medium">
-                    One-Time ID Verification Required
-                  </p>
-                  <p className="text-xs font-body text-orange-600 mt-1">
-                    Verify your ID once and you'll never need to do it again.
-                  </p>
-                  <Link
-                    href="/account/verify-id"
-                    className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block"
-                  >
-                    VERIFY NOW →
-                  </Link>
-                </div>
+          {idCheckRequired && isAuthenticated && user && !user.idVerified && user.idVerificationStatus === 'none' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <Shield size={20} className="text-orange-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-body text-orange-700 font-medium">One-Time ID Verification Required</p>
+                <p className="text-xs font-body text-orange-600 mt-1">Verify your ID once and you'll never need to do it again.</p>
+                <Link href="/account/verify-id" className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block">VERIFY NOW →</Link>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Registered user — ID pending review */}
           {idCheckRequired && isRegisteredPending && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <Clock size={20} className="text-yellow-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-body text-yellow-800 font-semibold">
-                  ID Verification In Review
-                </p>
-                <p className="text-xs font-body text-yellow-700 mt-1">
-                  Your ID is being reviewed. Your order will be processed once
-                  your age is verified.
-                </p>
+                <p className="text-sm font-body text-yellow-800 font-semibold">ID Verification In Review</p>
+                <p className="text-xs font-body text-yellow-700 mt-1">Your ID is being reviewed. Your order will be processed once your age is verified.</p>
               </div>
             </div>
           )}
@@ -746,10 +437,7 @@ export default function Checkout() {
           {idCheckRequired && isRegisteredAndVerified && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-6 flex items-center gap-3">
               <CheckCircle size={18} className="text-green-600 shrink-0" />
-              <p className="text-sm font-body text-green-700">
-                <strong>ID Verified</strong> — Your account is verified. No
-                further ID checks needed.
-              </p>
+              <p className="text-sm font-body text-green-700"><strong>ID Verified</strong> — Your account is verified. No further ID checks needed.</p>
             </div>
           )}
 
@@ -759,19 +447,9 @@ export default function Checkout() {
               <div className="flex items-start gap-3">
                 <Lock size={20} className="text-[#4B2D8E] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-body text-[#4B2D8E] font-medium">
-                    Have an account? Sign in to skip ID verification next time.
-                  </p>
-                  <p className="text-xs font-body text-gray-600 mt-1">
-                    Registered users only verify once. Guests must verify every
-                    checkout.
-                  </p>
-                  <Link
-                    href="/account/login"
-                    className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block"
-                  >
-                    SIGN IN →
-                  </Link>
+                  <p className="text-sm font-body text-[#4B2D8E] font-medium">Have an account? Sign in to skip ID verification next time.</p>
+                  <p className="text-xs font-body text-gray-600 mt-1">Registered users only verify once. Guests must verify every checkout.</p>
+                  <Link href="/account/login" className="text-xs font-display text-[#F15929] hover:underline mt-2 inline-block">SIGN IN →</Link>
                 </div>
               </div>
             </div>
@@ -782,18 +460,12 @@ export default function Checkout() {
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6 flex items-start gap-3">
               <Clock size={18} className="text-yellow-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-body text-yellow-800 font-semibold">
-                  Guest ID Verification in Review
-                </p>
+                <p className="text-sm font-body text-yellow-800 font-semibold">Guest ID Verification in Review</p>
                 <p className="text-xs font-body text-yellow-700 mt-1">
                   Your order will be processed once your age is verified.
                 </p>
                 <p className="text-[10px] font-body text-yellow-600 mt-1">
-                  Note: Guest verification is per-session.{" "}
-                  <Link href="/account/register" className="underline">
-                    Create an account
-                  </Link>{" "}
-                  to verify once.
+                  Note: Guest verification is per-session. <Link href="/account/register" className="underline">Create an account</Link> to verify once.
                 </p>
               </div>
             </div>
@@ -802,274 +474,90 @@ export default function Checkout() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Form */}
             <div className="lg:col-span-2 space-y-6">
+
               {/* GUEST ID VERIFICATION — inline, shown before form if guest hasn't submitted */}
               {idCheckRequired && !isAuthenticated && !guestIdSubmitted && (
-                <GuestIDVerification
-                  guestEmail={form.email}
-                  onSubmitted={vid => {
-                    setGuestIdSubmitted(true);
-                    setGuestVerificationId(vid);
-                  }}
-                />
+                <GuestIDVerification guestEmail={form.email} onSubmitted={(vid) => { setGuestIdSubmitted(true); setGuestVerificationId(vid); }} />
               )}
 
               {/* Contact */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">
-                  {t.checkout.contactInfo}
-                </h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.contactInfo}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.firstName}
-                      onChange={e =>
-                        setForm({ ...form, firstName: e.target.value })
-                      }
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                      required
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">First Name *</label>
+                    <input type="text" value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Last Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.lastName}
-                      onChange={e =>
-                        setForm({ ...form, lastName: e.target.value })
-                      }
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                      required
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Last Name *</label>
+                    <input type="text" value={form.lastName} onChange={e => setForm({...form, lastName: e.target.value})}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={e =>
-                        setForm({ ...form, email: e.target.value })
-                      }
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                      required
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Email *</label>
+                    <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={form.phone}
-                      onChange={e =>
-                        setForm({ ...form, phone: e.target.value })
-                      }
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Phone</label>
+                    <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
                   </div>
                 </div>
               </div>
 
               {/* Shipping Address */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-lg text-[#4B2D8E]">
-                    {t.checkout.shippingAddress}
-                  </h2>
-                  {hasSavedAddress && (
-                    <label className="flex items-center gap-2 cursor-pointer select-none group">
-                      <div
-                        className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
-                          useAccountAddress ? "bg-[#4B2D8E]" : "bg-gray-300"
-                        }`}
-                        onClick={() => setUseAccountAddress(prev => !prev)}
-                        role="switch"
-                        aria-checked={useAccountAddress}
-                        aria-label="Use my account address"
-                        tabIndex={0}
-                        onKeyDown={e => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setUseAccountAddress(prev => !prev);
-                          }
-                        }}
-                      >
-                        <div
-                          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                            useAccountAddress
-                              ? "translate-x-5"
-                              : "translate-x-0"
-                          }`}
-                        />
-                      </div>
-                      <span className="text-xs font-body text-gray-600 group-hover:text-[#4B2D8E] transition-colors flex items-center gap-1">
-                        <Home size={12} />
-                        Use my saved address
-                      </span>
-                    </label>
-                  )}
-                </div>
-
-                {/* Show saved address preview when toggle is on */}
-                {useAccountAddress && user?.savedAddress && (
-                  <div className="bg-[#4B2D8E]/5 border border-[#4B2D8E]/15 rounded-xl p-3 mb-4 flex items-start gap-3">
-                    <Home
-                      size={16}
-                      className="text-[#4B2D8E] shrink-0 mt-0.5"
-                    />
-                    <div className="text-sm font-body text-gray-700">
-                      <p>{user.savedAddress.street}</p>
-                      <p>
-                        {user.savedAddress.city},{" "}
-                        {user.savedAddress.provinceCode ||
-                          user.savedAddress.province}{" "}
-                        {user.savedAddress.postalCode}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.shippingAddress}</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Street Address *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address}
-                      onChange={e => {
-                        if (!useAccountAddress)
-                          setForm({ ...form, address: e.target.value });
-                      }}
-                      disabled={useAccountAddress}
-                      className={`w-full rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] ${useAccountAddress ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
-                      required
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Street Address *</label>
+                    <input type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        City *
-                      </label>
-                      <input
-                        type="text"
-                        value={form.city}
-                        onChange={e => {
-                          if (!useAccountAddress)
-                            setForm({ ...form, city: e.target.value });
-                        }}
-                        disabled={useAccountAddress}
-                        className={`w-full rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] ${useAccountAddress ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
-                        required
-                      />
+                      <label className="text-xs text-gray-500 font-body block mb-1">City *</label>
+                      <input type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Province *
-                      </label>
-                      <select
-                        value={form.province}
-                        onChange={e => {
-                          if (!useAccountAddress) {
-                            setForm({ ...form, province: e.target.value });
-                            setShippingProvince(e.target.value);
-                          }
-                        }}
-                        disabled={useAccountAddress}
-                        className={`w-full rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] ${useAccountAddress ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
-                      >
-                        {canadianProvinces.map(p => (
-                          <option key={p.code} value={p.code}>
-                            {p.name}
-                          </option>
-                        ))}
+                      <label className="text-xs text-gray-500 font-body block mb-1">Province *</label>
+                      <select value={form.province} onChange={e => { setForm({...form, province: e.target.value}); setShippingProvince(e.target.value); }}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]">
+                        {canadianProvinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Postal Code *
-                      </label>
-                      <input
-                        type="text"
-                        value={form.postalCode}
-                        onChange={e => {
-                          if (!useAccountAddress)
-                            setForm({ ...form, postalCode: e.target.value });
-                        }}
-                        disabled={useAccountAddress}
-                        className={`w-full rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] ${useAccountAddress ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"}`}
-                        required
-                      />
+                      <label className="text-xs text-gray-500 font-body block mb-1">Postal Code *</label>
+                      <input type="text" value={form.postalCode} onChange={e => setForm({...form, postalCode: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Order Notes (optional)
-                    </label>
-                    <textarea
-                      value={form.notes}
-                      onChange={e =>
-                        setForm({ ...form, notes: e.target.value })
-                      }
-                      rows={3}
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] resize-none"
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Order Notes (optional)</label>
+                    <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={3}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] resize-none" />
                   </div>
-
-                  {/* Offer to save address for logged-in users who don't have one saved */}
-                  {isAuthenticated && !hasSavedAddress && form.address && (
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={saveAddressToAccount}
-                        onChange={e =>
-                          setSaveAddressToAccount(e.target.checked)
-                        }
-                        className="w-4 h-4 rounded border-2 border-[#4B2D8E] text-[#4B2D8E] focus:ring-[#4B2D8E]"
-                      />
-                      <span className="text-xs font-body text-gray-600 flex items-center gap-1">
-                        <Home size={12} className="text-[#4B2D8E]" />
-                        Save this address to my account for future orders
-                      </span>
-                    </label>
-                  )}
                 </div>
               </div>
 
               {/* Coupon Code */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">
-                  {t.checkout.couponSection}
-                </h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.couponSection}</h2>
                 {appliedCoupon ? (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Tag size={18} className="text-green-600" />
                       <div>
-                        <p className="font-display text-sm text-green-700">
-                          {appliedCoupon.code}
-                        </p>
+                        <p className="font-display text-sm text-green-700">{appliedCoupon.code}</p>
                         <p className="text-xs text-green-600 font-body">
-                          {appliedCoupon.type === "free_shipping"
-                            ? "Free shipping applied!"
-                            : `-$${appliedCoupon.discount.toFixed(2)} discount`}
+                          {appliedCoupon.type === 'free_shipping' ? 'Free shipping applied!' : `-$${appliedCoupon.discount.toFixed(2)} discount`}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setAppliedCoupon(null);
-                        setCouponCode("");
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
+                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-gray-400 hover:text-red-500 transition-colors">
                       <X size={18} />
                     </button>
                   </div>
@@ -1079,10 +567,7 @@ export default function Checkout() {
                       <input
                         type="text"
                         value={couponCode}
-                        onChange={e => {
-                          setCouponCode(e.target.value);
-                          setCouponError("");
-                        }}
+                        onChange={e => { setCouponCode(e.target.value); setCouponError(''); }}
                         placeholder="Enter coupon code"
                         className="flex-1 bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] uppercase"
                       />
@@ -1091,46 +576,29 @@ export default function Checkout() {
                         disabled={!couponCode.trim() || couponLoading}
                         className="bg-[#4B2D8E] text-white font-display text-sm px-6 py-3 rounded-lg hover:bg-[#3a2270] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
-                        {couponLoading ? "CHECKING..." : "APPLY"}
+                        {couponLoading ? 'CHECKING...' : 'APPLY'}
                       </button>
                     </div>
-                    {couponError && (
-                      <p className="text-xs text-red-500 font-body mt-2">
-                        {couponError}
-                      </p>
-                    )}
+                    {couponError && <p className="text-xs text-red-500 font-body mt-2">{couponError}</p>}
                   </div>
                 )}
               </div>
 
               {/* Payment */}
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">
-                  {t.checkout.paymentMethod}
-                </h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.checkout.paymentMethod}</h2>
                 <div className="bg-white rounded-xl p-4 border-2 border-[#4B2D8E]">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center">
                       <CreditCard size={18} className="text-white" />
                     </div>
                     <div>
-                      <p className="font-display text-sm text-[#4B2D8E]">
-                        {t.checkout.interacETransfer}
-                      </p>
-                      <p className="text-xs text-gray-500 font-body">
-                        {t.checkout.sendPaymentAfter}
-                      </p>
+                      <p className="font-display text-sm text-[#4B2D8E]">{t.checkout.interacETransfer}</p>
+                      <p className="text-xs text-gray-500 font-body">{t.checkout.sendPaymentAfter}</p>
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 font-body bg-[#F5F5F5] rounded-lg p-3">
-                    After placing your order, send an e-Transfer to{" "}
-                    <strong>{paymentEmail}</strong>.{" "}
-                    <strong>
-                      Include your order number in the memo/message field
-                    </strong>{" "}
-                    for instant automatic matching. Send the{" "}
-                    <strong>exact amount shown</strong> (do not round). Your
-                    order will be processed once payment is received.
+                    After placing your order, send an e-Transfer to <strong>{paymentEmail}</strong>. <strong>Include your order number in the memo/message field</strong> for instant automatic matching. Send the <strong>exact amount shown</strong> (do not round). Your order will be processed once payment is received.
                   </p>
 
                   {/* Mandatory acknowledgment checkbox */}
@@ -1142,11 +610,9 @@ export default function Checkout() {
                       className="mt-0.5 w-4 h-4 rounded border-2 border-[#4B2D8E] text-[#4B2D8E] focus:ring-[#4B2D8E]"
                     />
                     <span className="text-xs text-[#333] font-body leading-relaxed">
-                      I understand my order will be{" "}
-                      <strong>automatically cancelled in 24 hours</strong> if
-                      payment is not received. I will send the{" "}
-                      <strong>exact amount shown</strong> and include my{" "}
-                      <strong>order number</strong> in the e-Transfer memo.
+                      I understand my order will be <strong>automatically cancelled in 24 hours</strong> if
+                      payment is not received. I will send the <strong>exact amount shown</strong> and
+                      include my <strong>order number</strong> in the e-Transfer memo.
                     </span>
                   </label>
                 </div>
@@ -1156,87 +622,33 @@ export default function Checkout() {
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-[#F5F5F5] rounded-2xl p-6 sticky top-28">
-                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">
-                  {t.cart.orderSummary}
-                </h2>
+                <h2 className="font-display text-lg text-[#4B2D8E] mb-4">{t.cart.orderSummary}</h2>
                 <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
                   {items.map(item => (
-                    <div
-                      key={item.product.id}
-                      className="flex items-center gap-3"
-                    >
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-12 h-12 rounded-lg object-cover bg-white"
-                        loading="lazy"
-                      />
+                    <div key={item.product.id} className="flex items-center gap-3">
+                      <img src={item.product.image} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover bg-white" loading="lazy" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-display text-[#333] truncate">
-                          {item.product.name}
-                        </p>
-                        <p className="text-[10px] text-gray-500 font-body">
-                          Qty: {item.quantity}
-                        </p>
+                        <p className="text-xs font-display text-[#333] truncate">{item.product.name}</p>
+                        <p className="text-[10px] text-gray-500 font-body">Qty: {item.quantity}</p>
                       </div>
-                      <span className="text-xs font-mono-legacy text-[#333]">
-                        $
-                        {(
-                          (typeof item.product.price === "string"
-                            ? parseFloat(item.product.price) || 0
-                            : item.product.price) * item.quantity
-                        ).toFixed(2)}
-                      </span>
+                      <span className="text-xs font-mono-legacy text-[#333]">${((typeof item.product.price === 'string' ? parseFloat(item.product.price) || 0 : item.product.price) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="space-y-2 text-sm font-body border-t border-gray-200 pt-4 mb-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  {rewardDiscount > 0 && (
-                    <div className="flex justify-between text-[#F15929]">
-                      <span>Rewards</span>
-                      <span>-${rewardDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {couponDiscount > 0 && (
-                    <div className="flex justify-between text-[#F15929]">
-                      <span>Coupon ({appliedCoupon?.code})</span>
-                      <span>-${couponDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Shipping</span>
-                    <span
-                      className={
-                        isFreeShipping ||
-                        appliedCoupon?.type === "free_shipping"
-                          ? "text-[#F15929]"
-                          : ""
-                      }
-                    >
-                      {isFreeShipping || appliedCoupon?.type === "free_shipping"
-                        ? "FREE"
-                        : `$${shippingRate.toFixed(2)}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Tax</span>
-                    <span>$0.00</span>
-                  </div>
+                  <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                  {rewardDiscount > 0 && <div className="flex justify-between text-[#F15929]"><span>Rewards</span><span>-${rewardDiscount.toFixed(2)}</span></div>}
+                  {couponDiscount > 0 && <div className="flex justify-between text-[#F15929]"><span>Coupon ({appliedCoupon?.code})</span><span>-${couponDiscount.toFixed(2)}</span></div>}
+                  <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span className={(isFreeShipping || appliedCoupon?.type === 'free_shipping') ? 'text-[#F15929]' : ''}>{(isFreeShipping || appliedCoupon?.type === 'free_shipping') ? 'FREE' : `$${shippingRate.toFixed(2)}`}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>$0.00</span></div>
                 </div>
                 <div className="flex justify-between font-display text-lg border-t border-gray-200 pt-4 mb-4">
                   <span className="text-[#4B2D8E]">TOTAL</span>
-                  <span className="text-[#4B2D8E]">
-                    ${adjustedTotal.toFixed(2)}
-                  </span>
+                  <span className="text-[#4B2D8E]">${adjustedTotal.toFixed(2)}</span>
                 </div>
                 {isAuthenticated && (
                   <p className="text-xs text-[#4B2D8E] font-body mb-4 flex items-center gap-1">
-                    <Gift size={12} className="text-[#F15929]" /> Earn{" "}
-                    <strong>{pointsToEarn} points</strong>
+                    <Gift size={12} className="text-[#F15929]" /> Earn <strong>{pointsToEarn} points</strong>
                   </p>
                 )}
 
@@ -1245,8 +657,7 @@ export default function Checkout() {
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                     <p className="text-xs font-body text-orange-700 flex items-center gap-1.5">
                       <Shield size={14} className="shrink-0" />
-                      Please submit your ID for verification above to place your
-                      order
+                      Please submit your ID for verification above to place your order
                     </p>
                   </div>
                 )}
@@ -1261,27 +672,14 @@ export default function Checkout() {
                   </div>
                 )}
 
-                <button
-                  onClick={handlePlaceOrder}
-                  disabled={
-                    !canPlaceOrder || !etransferAcknowledged || submitting
-                  }
-                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder && etransferAcknowledged && !submitting ? "bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{" "}
-                      PLACING ORDER...
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={16} /> PLACE ORDER
-                    </>
-                  )}
+                <button onClick={handlePlaceOrder}
+                  disabled={!canPlaceOrder || !etransferAcknowledged || submitting}
+                  className={`w-full font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2 ${canPlaceOrder && etransferAcknowledged && !submitting ? 'bg-[#F15929] hover:bg-[#d94d22] text-white hover:scale-[1.02] active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                  {submitting
+                    ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> PLACING ORDER...</>
+                    : <><Lock size={16} /> PLACE ORDER</>}
                 </button>
-                <p className="text-[10px] text-gray-400 font-body text-center mt-3">
-                  {t.checkout.orderConfirmBy19}
-                </p>
+                <p className="text-[10px] text-gray-400 font-body text-center mt-3">{t.checkout.orderConfirmBy19}</p>
               </div>
             </div>
           </div>
