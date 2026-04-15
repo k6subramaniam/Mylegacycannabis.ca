@@ -38,7 +38,7 @@ import {
   triggerOrderStatusUpdate,
   getResolvedCommonVars,
 } from "./emailTemplateEngine";
-import { parseMenuImage, applyMenuImport, type ParsedMenuItem, type MenuImportPayload } from "./menuImport";
+import { parseMenuImage, applyMenuImport, type MenuImportPayload } from "./menuImport";
 import { pollETransferEmails, manualMatchPayment, isETransferServiceConfigured, getKeywordRules, clearKeywordRulesCache, DEFAULT_ETRANSFER_INDICATORS_FOR_TEST, type KeywordRule } from "./etransferService";
 import { reserveUniqueCentAmount, expireOldCentReservations } from "./centMatching";
 import { pollTrackingEmails, isTrackingServiceConfigured } from "./trackingService";
@@ -1403,7 +1403,7 @@ Return ONLY the JSON object.`;
           return { success: true, items, count: items.length };
         } catch (err: any) {
           console.error("[MenuImport] Parse error:", err.message);
-          return { success: false, items: [] as ParsedMenuItem[], count: 0, error: err.message };
+          return { success: false, items: [], count: 0, error: err.message };
         }
       }),
 
