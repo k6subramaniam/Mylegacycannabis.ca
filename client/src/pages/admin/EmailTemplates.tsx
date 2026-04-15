@@ -174,7 +174,7 @@ export default function AdminEmailTemplates() {
                 <h2 className="text-lg font-bold text-gray-800">{previewTemplate.name}</h2>
                 <p className="text-xs text-gray-400 font-mono">{previewTemplate.slug}</p>
               </div>
-              <button onClick={() => setPreviewTemplate(null)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => setPreviewTemplate(null)} aria-label="Close preview" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-5">
               <p className="text-sm text-gray-500 mb-3"><strong>Subject:</strong> {previewTemplate.subject}</p>
@@ -217,7 +217,7 @@ export default function AdminEmailTemplates() {
           <div className="bg-white rounded-2xl w-full max-w-3xl my-8 shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800">New Email Template</h2>
-              <button onClick={() => setShowNew(false)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={() => setShowNew(false)} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...newForm, variables: newForm.variables ? newForm.variables.split(",").map(v => v.trim()) : [] }); }} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -354,7 +354,7 @@ function AiGenerateModal({ onClose, onCreated }: { onClose: () => void; onCreate
               <p className="text-xs text-gray-400">Describe the email you want and AI will create a branded template</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close generator" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-5">
@@ -871,7 +871,7 @@ function EditTemplateModal({ template, editForm, setEditForm, onClose, onSave, i
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${showAiPanel ? "bg-violet-100 border-violet-300 text-violet-700" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
               <Wand2 size={14} /> AI Improve
             </button>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+            <button onClick={onClose} aria-label="Close editor" className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
           </div>
         </div>
 
@@ -1074,7 +1074,7 @@ function ApplyDesignModal({ source, allTemplates, onClose, onApplied }: {
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Palette size={18} className="text-violet-600" /> Apply Design</h2>
             <p className="text-xs text-gray-400 mt-0.5">Copy the visual design of <strong>{source.name}</strong> to other templates</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" disabled={processing}><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100" disabled={processing}><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-4">
