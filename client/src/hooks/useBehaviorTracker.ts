@@ -175,7 +175,31 @@ export function useBehaviorTracker() {
   }, [pushEvent]);
 
   const trackCheckoutComplete = useCallback((orderNumber: string, total: string) => {
-    pushEvent({ eventType: 'checkout_complete', page: '/checkout', metadata: { orderNumber, total } });
+    const event = {
+      sessionId: sessionId.current,
+      eventType: 'checkout_complete',
+      page: '/checkout',
+      metadata: { orderNumber, total }
+    } as any;
+
+    // Use navigator.sendBeacon to ensure the event fires even as the page unloads
+    if (navigator.sendBeacon) {
+      try {
+        const payload = JSON.stringify({ events: [event] });
+        const blob = new Blob([payload], { type: 'application/json' });
+        const success = navigator.sendBeacon('/api/analytics/track', blob);
+        if (!success) {
+          throw new Error("sendBeacon returned false");
+        }
+      } catch (e) {
+        // Fallback to pushEvent if beacon fails
+        pushEvent({ eventType: 'checkout_complete', page: '/checkout', metadata: { orderNumber, total } });
+        flushEvents();
+      }
+    } else {
+      pushEvent({ eventType: 'checkout_complete', page: '/checkout', metadata: { orderNumber, total } });
+      flushEvents();
+    }
   }, [pushEvent]);
 
   return {
