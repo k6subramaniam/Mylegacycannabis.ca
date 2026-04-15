@@ -187,7 +187,10 @@ export function useBehaviorTracker() {
       try {
         const payload = JSON.stringify({ events: [event] });
         const blob = new Blob([payload], { type: 'application/json' });
-        navigator.sendBeacon('/api/analytics/track', blob);
+        const success = navigator.sendBeacon('/api/analytics/track', blob);
+        if (!success) {
+          throw new Error("sendBeacon returned false");
+        }
       } catch (e) {
         // Fallback to pushEvent if beacon fails
         pushEvent({ eventType: 'checkout_complete', page: '/checkout', metadata: { orderNumber, total } });
