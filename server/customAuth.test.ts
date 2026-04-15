@@ -60,7 +60,8 @@ describe("Custom Auth Routes", () => {
     expect(isPhoneValid).toBe(false);
 
     registrationData.phone = "4165550123";
-    const isPhoneValidNow = registrationData.phone.replace(/\D/g, "").length >= 10;
+    const isPhoneValidNow =
+      registrationData.phone.replace(/\D/g, "").length >= 10;
     expect(isPhoneValidNow).toBe(true);
   });
 

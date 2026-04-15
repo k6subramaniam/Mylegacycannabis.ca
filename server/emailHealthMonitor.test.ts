@@ -8,7 +8,7 @@ vi.mock("./_core/env", () => ({
     smtpHost: "",
     smtpUser: "",
     smtpPass: "",
-  }
+  },
 }));
 
 describe("getAvailableProviders", () => {
@@ -27,16 +27,18 @@ describe("getAvailableProviders", () => {
 
   it("should return false for all providers when no env vars are set", () => {
     const providers = getAvailableProviders();
-    expect(providers.every((p) => p.configured === false)).toBe(true);
+    expect(providers.every(p => p.configured === false)).toBe(true);
   });
 
   it("should configure Resend when resendApiKey is provided", () => {
     ENV.resendApiKey = "re_123456";
     const providers = getAvailableProviders();
-    const resend = providers.find((p) => p.name === "resend");
+    const resend = providers.find(p => p.name === "resend");
 
     expect(resend?.configured).toBe(true);
-    expect(resend?.warning).toContain("Free tier: can only send to your own email");
+    expect(resend?.warning).toContain(
+      "Free tier: can only send to your own email"
+    );
   });
 
   it("should configure SMTP when all required vars are provided", () => {
@@ -44,7 +46,7 @@ describe("getAvailableProviders", () => {
     ENV.smtpUser = "user";
     ENV.smtpPass = "pass";
     const providers = getAvailableProviders();
-    const smtp = providers.find((p) => p.name === "smtp");
+    const smtp = providers.find(p => p.name === "smtp");
 
     expect(smtp?.configured).toBe(true);
     expect(smtp?.warning).toContain("Railway Hobby plan blocks SMTP");
@@ -54,7 +56,7 @@ describe("getAvailableProviders", () => {
     ENV.smtpHost = "smtp.example.com";
     ENV.smtpUser = "user";
     const providers = getAvailableProviders();
-    const smtp = providers.find((p) => p.name === "smtp");
+    const smtp = providers.find(p => p.name === "smtp");
 
     expect(smtp?.configured).toBe(false);
     expect(smtp?.warning).toContain("SMTP_PASS is missing");
@@ -63,7 +65,7 @@ describe("getAvailableProviders", () => {
   it("should configure Sendgrid when SENDGRID_API_KEY is provided", () => {
     process.env.SENDGRID_API_KEY = "sg.123";
     const providers = getAvailableProviders();
-    const sendgrid = providers.find((p) => p.name === "sendgrid");
+    const sendgrid = providers.find(p => p.name === "sendgrid");
 
     expect(sendgrid?.configured).toBe(true);
   });
@@ -72,7 +74,7 @@ describe("getAvailableProviders", () => {
     process.env.MAILGUN_API_KEY = "key-123";
     process.env.MAILGUN_DOMAIN = "mg.example.com";
     const providers = getAvailableProviders();
-    const mailgun = providers.find((p) => p.name === "mailgun");
+    const mailgun = providers.find(p => p.name === "mailgun");
 
     expect(mailgun?.configured).toBe(true);
   });
@@ -80,7 +82,7 @@ describe("getAvailableProviders", () => {
   it("should not configure Mailgun if only API key is provided", () => {
     process.env.MAILGUN_API_KEY = "key-123";
     const providers = getAvailableProviders();
-    const mailgun = providers.find((p) => p.name === "mailgun");
+    const mailgun = providers.find(p => p.name === "mailgun");
 
     expect(mailgun?.configured).toBe(false);
   });
@@ -89,7 +91,7 @@ describe("getAvailableProviders", () => {
     process.env.AWS_ACCESS_KEY_ID = "AKIA123";
     process.env.AWS_SECRET_ACCESS_KEY = "secret123";
     const providers = getAvailableProviders();
-    const ses = providers.find((p) => p.name === "ses");
+    const ses = providers.find(p => p.name === "ses");
 
     expect(ses?.configured).toBe(true);
   });
@@ -97,7 +99,7 @@ describe("getAvailableProviders", () => {
   it("should not configure SES if secret is missing", () => {
     process.env.AWS_ACCESS_KEY_ID = "AKIA123";
     const providers = getAvailableProviders();
-    const ses = providers.find((p) => p.name === "ses");
+    const ses = providers.find(p => p.name === "ses");
 
     expect(ses?.configured).toBe(false);
   });
