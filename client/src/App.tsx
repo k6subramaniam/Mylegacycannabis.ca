@@ -1,3 +1,7 @@
+import posthog from "posthog-js";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { PostHogProvider } from "posthog-js/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -71,147 +75,316 @@ function Router() {
       <Route path="/admin/orders/:id">
         {(params: any) => (
           <AdminLayout>
-            <S><AdminOrders routeId={params?.id} /></S>
+            <S>
+              <AdminOrders routeId={params?.id} />
+            </S>
           </AdminLayout>
         )}
       </Route>
       <Route path="/admin/orders">
-        <AdminLayout><S><AdminOrders /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminOrders />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/products">
-        <AdminLayout><S><AdminProducts /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminProducts />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/menu-import">
-        <AdminLayout><S><AdminMenuImport /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminMenuImport />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/verifications">
-        <AdminLayout><S><AdminVerifications /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminVerifications />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/shipping">
-        <AdminLayout><S><AdminShipping /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminShipping />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/emails">
-        <AdminLayout><S><AdminEmailTemplates /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminEmailTemplates />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/reports">
-        <AdminLayout><S><AdminReports /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminReports />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/customers">
-        <AdminLayout><S><AdminCustomers /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminCustomers />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/reviews">
-        <AdminLayout><S><AdminReviews /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminReviews />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/payments">
-        <AdminLayout><S><AdminPayments /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminPayments />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/locations">
-        <AdminLayout><S><AdminLocations /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminLocations />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/settings">
-        <AdminLayout><S><AdminSettings /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminSettings />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/system-logs">
-        <AdminLayout><S><AdminSystemLogs /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminSystemLogs />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin/a7x">
-        <AdminLayout><S><AdminInsights /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminInsights />
+          </S>
+        </AdminLayout>
       </Route>
       <Route path="/admin">
-        <AdminLayout><S><AdminDashboard /></S></AdminLayout>
+        <AdminLayout>
+          <S>
+            <AdminDashboard />
+          </S>
+        </AdminLayout>
       </Route>
 
       {/* ── Auth pages — no Layout wrapper ── */}
       <Route path="/login">
-        <S><Login /></S>
+        <S>
+          <Login />
+        </S>
       </Route>
       <Route path="/register">
-        <S><Register /></S>
+        <S>
+          <Register />
+        </S>
       </Route>
       <Route path="/complete-profile">
-        <S><CompleteProfile /></S>
+        <S>
+          <CompleteProfile />
+        </S>
       </Route>
 
       {/* ── Storefront routes ── */}
       <Route path="/">
-        <Layout><S><Home /></S></Layout>
+        <Layout>
+          <S>
+            <Home />
+          </S>
+        </Layout>
       </Route>
       <Route path="/shop">
-        <Layout><S><Shop /></S></Layout>
+        <Layout>
+          <S>
+            <Shop />
+          </S>
+        </Layout>
       </Route>
       <Route path="/shop/:category">
-        <Layout><S><Shop /></S></Layout>
+        <Layout>
+          <S>
+            <Shop />
+          </S>
+        </Layout>
       </Route>
       <Route path="/product/:slug">
-        <Layout><S><ProductPage /></S></Layout>
+        <Layout>
+          <S>
+            <ProductPage />
+          </S>
+        </Layout>
       </Route>
       <Route path="/cart">
-        <Layout><S><Cart /></S></Layout>
+        <Layout>
+          <S>
+            <Cart />
+          </S>
+        </Layout>
       </Route>
       <Route path="/checkout">
-        <Layout><S><Checkout /></S></Layout>
+        <Layout>
+          <S>
+            <Checkout />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account/verify-id">
-        <Layout><S><IDVerification /></S></Layout>
+        <Layout>
+          <S>
+            <IDVerification />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account/login">
-        <Layout><S><Account /></S></Layout>
+        <Layout>
+          <S>
+            <Account />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account/register">
-        <Layout><S><Account /></S></Layout>
+        <Layout>
+          <S>
+            <Account />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account/rewards">
-        <Layout><S><Account /></S></Layout>
+        <Layout>
+          <S>
+            <Account />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account/orders">
-        <Layout><S><Account /></S></Layout>
+        <Layout>
+          <S>
+            <Account />
+          </S>
+        </Layout>
       </Route>
       <Route path="/account">
-        <Layout><S><Account /></S></Layout>
+        <Layout>
+          <S>
+            <Account />
+          </S>
+        </Layout>
       </Route>
       <Route path="/verify-id">
-        <Layout><S><IDVerification /></S></Layout>
+        <Layout>
+          <S>
+            <IDVerification />
+          </S>
+        </Layout>
       </Route>
       <Route path="/verify-mobile">
-        <Layout><S><MobileUpload /></S></Layout>
+        <Layout>
+          <S>
+            <MobileUpload />
+          </S>
+        </Layout>
       </Route>
       <Route path="/rewards">
-        <Layout><S><Rewards /></S></Layout>
+        <Layout>
+          <S>
+            <Rewards />
+          </S>
+        </Layout>
       </Route>
       <Route path="/locations">
-        <Layout><S><Locations /></S></Layout>
+        <Layout>
+          <S>
+            <Locations />
+          </S>
+        </Layout>
       </Route>
       <Route path="/about">
-        <Layout><S><About /></S></Layout>
+        <Layout>
+          <S>
+            <About />
+          </S>
+        </Layout>
       </Route>
       <Route path="/shipping">
-        <Layout><S><ShippingPolicy /></S></Layout>
+        <Layout>
+          <S>
+            <ShippingPolicy />
+          </S>
+        </Layout>
       </Route>
       <Route path="/contact">
-        <Layout><S><Contact /></S></Layout>
+        <Layout>
+          <S>
+            <Contact />
+          </S>
+        </Layout>
       </Route>
       <Route path="/faq">
-        <Layout><S><FAQ /></S></Layout>
+        <Layout>
+          <S>
+            <FAQ />
+          </S>
+        </Layout>
       </Route>
       <Route path="/privacy-policy">
-        <Layout><S><PrivacyPolicy /></S></Layout>
+        <Layout>
+          <S>
+            <PrivacyPolicy />
+          </S>
+        </Layout>
       </Route>
       <Route path="/terms">
-        <Layout><S><Terms /></S></Layout>
+        <Layout>
+          <S>
+            <Terms />
+          </S>
+        </Layout>
       </Route>
       <Route path="/404">
-        <Layout><S><NotFound /></S></Layout>
+        <Layout>
+          <S>
+            <NotFound />
+          </S>
+        </Layout>
       </Route>
 
       {/* Catch-all */}
       <Route>
-        <Layout><S><NotFound /></S></Layout>
+        <Layout>
+          <S>
+            <NotFound />
+          </S>
+        </Layout>
       </Route>
     </Switch>
   );
 }
 
 function App() {
+  const [location] = useLocation();
+  useEffect(() => {
+    posthog.capture("$pageview");
+  }, [location]);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">

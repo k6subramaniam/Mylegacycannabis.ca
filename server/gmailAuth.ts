@@ -60,7 +60,9 @@ export function getGmailStatus(): {
  * Create a gmail client. Returns `null` if credentials are missing
  * or the circuit-breaker has tripped.
  */
-export function getGmailClient(service: string): ReturnType<typeof google.gmail> | null {
+export function getGmailClient(
+  service: string
+): ReturnType<typeof google.gmail> | null {
   if (!isGmailConfigured()) {
     return null;
   }
@@ -107,31 +109,34 @@ export function handleGmailError(service: string, err: unknown): boolean {
       // Trip the circuit-breaker
       _oauthDisabled = true;
       _disabledAt = new Date();
-      _disabledReason = errAny?.response?.data?.error_description
-        || errAny?.response?.data?.error
-        || errAny?.message
-        || "Unknown OAuth error";
+      _disabledReason =
+        errAny?.response?.data?.error_description ||
+        errAny?.response?.data?.error ||
+        errAny?.message ||
+        "Unknown OAuth error";
 
       console.error(
         `\n` +
-        `┌──────────────────────────────────────────────────────────────────┐\n` +
-        `│  ⚠️  [${service}] Gmail OAuth DISABLED — token expired/revoked  │\n` +
-        `├──────────────────────────────────────────────────────────────────┤\n` +
-        `│  Reason: ${_disabledReason.substring(0, 52).padEnd(52)} │\n` +
-        `│  Time:   ${_disabledAt.toISOString().padEnd(52)} │\n` +
-        `│                                                                  │\n` +
-        `│  TO FIX:                                                         │\n` +
-        `│  1. Re-authorize Gmail OAuth (run OAuth flow)                    │\n` +
-        `│  2. Update GMAIL_REFRESH_TOKEN in Railway env vars               │\n` +
-        `│  3. Redeploy (or restart the service)                            │\n` +
-        `│                                                                  │\n` +
-        `│  Gmail polling is paused until the token is refreshed.           │\n` +
-        `│  The website and all other services continue to work normally.   │\n` +
-        `└──────────────────────────────────────────────────────────────────┘\n`
+          `┌──────────────────────────────────────────────────────────────────┐\n` +
+          `│  ⚠️  [${service}] Gmail OAuth DISABLED — token expired/revoked  │\n` +
+          `├──────────────────────────────────────────────────────────────────┤\n` +
+          `│  Reason: ${_disabledReason.substring(0, 52).padEnd(52)} │\n` +
+          `│  Time:   ${_disabledAt.toISOString().padEnd(52)} │\n` +
+          `│                                                                  │\n` +
+          `│  TO FIX:                                                         │\n` +
+          `│  1. Re-authorize Gmail OAuth (run OAuth flow)                    │\n` +
+          `│  2. Update GMAIL_REFRESH_TOKEN in Railway env vars               │\n` +
+          `│  3. Redeploy (or restart the service)                            │\n` +
+          `│                                                                  │\n` +
+          `│  Gmail polling is paused until the token is refreshed.           │\n` +
+          `│  The website and all other services continue to work normally.   │\n` +
+          `└──────────────────────────────────────────────────────────────────┘\n`
       );
     } else if (!_oauthDisabled) {
       // First failure — brief warning, will retry once more
-      console.warn(`[${service}] Gmail OAuth error (attempt ${_failureCount}/${MAX_FAILURES}): ${errAny?.response?.data?.error || errAny?.message || "unknown"}`);
+      console.warn(
+        `[${service}] Gmail OAuth error (attempt ${_failureCount}/${MAX_FAILURES}): ${errAny?.response?.data?.error || errAny?.message || "unknown"}`
+      );
     }
     // Once disabled, don't log anything — caller gets null from getGmailClient()
 
@@ -151,13 +156,21 @@ export function handleGmailError(service: string, err: unknown): boolean {
   }
 
   // Network / timeout
-  if (msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT") || msg.includes("ENOTFOUND")) {
-    console.warn(`[${service}] Gmail network error (${code}) — will retry next cycle`);
+  if (
+    msg.includes("ECONNREFUSED") ||
+    msg.includes("ETIMEDOUT") ||
+    msg.includes("ENOTFOUND")
+  ) {
+    console.warn(
+      `[${service}] Gmail network error (${code}) — will retry next cycle`
+    );
     return false;
   }
 
   // Other API errors — log one line, not the whole object
-  console.warn(`[${service}] Gmail API error (${code}): ${msg.substring(0, 200)}`);
+  console.warn(
+    `[${service}] Gmail API error (${code}): ${msg.substring(0, 200)}`
+  );
   return false;
 }
 

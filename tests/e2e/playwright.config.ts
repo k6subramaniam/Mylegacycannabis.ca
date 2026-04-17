@@ -1,8 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
+import { defineConfig, devices } from "@playwright/test";
+import dotenv from "dotenv";
 
 // Load environment variables
-dotenv.config({ path: '.env.test' });
+dotenv.config({ path: ".env.test" });
 
 /**
  * My Legacy Cannabis — Playwright Configuration
@@ -17,7 +17,7 @@ dotenv.config({ path: '.env.test' });
  *   npx playwright show-report             # view HTML report
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: "./tests/e2e",
   timeout: 30_000,
   expect: { timeout: 10_000 },
 
@@ -32,20 +32,22 @@ export default defineConfig({
 
   // Report
   reporter: [
-    ['html', { open: process.env.CI ? 'never' : 'on-failure' }],
-    ['list'],
+    ["html", { open: process.env.CI ? "never" : "on-failure" }],
+    ["list"],
     // JSON report for CI parsing
-    ...(process.env.CI ? [['json', { outputFile: 'test-results/results.json' }] as any] : []),
+    ...(process.env.CI
+      ? [["json", { outputFile: "test-results/results.json" }] as any]
+      : []),
   ],
 
   // Shared settings for all projects
   use: {
-    baseURL: process.env.TEST_BASE_URL || 'http://localhost:5000',
+    baseURL: process.env.TEST_BASE_URL || "http://localhost:5000",
 
     // Capture evidence on failure
-    screenshot: 'only-on-failure',
-    trace: 'on-first-retry',
-    video: 'on-first-retry',
+    screenshot: "only-on-failure",
+    trace: "on-first-retry",
+    video: "on-first-retry",
 
     // Reasonable timeouts for Railway
     actionTimeout: 15_000,
@@ -53,46 +55,46 @@ export default defineConfig({
 
     // Accept cookies / age gate automatically
     extraHTTPHeaders: {
-      'Accept-Language': 'en-CA',
+      "Accept-Language": "en-CA",
     },
   },
 
   projects: [
     // ─── Auth Setup (runs first) ───
     {
-      name: 'auth-setup',
+      name: "auth-setup",
       testMatch: /auth\.setup\.ts/,
     },
 
     // ─── Desktop Chrome ───
     {
-      name: 'chrome',
+      name: "chrome",
       use: {
-        ...devices['Desktop Chrome'],
+        ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
       },
-      dependencies: ['auth-setup'],
+      dependencies: ["auth-setup"],
     },
 
     // ─── Mobile (Galaxy S25 Ultra — your primary device) ───
     {
-      name: 'mobile',
+      name: "mobile",
       use: {
-        ...devices['Pixel 7'],
+        ...devices["Pixel 7"],
         // Galaxy S25 Ultra approximate viewport
         viewport: { width: 412, height: 915 },
         isMobile: true,
         hasTouch: true,
       },
-      dependencies: ['auth-setup'],
+      dependencies: ["auth-setup"],
     },
 
     // ─── Smoke tests against production ───
     {
-      name: 'production-smoke',
+      name: "production-smoke",
       use: {
-        ...devices['Desktop Chrome'],
-        baseURL: 'https://mylegacycannabisca-production.up.railway.app',
+        ...devices["Desktop Chrome"],
+        baseURL: "https://mylegacycannabisca-production.up.railway.app",
       },
       testMatch: /.*\.smoke\.spec\.ts/,
       // No auth dependency — smoke tests are unauthenticated
@@ -100,10 +102,12 @@ export default defineConfig({
   ],
 
   // Auto-start dev server for local testing
-  webServer: process.env.CI ? undefined : {
-    command: 'npm run dev',
-    url: 'http://localhost:5000',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: process.env.CI
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:5000",
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
 });

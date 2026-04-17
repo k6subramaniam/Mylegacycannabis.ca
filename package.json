@@ -76,6 +76,7 @@
     "nodemailer": "^8.0.5",
     "openai": "^6.32.0",
     "postgres": "^3.4.8",
+    "posthog-js": "^1.369.0",
     "react": "^19.2.1",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.1",
