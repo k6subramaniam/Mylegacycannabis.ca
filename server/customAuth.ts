@@ -166,7 +166,7 @@ export function registerCustomAuthRoutes(app: Express) {
           res.json({ success: true, message: "Verification code sent to your phone.", method: "sms" });
         } else {
           // SMS failed — fall back to email notification to admin
-          console.log(`[OTP FALLBACK] SMS failed for ${normalizedIdentifier}. Code: ${code}`);
+          console.log(`[OTP FALLBACK] SMS failed for ${normalizedIdentifier}`);
           res.json({
             success: true,
             message: smsResult.reason || "SMS service is not yet configured. The code has been logged for admin verification.",
