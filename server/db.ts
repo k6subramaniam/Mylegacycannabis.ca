@@ -648,7 +648,6 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
-
   // Smart e-Transfer matching: new columns on orders table
   await _sql!`DO $$ BEGIN
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS original_total NUMERIC(10,2);
@@ -6775,20 +6774,32 @@ function _mem_getPendingETransferOrders() {
 
 // ─── NEWSLETTER FUNCTIONS ───
 
-export async function subscribeNewsletter(email: string, source: string = 'website'): Promise<{ isNew: boolean }> {
+export async function subscribeNewsletter(
+  email: string,
+  source: string = "website"
+): Promise<{ isNew: boolean }> {
   if (!USE_PERSISTENT_DB) return { isNew: true };
   const normalizedEmail = email.toLowerCase().trim();
   const db = getDb();
   try {
-    const existing = await db.select().from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, normalizedEmail)).limit(1);
+    const existing = await db
+      .select()
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.email, normalizedEmail))
+      .limit(1);
     if (existing.length > 0) {
       if (existing[0].isActive) return { isNew: false };
       else {
-        await db.update(schema.newsletterSubscribers).set({ isActive: true, unsubscribedAt: null }).where(eq(schema.newsletterSubscribers.email, normalizedEmail));
+        await db
+          .update(schema.newsletterSubscribers)
+          .set({ isActive: true, unsubscribedAt: null })
+          .where(eq(schema.newsletterSubscribers.email, normalizedEmail));
         return { isNew: true };
       }
     }
-    await db.insert(schema.newsletterSubscribers).values({ email: normalizedEmail, source });
+    await db
+      .insert(schema.newsletterSubscribers)
+      .values({ email: normalizedEmail, source });
     return { isNew: true };
   } catch (err) {
     console.error("[DB] Failed to subscribe newsletter:", err);
@@ -6801,7 +6812,10 @@ export async function unsubscribeNewsletter(email: string): Promise<void> {
   const normalizedEmail = email.toLowerCase().trim();
   const db = getDb();
   try {
-    await db.update(schema.newsletterSubscribers).set({ isActive: false, unsubscribedAt: new Date() }).where(eq(schema.newsletterSubscribers.email, normalizedEmail));
+    await db
+      .update(schema.newsletterSubscribers)
+      .set({ isActive: false, unsubscribedAt: new Date() })
+      .where(eq(schema.newsletterSubscribers.email, normalizedEmail));
   } catch (err) {
     console.error("[DB] Failed to unsubscribe newsletter:", err);
     throw err;
@@ -6812,7 +6826,11 @@ export async function getAllNewsletterSubscribers(): Promise<any[]> {
   if (!USE_PERSISTENT_DB) return [];
   const db = getDb();
   try {
-    return await db.select().from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.isActive, true)).orderBy(desc(schema.newsletterSubscribers.subscribedAt));
+    return await db
+      .select()
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.isActive, true))
+      .orderBy(desc(schema.newsletterSubscribers.subscribedAt));
   } catch (err) {
     console.error("[DB] Failed to get newsletter subscribers:", err);
     return [];
@@ -6823,7 +6841,10 @@ export async function getNewsletterSubscriberCount(): Promise<number> {
   if (!USE_PERSISTENT_DB) return 0;
   const db = getDb();
   try {
-    const result = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.isActive, true));
+    const result = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.isActive, true));
     return result[0]?.count || 0;
   } catch (err) {
     console.error("[DB] Failed to get newsletter subscriber count:", err);

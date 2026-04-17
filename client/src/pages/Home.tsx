@@ -571,7 +571,7 @@ function NewsletterForm() {
   const [email, setEmail] = useState("");
   const { t } = useT();
   const subscribeMutation = trpc.subscribeNewsletter.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       if (data.isNew) {
         toast.success(t.home.thanksSubscribing || "Thanks for subscribing!");
         setEmail("");
@@ -580,9 +580,9 @@ function NewsletterForm() {
         setEmail("");
       }
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to subscribe. Please try again.");
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {

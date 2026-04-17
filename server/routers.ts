@@ -123,7 +123,9 @@ export const appRouter = router({
     .mutation(async ({ input }) => {
       const result = await db.subscribeNewsletter(input.email, input.source);
       if (result.isNew) {
-        await triggerNewsletterWelcomeEmail({ subscriberEmail: input.email }).catch(err => {
+        await triggerNewsletterWelcomeEmail({
+          subscriberEmail: input.email,
+        }).catch(err => {
           console.error("Failed to send newsletter welcome email:", err);
         });
       }
