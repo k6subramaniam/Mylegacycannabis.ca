@@ -11,3 +11,7 @@
 ## 2025-04-15 - Enable Express Compression
  **Learning:** Express server by default does not compress assets, leading to large payloads sent to clients and slow FCP.
  **Action:** Add `compression` middleware as the first middleware in the Express application to compress all responses.
+
+## 2026-04-17 - Bulk Deactivation Optimization
+ **Learning:** Updating multiple records with the same value (e.g., deactivating products) in a loop creates an N+1 query bottleneck, significantly increasing latency due to multiple database round-trips.
+ **Action:** Implement a bulk update function in the database layer that uses Drizzle's `inArray` operator to update multiple records in a single SQL statement. Ensure counters for deactivated items use cumulative addition (`+=`) when refactoring from loops.

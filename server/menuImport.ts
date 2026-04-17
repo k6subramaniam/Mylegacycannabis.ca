@@ -303,11 +303,14 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
 
   // Deactivate flower products that weren't in this import
   if (deactivateOldFlower) {
-    for (const product of existingFlower) {
-      if (!matchedIds.has(product.id) && product.isActive) {
-        await db.updateProduct(product.id, { isActive: false } as any);
-        deactivated++;
-      }
+    const toDeactivate = existingFlower
+      .filter((p: any) => !matchedIds.has(p.id) && p.isActive)
+      .map((p: any) => p.id);
+
+    if (toDeactivate.length > 0) {
+      // Optimized: replace N+1 update loop with a single bulk update
+      await db.bulkUpdateProducts(toDeactivate, { isActive: false } as any);
+      deactivated += toDeactivate.length;
     }
   }
 
