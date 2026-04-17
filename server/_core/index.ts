@@ -343,6 +343,7 @@ async function startServer() {
       res.json({ store: null, geo: null, source: "error" });
     }
   });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Custom auth routes (OTP, Google, profile completion)
