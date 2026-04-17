@@ -61,7 +61,9 @@ export async function reserveUniqueCentAmount(
     expiresAt,
   });
 
-  console.log(`[CentMatch] Reserved $${finalAmount.toFixed(2)} (offset +${centOffset}c) for order #${orderId}`);
+  console.log(
+    `[CentMatch] Reserved $${finalAmount.toFixed(2)} (offset +${centOffset}c) for order #${orderId}`
+  );
   return parseFloat(finalAmount.toFixed(2));
 }
 

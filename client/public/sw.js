@@ -9,7 +9,7 @@
  */
 
 // ─── Push Event ─────────────────────────────────────────────────
-self.addEventListener("push", (event) => {
+self.addEventListener("push", event => {
   let data = {
     title: "My Legacy Cannabis",
     body: "You have a new notification",
@@ -46,7 +46,7 @@ self.addEventListener("push", (event) => {
 });
 
 // ─── Notification Click ─────────────────────────────────────────
-self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", event => {
   event.notification.close();
 
   if (event.action === "dismiss") return;
@@ -56,7 +56,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windowClients) => {
+      .then(windowClients => {
         // Focus an existing tab if one is open
         for (const client of windowClients) {
           if (
@@ -78,6 +78,6 @@ self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", event => {
   event.waitUntil(clients.claim());
 });

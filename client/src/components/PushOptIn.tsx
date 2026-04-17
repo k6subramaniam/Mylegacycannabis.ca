@@ -21,7 +21,8 @@ const DISMISS_DAYS = 30;
 
 export default function PushOptIn() {
   const { user, isAuthenticated } = useAuth();
-  const { isSupported, isSubscribed, isDenied, loading, subscribe } = usePushNotifications();
+  const { isSupported, isSubscribed, isDenied, loading, subscribe } =
+    usePushNotifications();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -29,7 +30,8 @@ export default function PushOptIn() {
     if (!isAuthenticated || !isSupported || isSubscribed || isDenied) return;
 
     // Only show for verified users or users with at least 1 order
-    const qualified = user?.idVerified || (user?.orders && user.orders.length > 0);
+    const qualified =
+      user?.idVerified || (user?.orders && user.orders.length > 0);
     if (!qualified) return;
 
     // Check dismissal cooldown
@@ -82,7 +84,8 @@ export default function PushOptIn() {
           <div>
             <h4 className="font-semibold text-sm">Stay in the loop</h4>
             <p className="text-xs text-white/70 mt-0.5 leading-relaxed">
-              Get notified about order updates, new drops, and exclusive rewards — right on your device.
+              Get notified about order updates, new drops, and exclusive rewards
+              — right on your device.
             </p>
           </div>
         </div>

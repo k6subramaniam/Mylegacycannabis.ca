@@ -64,61 +64,61 @@ describe("admin routes", () => {
   });
 });
 
-  it("admin.products.list returns products for admin users", async () => {
-    const ctx = createAdminContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.admin.products.list({ page: 1, limit: 10 });
-    expect(result).toHaveProperty("data");
-    expect(result).toHaveProperty("total");
-    expect(Array.isArray(result.data)).toBe(true);
-  });
+it("admin.products.list returns products for admin users", async () => {
+  const ctx = createAdminContext();
+  const caller = appRouter.createCaller(ctx);
+  const result = await caller.admin.products.list({ page: 1, limit: 10 });
+  expect(result).toHaveProperty("data");
+  expect(result).toHaveProperty("total");
+  expect(Array.isArray(result.data)).toBe(true);
+});
 
-  it("admin.orders.list returns orders for admin users", async () => {
-    const ctx = createAdminContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.admin.orders.list({ page: 1, limit: 10 });
-    expect(result).toHaveProperty("data");
-    expect(result).toHaveProperty("total");
-    expect(Array.isArray(result.data)).toBe(true);
-  });
+it("admin.orders.list returns orders for admin users", async () => {
+  const ctx = createAdminContext();
+  const caller = appRouter.createCaller(ctx);
+  const result = await caller.admin.orders.list({ page: 1, limit: 10 });
+  expect(result).toHaveProperty("data");
+  expect(result).toHaveProperty("total");
+  expect(Array.isArray(result.data)).toBe(true);
+});
 
-  it("admin.verifications.list returns verifications for admin users", async () => {
-    const ctx = createAdminContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.admin.verifications.list({ page: 1, limit: 10 });
-    expect(result).toHaveProperty("data");
-    expect(result).toHaveProperty("total");
-  });
+it("admin.verifications.list returns verifications for admin users", async () => {
+  const ctx = createAdminContext();
+  const caller = appRouter.createCaller(ctx);
+  const result = await caller.admin.verifications.list({ page: 1, limit: 10 });
+  expect(result).toHaveProperty("data");
+  expect(result).toHaveProperty("total");
+});
 
-  it("admin.shipping.list returns shipping zones for admin users", async () => {
-    const ctx = createAdminContext();
-    const caller = appRouter.createCaller(ctx);
-    const zones = await caller.admin.shipping.list();
-    expect(Array.isArray(zones)).toBe(true);
-    if (zones.length > 0) {
-      expect(zones[0]).toHaveProperty("zoneName");
-      expect(zones[0]).toHaveProperty("rate");
-      expect(zones[0]).toHaveProperty("provinces");
-    }
-  });
+it("admin.shipping.list returns shipping zones for admin users", async () => {
+  const ctx = createAdminContext();
+  const caller = appRouter.createCaller(ctx);
+  const zones = await caller.admin.shipping.list();
+  expect(Array.isArray(zones)).toBe(true);
+  if (zones.length > 0) {
+    expect(zones[0]).toHaveProperty("zoneName");
+    expect(zones[0]).toHaveProperty("rate");
+    expect(zones[0]).toHaveProperty("provinces");
+  }
+});
 
-  it("admin.emailTemplates.list returns email templates for admin users", async () => {
-    const ctx = createAdminContext();
-    const caller = appRouter.createCaller(ctx);
-    const templates = await caller.admin.emailTemplates.list();
-    expect(Array.isArray(templates)).toBe(true);
-    if (templates.length > 0) {
-      expect(templates[0]).toHaveProperty("slug");
-      expect(templates[0]).toHaveProperty("name");
-      expect(templates[0]).toHaveProperty("subject");
-    }
-  });
+it("admin.emailTemplates.list returns email templates for admin users", async () => {
+  const ctx = createAdminContext();
+  const caller = appRouter.createCaller(ctx);
+  const templates = await caller.admin.emailTemplates.list();
+  expect(Array.isArray(templates)).toBe(true);
+  if (templates.length > 0) {
+    expect(templates[0]).toHaveProperty("slug");
+    expect(templates[0]).toHaveProperty("name");
+    expect(templates[0]).toHaveProperty("subject");
+  }
+});
 
-  it("rejects non-admin users from admin routes", async () => {
-    const ctx = createUserContext();
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.admin.stats()).rejects.toThrow();
-  });
+it("rejects non-admin users from admin routes", async () => {
+  const ctx = createUserContext();
+  const caller = appRouter.createCaller(ctx);
+  await expect(caller.admin.stats()).rejects.toThrow();
+});
 
 describe("store routes", () => {
   it("store.products returns active products", async () => {
