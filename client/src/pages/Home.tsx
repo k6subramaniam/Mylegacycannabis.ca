@@ -570,7 +570,7 @@ export default function Home() {
 function NewsletterForm() {
   const [email, setEmail] = useState("");
   const { t } = useT();
-  const subscribeMutation = trpc.subscribeNewsletter.useMutation({
+  const subscribeMutation = trpc.newsletter.subscribe.useMutation({
     onSuccess: data => {
       if (data.isNew) {
         toast.success(t.home.thanksSubscribing || "Thanks for subscribing!");

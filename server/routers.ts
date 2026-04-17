@@ -113,24 +113,26 @@ const MLC_BRAND_DNA = `BRANDING DNA / CORPORATE VISUAL IDENTITY:
 export const appRouter = router({
   system: systemRouter,
   // ─── NEWSLETTER ───
-  subscribeNewsletter: publicProcedure
-    .input(
-      z.object({
-        email: z.string().email(),
-        source: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const result = await db.subscribeNewsletter(input.email, input.source);
-      if (result.isNew) {
-        await triggerNewsletterWelcomeEmail({
-          subscriberEmail: input.email,
-        }).catch(err => {
-          console.error("Failed to send newsletter welcome email:", err);
-        });
-      }
-      return result;
-    }),
+  newsletter: router({
+    subscribe: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          source: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await db.subscribeNewsletter(input.email, input.source);
+        if (result.isNew) {
+          await triggerNewsletterWelcomeEmail({
+            subscriberEmail: input.email,
+          }).catch(err => {
+            console.error("Failed to send newsletter welcome email:", err);
+          });
+        }
+        return result;
+      }),
+  }),
 
   auth: router({
     me: publicProcedure.query(async opts => {
