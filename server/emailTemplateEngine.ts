@@ -405,3 +405,14 @@ export async function getResolvedCommonVars(): Promise<Record<string, string>> {
     faq_url: `${base}/faq`,
   };
 }
+
+export async function triggerNewsletterWelcomeEmail(params: {
+  subscriberEmail: string;
+}): Promise<void> {
+  const base = getSiteUrl();
+  await sendTemplatedEmail("newsletter-welcome", params.subscriberEmail, {
+    shop_url: `${base}/shop`,
+    account_url: `${base}/account`,
+    ...(await commonVars()),
+  });
+}

@@ -23,6 +23,95 @@ export interface EmailTemplateSeed {
 
 export const EMAIL_TEMPLATE_SEEDS: EmailTemplateSeed[] = [
   // ═══════════════════════════════════════
+  // NEWSLETTER WELCOME
+  // ═══════════════════════════════════════
+  {
+    slug: "newsletter-welcome",
+    name: "Newsletter Welcome Email",
+    subject: "Welcome to the My Legacy Cannabis Newsletter!",
+    bodyHtml: emailShell(
+      "Welcome to the My Legacy Cannabis Newsletter!",
+      `
+        <!-- Header Stripe -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="background: linear-gradient(135deg, #4B2D8E, #7A42A5); padding: 32px 24px; text-align: center;">
+              <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: bold; letter-spacing: -0.5px;">You're In!</h1>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Main Content -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="padding: 32px 24px; background-color: #ffffff;">
+              <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: #374151;">
+                Thanks for subscribing to the My Legacy Cannabis newsletter! We're thrilled to have you in the loop.
+              </p>
+
+              <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #374151;">
+                As a subscriber, you're now on the inside track for everything happening at My Legacy Cannabis.
+              </p>
+
+              <!-- Green Info Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; background-color: #ECFDF5; border-radius: 8px; border-left: 4px solid #10B981;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin: 0 0 12px; color: #065F46; font-size: 16px; font-weight: bold;">Here's what you can expect from us:</h3>
+                    <ul style="margin: 0; padding: 0 0 0 20px; color: #065F46; font-size: 15px; line-height: 1.6;">
+                      <li style="margin-bottom: 8px;">Weekly deals and specials</li>
+                      <li style="margin-bottom: 8px;">New product announcements</li>
+                      <li style="margin-bottom: 8px;">Exclusive subscriber-only promotions</li>
+                      <li style="margin-bottom: 0;">Community news and events</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{shop_url}}" style="display: inline-block; padding: 14px 32px; background-color: #F15929; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 16px;">Browse Our Shop</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Blue Info Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; background-color: #EFF6FF; border-radius: 8px; border-left: 4px solid #3B82F6;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin: 0 0 8px; color: #1E3A8A; font-size: 16px; font-weight: bold;">Want to earn rewards?</h3>
+                    <p style="margin: 0; color: #1E40AF; font-size: 15px; line-height: 1.5;">
+                      Create an account to start earning Legacy Points! You'll get <strong>25 bonus points</strong> just for signing up, and earn 1 point for every $1 spent. <a href="{{account_url}}" style="color: #2563EB; text-decoration: underline; font-weight: bold;">Create Account &rarr;</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Support Contact -->
+              <p style="margin: 0; font-size: 14px; color: #6B7280; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 24px;">
+                Have questions? We're here to help. Contact us at <a href="mailto:support@mylegacycannabis.ca" style="color: #4B2D8E; text-decoration: none; font-weight: bold;">support@mylegacycannabis.ca</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      `,
+      CUSTOMER_FOOTER
+    ),
+    variables: [
+      "shop_url",
+      "logo_url",
+      "site_url",
+      "account_url",
+      "unsubscribe_url",
+      "privacy_url",
+      "terms_url",
+    ],
+    isActive: true,
+  },
+
+  // ═══════════════════════════════════════
   // 1. WELCOME EMAIL
   // ═══════════════════════════════════════
   {
