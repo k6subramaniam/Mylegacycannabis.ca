@@ -27,9 +27,9 @@ describe("isOptedOut", () => {
   });
 
   it("should return true if mlc-analytics-optout cookie is set to '1'", () => {
-    expect(
-      isOptedOut({ headers: { cookie: "mlc-analytics-optout=1" } })
-    ).toBe(true);
+    expect(isOptedOut({ headers: { cookie: "mlc-analytics-optout=1" } })).toBe(
+      true
+    );
   });
 
   it("should return true if mlc-analytics-optout cookie is set to '1' among other cookies", () => {
