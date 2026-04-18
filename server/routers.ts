@@ -115,11 +115,6 @@ export const appRouter = router({
 
   // ─── NEWSLETTER ───
   newsletter: router({
-    unsubscribe: publicProcedure
-      .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
-        return await db.unsubscribeNewsletter(input.email);
-      }),
     subscribe: publicProcedure
       .input(
         z.object({
