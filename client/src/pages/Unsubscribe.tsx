@@ -36,7 +36,10 @@ export default function Unsubscribe() {
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
             {done ? (
               <div className="text-center py-6">
-                <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+                <CheckCircle
+                  size={48}
+                  className="text-green-500 mx-auto mb-4"
+                />
                 <h1 className="font-display text-2xl text-[#4B2D8E] mb-3">
                   You've Been Unsubscribed
                 </h1>
@@ -60,14 +63,15 @@ export default function Unsubscribe() {
                   </h1>
                   <p className="text-gray-600 font-body text-sm">
                     Enter the email address you'd like to unsubscribe. You will
-                    no longer receive promotional emails from My Legacy Cannabis.
+                    no longer receive promotional emails from My Legacy
+                    Cannabis.
                   </p>
                 </div>
                 <form onSubmit={handleSubmit}>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     placeholder="Enter your email address"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-800 font-body text-sm focus:outline-none focus:ring-2 focus:ring-[#4B2D8E]/30 focus:border-[#4B2D8E] transition-all mb-4"
                     required
