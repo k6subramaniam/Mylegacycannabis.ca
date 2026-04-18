@@ -1,42 +1,37 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
 /**
  * SHOPPING EXPERIENCE TESTS — Product browsing, Quick View, cart, images.
  * Tag: @critical @shop
  */
 
-test.describe("Shop & Product Browsing @critical @shop", () => {
+test.describe('Shop & Product Browsing @critical @shop', () => {
+
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    const ageGateYes = page
-      .locator('[aria-label="Age verification"] button')
-      .first();
+    await page.goto('/');
+    const ageGateYes = page.locator('[aria-label="Age verification"] button').first();
     if (await ageGateYes.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await ageGateYes.click({ force: true });
     }
   });
 
-  test("shop page displays product grid", async ({ page }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('shop page displays product grid', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
     // Product cards should be visible
-    const products = page.locator("div.bg-white.rounded-2xl.overflow-hidden");
+    const products = page.locator('div.bg-white.rounded-2xl.overflow-hidden');
     await expect(products.first()).toBeVisible({ timeout: 10_000 });
 
     const count = await products.count();
     expect(count).toBeGreaterThanOrEqual(1);
   });
 
-  test("product cards show essential info — name, price, category", async ({
-    page,
-  }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('product cards show essential info — name, price, category', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
-    const firstCard = page
-      .locator("div.bg-white.rounded-2xl.overflow-hidden")
-      .first();
+    const firstCard = page.locator('div.bg-white.rounded-2xl.overflow-hidden').first();
     await expect(firstCard).toBeVisible();
 
     // Should contain a price (e.g., "$38.00")
@@ -44,24 +39,20 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
     expect(cardText).toMatch(/\$/);
 
     // Should have an image
-    const img = firstCard.locator("img").first();
+    const img = firstCard.locator('img').first();
     await expect(img).toBeVisible();
   });
 
-  test("clicking a product navigates to product detail page", async ({
-    page,
-  }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('clicking a product navigates to product detail page', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
     // Click on a product link/card (not Quick View button)
-    const productLink = page
-      .locator("div.bg-white.rounded-2xl.overflow-hidden a")
-      .first();
+    const productLink = page.locator('div.bg-white.rounded-2xl.overflow-hidden a').first();
     if (await productLink.isVisible().catch(() => false)) {
       await productLink.click({ force: true });
       await page.waitForURL(/\/product\//);
-      expect(page.url()).toContain("/product/");
+      expect(page.url()).toContain('/product/');
     }
   });
 
@@ -69,9 +60,9 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
   // PRODUCT DETAIL PAGE
   // ═══════════════════════════════════════
 
-  test("product detail page shows full product info", async ({ page }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('product detail page shows full product info', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
     // Navigate to first product
     const productLink = page.locator('a[href*="/product/"]').first();
@@ -79,7 +70,7 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
     await page.waitForURL(/\/product\//);
 
     // Product name
-    const heading = page.locator("h1, h2").first();
+    const heading = page.locator('h1, h2').first();
     await expect(heading).toBeVisible();
     const name = await heading.textContent();
     expect(name!.length).toBeGreaterThan(2);
@@ -88,112 +79,86 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
     await expect(page.getByText(/\$\d+/)).toBeVisible();
 
     // Add to cart button
-    await expect(page.locator(".bg-\\[\\#F19929\\]")).toBeVisible();
+    await expect(page.locator('.bg-\\[\\#F19929\\]')).toBeVisible();
   });
 
   // ═══════════════════════════════════════
   // QUICK VIEW MODAL
   // ═══════════════════════════════════════
 
-  test("Quick View opens on hover + click", async ({ page }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('Quick View opens on hover + click', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
-    const firstProduct = page
-      .locator("div.bg-white.rounded-2xl.overflow-hidden")
-      .first();
+    const firstProduct = page.locator('div.bg-white.rounded-2xl.overflow-hidden').first();
     await expect(firstProduct).toBeVisible();
 
     // Hover to reveal Quick View button
     await firstProduct.hover({ force: true });
 
-    const quickViewBtn = firstProduct.locator(
-      'button:has-text("Quick View"), [data-testid="quick-view-btn"]'
-    );
+    const quickViewBtn = firstProduct.locator('button:has-text("Quick View"), [data-testid="quick-view-btn"]');
 
     // Quick View may not be implemented yet — skip if not found
-    if (
-      !(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))
-    ) {
-      test.skip(true, "Quick View not yet implemented");
+    if (!(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))) {
+      test.skip(true, 'Quick View not yet implemented');
       return;
     }
 
     await quickViewBtn.click({ force: true });
 
     // Modal should open
-    const modal = page.locator(
-      '[data-testid="quick-view-modal"], [role="dialog"], .quick-view-modal'
-    );
+    const modal = page.locator('[data-testid="quick-view-modal"], [role="dialog"], .quick-view-modal');
     await expect(modal).toBeVisible();
 
     // Should contain product info
     await expect(modal.getByText(/\$/)).toBeVisible();
 
     // Should have Add to Cart inside modal
-    await expect(modal.locator(".bg-\\[\\#F19929\\]")).toBeVisible();
+    await expect(modal.locator('.bg-\\[\\#F19929\\]')).toBeVisible();
   });
 
-  test("Quick View modal closes on ESC", async ({ page }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('Quick View modal closes on ESC', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
-    const firstProduct = page
-      .locator("div.bg-white.rounded-2xl.overflow-hidden")
-      .first();
+    const firstProduct = page.locator('div.bg-white.rounded-2xl.overflow-hidden').first();
     await firstProduct.hover({ force: true });
 
-    const quickViewBtn = firstProduct.locator(
-      'button:has-text("Quick View"), [data-testid="quick-view-btn"]'
-    );
-    if (
-      !(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))
-    ) {
-      test.skip(true, "Quick View not yet implemented");
+    const quickViewBtn = firstProduct.locator('button:has-text("Quick View"), [data-testid="quick-view-btn"]');
+    if (!(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))) {
+      test.skip(true, 'Quick View not yet implemented');
       return;
     }
 
     await quickViewBtn.click({ force: true });
 
-    const modal = page.locator(
-      '[data-testid="quick-view-modal"], [role="dialog"]'
-    );
+    const modal = page.locator('[data-testid="quick-view-modal"], [role="dialog"]');
     await expect(modal).toBeVisible();
 
     // Press ESC
-    await page.keyboard.press("Escape");
+    await page.keyboard.press('Escape');
 
     // Modal should close
     await expect(modal).not.toBeVisible();
   });
 
-  test('Quick View modal "View Full Details" navigates to product page', async ({
-    page,
-  }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('Quick View modal "View Full Details" navigates to product page', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
-    const firstProduct = page
-      .locator("div.bg-white.rounded-2xl.overflow-hidden")
-      .first();
+    const firstProduct = page.locator('div.bg-white.rounded-2xl.overflow-hidden').first();
     await firstProduct.hover({ force: true });
 
-    const quickViewBtn = firstProduct.locator(
-      'button:has-text("Quick View"), [data-testid="quick-view-btn"]'
-    );
-    if (
-      !(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))
-    ) {
-      test.skip(true, "Quick View not yet implemented");
+    const quickViewBtn = firstProduct.locator('button:has-text("Quick View"), [data-testid="quick-view-btn"]');
+    if (!(await quickViewBtn.isVisible({ timeout: 2_000 }).catch(() => false))) {
+      test.skip(true, 'Quick View not yet implemented');
       return;
     }
 
     await quickViewBtn.click({ force: true });
 
     // Click "View Full Details"
-    const detailsLink = page
-      .getByText(/view full details/i)
-      .or(page.getByRole("link", { name: /details/i }));
+    const detailsLink = page.getByText(/view full details/i).or(page.getByRole('link', { name: /details/i }));
     if (await detailsLink.isVisible().catch(() => false)) {
       await detailsLink.click({ force: true });
       await page.waitForURL(/\/product\//);
@@ -204,10 +169,10 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
   // IMAGE CAROUSEL
   // ═══════════════════════════════════════
 
-  test("image carousel navigates between images", async ({ page }) => {
+  test('image carousel navigates between images', async ({ page }) => {
     // Go directly to a product page
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
     // Navigate to a product
     const productLink = page.locator('a[href*="/product/"]').first();
@@ -215,12 +180,8 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
     await page.waitForURL(/\/product\//);
 
     // Check if image carousel exists (multiple images)
-    const nextBtn = page.locator(
-      'button[aria-label*="next"], button:has-text("›"), [data-testid="carousel-next"]'
-    );
-    const dots = page.locator(
-      '[data-testid="carousel-dot"], [class*="carousel-dot"]'
-    );
+    const nextBtn = page.locator('button[aria-label*="next"], button:has-text("›"), [data-testid="carousel-next"]');
+    const dots = page.locator('[data-testid="carousel-dot"], [class*="carousel-dot"]');
 
     if (await nextBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
       // Click next
@@ -235,9 +196,9 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
   // CART OPERATIONS
   // ═══════════════════════════════════════
 
-  test("add to cart updates cart count", async ({ page }) => {
-    await page.goto("/shop");
-    await page.waitForLoadState("networkidle");
+  test('add to cart updates cart count', async ({ page }) => {
+    await page.goto('/shop');
+    await page.waitForLoadState('networkidle');
 
     // Navigate to product
     const productLink = page.locator('a[href*="/product/"]').first();
@@ -245,19 +206,15 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
     await page.waitForURL(/\/product\//);
 
     // Click add to cart
-    const addBtn = page.locator(".bg-\\[\\#F19929\\]").first();
+    const addBtn = page.locator('.bg-\\[\\#F19929\\]').first();
     await expect(addBtn).toBeVisible();
     await addBtn.click({ force: true });
 
     // Cart count should update (look for badge or counter)
-    const cartIndicator = page
-      .locator(
-        '[data-testid="cart-count"], [class*="cart-count"], [class*="badge"]'
-      )
-      .first();
+    const cartIndicator = page.locator('[data-testid="cart-count"], [class*="cart-count"], [class*="badge"]').first();
     if (await cartIndicator.isVisible({ timeout: 3_000 }).catch(() => false)) {
       const text = await cartIndicator.textContent();
-      expect(parseInt(text || "0")).toBeGreaterThan(0);
+      expect(parseInt(text || '0')).toBeGreaterThan(0);
     }
 
     // Or a toast/notification confirming the add
@@ -271,10 +228,8 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
   // FEATURED PRODUCTS (HOMEPAGE)
   // ═══════════════════════════════════════
 
-  test("homepage featured products section displays products", async ({
-    page,
-  }) => {
-    await page.goto("/");
+  test('homepage featured products section displays products', async ({ page }) => {
+    await page.goto('/');
 
     // Featured products section
     const featured = page.getByText(/featured products/i);
@@ -282,7 +237,7 @@ test.describe("Shop & Product Browsing @critical @shop", () => {
       await expect(featured).toBeVisible();
 
       // Should have product cards in the featured section
-      const cards = page.locator("div.bg-white.rounded-2xl.overflow-hidden");
+      const cards = page.locator('div.bg-white.rounded-2xl.overflow-hidden');
       const count = await cards.count();
       expect(count).toBeGreaterThanOrEqual(1);
     }

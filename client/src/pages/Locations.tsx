@@ -1,44 +1,23 @@
-import SEOHead from "@/components/SEOHead";
-import { Breadcrumbs, WaveDivider } from "@/components/Layout";
-import {
-  ROUTE_SEO,
-  SITE_URL,
-  canonical,
-  buildBreadcrumbJsonLd,
-} from "@/lib/seo-config";
-import { trpc } from "@/lib/trpc";
-import { storeLocations as fallbackLocations } from "@/lib/data";
-import {
-  MapPin,
-  Phone,
-  Clock,
-  Navigation,
-  ChevronLeft,
-  ChevronRight,
-  Locate,
-} from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { useT } from "@/i18n";
+import SEOHead from '@/components/SEOHead';
+import { Breadcrumbs, WaveDivider } from '@/components/Layout';
+import { ROUTE_SEO, SITE_URL, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
+import { trpc } from '@/lib/trpc';
+import { storeLocations as fallbackLocations } from '@/lib/data';
+import { MapPin, Phone, Clock, Navigation, ChevronLeft, ChevronRight, Locate } from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useT } from '@/i18n';
 
-const HERO_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp";
+const HERO_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-locations-2eTfMvHXR9EvDXMXwCxHwg.webp';
 
 /** Haversine distance in km between two lat/lng points */
-function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371; // Earth radius km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -57,21 +36,13 @@ type LocationData = {
   lng?: number | string | null;
 };
 
-function LocationCard({
-  loc,
-  isNearest,
-  distance,
-}: {
-  loc: LocationData;
-  isNearest?: boolean;
-  distance?: number | null;
-}) {
+function LocationCard({ loc, isNearest, distance }: { loc: LocationData; isNearest?: boolean; distance?: number | null }) {
   return (
     <article
       className={`rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all h-full ${
         isNearest
-          ? "bg-[#F15929]/5 ring-2 ring-[#F15929] relative"
-          : "bg-[#F5F5F5]"
+          ? 'bg-[#F15929]/5 ring-2 ring-[#F15929] relative'
+          : 'bg-[#F5F5F5]'
       }`}
       itemScope
       itemType="https://schema.org/LocalBusiness"
@@ -81,9 +52,7 @@ function LocationCard({
         <div className="absolute top-3 right-3 z-10 bg-[#F15929] text-white font-display text-[10px] px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
           <Locate size={12} />
           NEAREST TO YOU
-          {distance != null && (
-            <span className="font-body">({distance.toFixed(0)} km)</span>
-          )}
+          {distance != null && <span className="font-body">({distance.toFixed(0)} km)</span>}
         </div>
       )}
       {/* Map embed */}
@@ -104,10 +73,7 @@ function LocationCard({
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h2
-              className="font-display text-lg md:text-xl text-[#4B2D8E]"
-              itemProp="name"
-            >
+            <h2 className="font-display text-lg md:text-xl text-[#4B2D8E]" itemProp="name">
               MY LEGACY — {loc.name.toUpperCase()}
             </h2>
             <p
@@ -116,20 +82,20 @@ function LocationCard({
               itemScope
               itemType="https://schema.org/PostalAddress"
             >
-              <span itemProp="streetAddress">{loc.address}</span>,{" "}
-              <span itemProp="addressLocality">{loc.city}</span>,{" "}
-              <span itemProp="addressRegion">{loc.province}</span>{" "}
+              <span itemProp="streetAddress">{loc.address}</span>,{' '}
+              <span itemProp="addressLocality">{loc.city}</span>,{' '}
+              <span itemProp="addressRegion">{loc.province}</span>{' '}
               <span itemProp="postalCode">{loc.postalCode}</span>
             </p>
           </div>
           <div className="bg-[#F15929] text-white font-display text-xs px-3 py-1.5 rounded-full shrink-0 flex items-center gap-1">
-            <Clock size={12} /> {loc.hours === "Open 24/7" ? "24/7" : loc.hours}
+            <Clock size={12} /> {loc.hours === 'Open 24/7' ? '24/7' : loc.hours}
           </div>
         </div>
 
         <div className="flex items-center gap-4 mb-4">
           <a
-            href={`tel:${loc.phone.replace(/\D/g, "")}`}
+            href={`tel:${loc.phone.replace(/\D/g, '')}`}
             className="flex items-center gap-1.5 text-sm text-[#4B2D8E] hover:text-[#F15929] font-body transition-colors"
             itemProp="telephone"
           >
@@ -139,7 +105,7 @@ function LocationCard({
 
         <div className="flex gap-3">
           <a
-            href={`tel:${loc.phone.replace(/\D/g, "")}`}
+            href={`tel:${loc.phone.replace(/\D/g, '')}`}
             className="flex-1 bg-[#4B2D8E] hover:bg-[#3a2270] text-white text-center font-display text-sm py-3 rounded-full transition-colors flex items-center justify-center gap-2"
           >
             <Phone size={16} /> CALL NOW
@@ -166,20 +132,13 @@ export default function Locations() {
   const { t } = useT();
 
   // ─── Auto-detect user location for nearest store highlight ───
-  const [userCoords, setUserCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     // Try browser Geolocation API (user must grant permission)
-    if ("geolocation" in navigator) {
+    if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        pos =>
-          setUserCoords({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          }),
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
         () => {
           // If denied/unavailable, try IP-based geo via our /api/geo endpoint
           // (which returns province-level, less precise but works without permission)
@@ -195,43 +154,35 @@ export default function Locations() {
     retry: 1,
   });
 
-  const locations: LocationData[] =
-    apiLocations && apiLocations.length > 0
-      ? apiLocations.map((loc: any) => ({
-          id: loc.id,
-          name: loc.name,
-          address: loc.address,
-          city: loc.city,
-          province: loc.province,
-          postalCode: loc.postalCode,
-          phone: loc.phone,
-          hours: loc.hours || "Open 24/7",
-          mapUrl: loc.mapUrl,
-          directionsUrl: loc.directionsUrl,
-          lat: loc.lat,
-          lng: loc.lng,
-        }))
-      : fallbackLocations;
+  const locations: LocationData[] = apiLocations && apiLocations.length > 0
+    ? apiLocations.map((loc: any) => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        city: loc.city,
+        province: loc.province,
+        postalCode: loc.postalCode,
+        phone: loc.phone,
+        hours: loc.hours || 'Open 24/7',
+        mapUrl: loc.mapUrl,
+        directionsUrl: loc.directionsUrl,
+        lat: loc.lat,
+        lng: loc.lng,
+      }))
+    : fallbackLocations;
 
   // Compute nearest store and sort by distance
   const { sortedLocations, nearestId, distances } = useMemo(() => {
     if (!userCoords || locations.length === 0) {
-      return {
-        sortedLocations: locations,
-        nearestId: null,
-        distances: new Map<string | number, number>(),
-      };
+      return { sortedLocations: locations, nearestId: null, distances: new Map<string | number, number>() };
     }
 
     const distMap = new Map<string | number, number>();
     for (const loc of locations) {
-      const lat = typeof loc.lat === "string" ? parseFloat(loc.lat) : loc.lat;
-      const lng = typeof loc.lng === "string" ? parseFloat(loc.lng) : loc.lng;
+      const lat = typeof loc.lat === 'string' ? parseFloat(loc.lat) : loc.lat;
+      const lng = typeof loc.lng === 'string' ? parseFloat(loc.lng) : loc.lng;
       if (lat && lng) {
-        distMap.set(
-          loc.id,
-          haversineKm(userCoords.lat, userCoords.lng, lat, lng)
-        );
+        distMap.set(loc.id, haversineKm(userCoords.lat, userCoords.lng, lat, lng));
       }
     }
 
@@ -241,18 +192,17 @@ export default function Locations() {
       return da - db;
     });
 
-    const nearest =
-      sorted.length > 0 && distMap.has(sorted[0].id) ? sorted[0].id : null;
+    const nearest = sorted.length > 0 && distMap.has(sorted[0].id) ? sorted[0].id : null;
     return { sortedLocations: sorted, nearestId: nearest, distances: distMap };
   }, [locations, userCoords]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: "start",
+    align: 'start',
     loop: false,
     skipSnaps: false,
-    containScroll: "trimSnaps",
+    containScroll: 'trimSnaps',
     breakpoints: {
-      "(min-width: 768px)": { slidesToScroll: 2 },
+      '(min-width: 768px)': { slidesToScroll: 2 },
     },
   });
 
@@ -262,10 +212,7 @@ export default function Locations() {
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-  const scrollTo = useCallback(
-    (index: number) => emblaApi?.scrollTo(index),
-    [emblaApi]
-  );
+  const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -277,24 +224,24 @@ export default function Locations() {
   useEffect(() => {
     if (!emblaApi) return;
     onSelect();
-    emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
     return () => {
-      emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onSelect);
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
     };
   }, [emblaApi, onSelect]);
 
   return (
     <>
       <SEOHead
-        title={ROUTE_SEO["/locations"].title}
-        description={ROUTE_SEO["/locations"].description}
-        canonical={canonical("/locations")}
+        title={ROUTE_SEO['/locations'].title}
+        description={ROUTE_SEO['/locations'].description}
+        canonical={canonical('/locations')}
         ogImage={HERO_IMG}
         jsonLd={buildBreadcrumbJsonLd([
-          { name: "Home", url: canonical("/") },
-          { name: "Store Locations", url: canonical("/locations") },
+          { name: 'Home', url: canonical('/') },
+          { name: 'Store Locations', url: canonical('/locations') },
         ])}
       />
 
@@ -313,13 +260,8 @@ export default function Locations() {
           <div className="absolute inset-0 bg-[#4B2D8E]/70" />
         </div>
         <div className="container relative z-10 py-6 md:py-10">
-          <Breadcrumbs
-            items={[{ label: "Home", href: "/" }, { label: "Locations" }]}
-            variant="dark"
-          />
-          <h1 className="font-display text-3xl md:text-4xl text-white mb-3">
-            {t.locationsPage.title}
-          </h1>
+          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Locations' }]} variant="dark" />
+          <h1 className="font-display text-3xl md:text-4xl text-white mb-3">{t.locationsPage.title}</h1>
           <p className="text-white/70 font-body max-w-lg">
             {t.locationsPage.subtitle}
           </p>
@@ -333,9 +275,7 @@ export default function Locations() {
           {/* Header with navigation arrows */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-display text-2xl md:text-3xl text-[#4B2D8E]">
-                {t.locationsPage.findAStore}
-              </h2>
+              <h2 className="font-display text-2xl md:text-3xl text-[#4B2D8E]">{t.locationsPage.findAStore}</h2>
               <p className="text-gray-500 font-body text-sm mt-1">
                 {t.locationsPage.swipeToBrowse}
               </p>
@@ -363,7 +303,7 @@ export default function Locations() {
           {/* Embla Carousel */}
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex gap-4 md:gap-6">
-              {sortedLocations.map(loc => (
+              {sortedLocations.map((loc) => (
                 <div
                   key={loc.id}
                   className="flex-[0_0_85%] sm:flex-[0_0_70%] md:flex-[0_0_48%] lg:flex-[0_0_48%]"
@@ -386,8 +326,8 @@ export default function Locations() {
                 onClick={() => scrollTo(i)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
                   i === selectedIndex
-                    ? "w-8 bg-[#F15929]"
-                    : "w-2.5 bg-[#4B2D8E]/25 hover:bg-[#4B2D8E]/50"
+                    ? 'w-8 bg-[#F15929]'
+                    : 'w-2.5 bg-[#4B2D8E]/25 hover:bg-[#4B2D8E]/50'
                 }`}
                 aria-label={`Go to location ${i + 1}`}
               />
@@ -402,68 +342,61 @@ export default function Locations() {
       </section>
 
       {/* JSON-LD: one LocalBusiness per location — rich schema for Google Knowledge Panel */}
-      {locations.map(loc => (
+      {locations.map((loc) => (
         <script
           key={loc.id}
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "@id": `${SITE_URL}/locations#${loc.id}`,
+              '@context': 'https://schema.org',
+              '@type': 'LocalBusiness',
+              '@id': `${SITE_URL}/locations#${loc.id}`,
               name: `My Legacy Cannabis — ${loc.name}`,
               image: [
                 `${SITE_URL}/logo.webp`,
-                "https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp",
+                'https://d2xsxph8kpxj0f.cloudfront.net/86973655/5wgxseZemq4jvbSSj7t6zG/hero-main-nBCmJTxSfhqeiDs3Vxut62.webp',
               ],
               url: `${SITE_URL}/locations`,
               telephone: loc.phone,
-              email: "support@mylegacycannabis.ca",
-              priceRange: "$$",
-              currenciesAccepted: "CAD",
-              paymentAccepted: "Cash, Credit Card, Debit Card, E-Transfer",
+              email: 'support@mylegacycannabis.ca',
+              priceRange: '$$',
+              currenciesAccepted: 'CAD',
+              paymentAccepted: 'Cash, Credit Card, Debit Card, E-Transfer',
               address: {
-                "@type": "PostalAddress",
+                '@type': 'PostalAddress',
                 streetAddress: loc.address,
                 addressLocality: loc.city,
                 addressRegion: loc.province,
                 postalCode: loc.postalCode,
-                addressCountry: "CA",
+                addressCountry: 'CA',
               },
-              ...(loc.lat && loc.lng
-                ? {
-                    geo: {
-                      "@type": "GeoCoordinates",
-                      latitude: Number(loc.lat),
-                      longitude: Number(loc.lng),
-                    },
-                  }
-                : {}),
+              ...(loc.lat && loc.lng ? {
+                geo: {
+                  '@type': 'GeoCoordinates',
+                  latitude: Number(loc.lat),
+                  longitude: Number(loc.lng),
+                },
+              } : {}),
               ...(loc.directionsUrl ? { hasMap: loc.directionsUrl } : {}),
               openingHoursSpecification: [
                 {
-                  "@type": "OpeningHoursSpecification",
+                  '@type': 'OpeningHoursSpecification',
                   dayOfWeek: [
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday",
+                    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                    'Friday', 'Saturday', 'Sunday',
                   ],
-                  opens: "00:00",
-                  closes: "23:59",
+                  opens: '00:00',
+                  closes: '23:59',
                 },
               ],
               areaServed: {
-                "@type": "City",
+                '@type': 'City',
                 name: loc.city,
               },
               parentOrganization: {
-                "@type": "Organization",
-                "@id": `${SITE_URL}/#organization`,
-                name: "My Legacy Cannabis",
+                '@type': 'Organization',
+                '@id': `${SITE_URL}/#organization`,
+                name: 'My Legacy Cannabis',
                 url: SITE_URL,
               },
             }),

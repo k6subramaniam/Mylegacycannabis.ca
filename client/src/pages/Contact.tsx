@@ -1,30 +1,21 @@
-import { useState } from "react";
-import SEOHead from "@/components/SEOHead";
-import { Breadcrumbs } from "@/components/Layout";
-import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from "@/lib/seo-config";
-import { storeLocations } from "@/lib/data";
-import { Link } from "wouter";
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
-import { useT } from "@/i18n";
+import { useState } from 'react';
+import SEOHead from '@/components/SEOHead';
+import { Breadcrumbs } from '@/components/Layout';
+import { ROUTE_SEO, canonical, buildBreadcrumbJsonLd } from '@/lib/seo-config';
+import { storeLocations } from '@/lib/data';
+import { Link } from 'wouter';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useT } from '@/i18n';
 
 export default function Contact() {
   const { t } = useT();
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) {
-      toast.error(t.contactPage.fillRequired);
-      return;
-    }
+    if (!form.name || !form.email || !form.message) { toast.error(t.contactPage.fillRequired); return; }
     setSubmitted(true);
     toast.success(t.contactPage.messageSentToast);
   };
@@ -32,27 +23,20 @@ export default function Contact() {
   return (
     <>
       <SEOHead
-        title={ROUTE_SEO["/contact"].title}
-        description={ROUTE_SEO["/contact"].description}
-        canonical={canonical("/contact")}
+        title={ROUTE_SEO['/contact'].title}
+        description={ROUTE_SEO['/contact'].description}
+        canonical={canonical('/contact')}
         jsonLd={buildBreadcrumbJsonLd([
-          { name: "Home", url: canonical("/") },
-          { name: "Contact Us", url: canonical("/contact") },
+          { name: 'Home', url: canonical('/') },
+          { name: 'Contact Us', url: canonical('/contact') },
         ])}
       />
 
       <section className="bg-[#4B2D8E] py-6">
         <div className="container">
-          <Breadcrumbs
-            items={[{ label: "Home", href: "/" }, { label: "Contact Us" }]}
-            variant="dark"
-          />
-          <h1 className="font-display text-3xl md:text-4xl text-white">
-            {t.contactPage.contactUsTitle}
-          </h1>
-          <p className="text-white/70 font-body mt-2">
-            {t.contactPage.weWouldLove}
-          </p>
+          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Contact Us' }]} variant="dark" />
+          <h1 className="font-display text-3xl md:text-4xl text-white">{t.contactPage.contactUsTitle}</h1>
+          <p className="text-white/70 font-body mt-2">{t.contactPage.weWouldLove}</p>
         </div>
       </section>
 
@@ -63,133 +47,53 @@ export default function Contact() {
             <div>
               {submitted ? (
                 <div className="bg-[#F5F5F5] rounded-2xl p-8 text-center">
-                  <CheckCircle
-                    size={48}
-                    className="text-green-500 mx-auto mb-4"
-                  />
-                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">
-                    {t.contactPage.messageSent}
-                  </h2>
-                  <p className="text-gray-600 font-body mb-4">
-                    {t.contactPage.messageSentDesc}
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSubmitted(false);
-                      setForm({
-                        name: "",
-                        email: "",
-                        phone: "",
-                        subject: "",
-                        message: "",
-                      });
-                    }}
-                    className="text-[#F15929] font-display text-sm hover:underline"
-                  >
-                    {t.contactPage.sendAnother}
-                  </button>
+                  <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">{t.contactPage.messageSent}</h2>
+                  <p className="text-gray-600 font-body mb-4">{t.contactPage.messageSentDesc}</p>
+                  <button onClick={() => { setSubmitted(false); setForm({ name: '', email: '', phone: '', subject: '', message: '' }); }}
+                    className="text-[#F15929] font-display text-sm hover:underline">{t.contactPage.sendAnother}</button>
                 </div>
               ) : (
-                <form
-                  onSubmit={handleSubmit}
-                  className="bg-[#F5F5F5] rounded-2xl p-6 space-y-4"
-                >
-                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">
-                    {t.contactPage.sendMessage}
-                  </h2>
+                <form onSubmit={handleSubmit} className="bg-[#F5F5F5] rounded-2xl p-6 space-y-4">
+                  <h2 className="font-display text-xl text-[#4B2D8E] mb-2">{t.contactPage.sendMessage}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={e =>
-                          setForm({ ...form, name: e.target.value })
-                        }
-                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                        required
-                      />
+                      <label className="text-xs text-gray-500 font-body block mb-1">Name *</label>
+                      <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={e =>
-                          setForm({ ...form, email: e.target.value })
-                        }
-                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                        required
-                      />
+                      <label className="text-xs text-gray-500 font-body block mb-1">Email *</label>
+                      <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" required />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={form.phone}
-                        onChange={e =>
-                          setForm({ ...form, phone: e.target.value })
-                        }
-                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                      />
+                      <label className="text-xs text-gray-500 font-body block mb-1">Phone</label>
+                      <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 font-body block mb-1">
-                        Subject
-                      </label>
-                      <select
-                        value={form.subject}
-                        onChange={e =>
-                          setForm({ ...form, subject: e.target.value })
-                        }
-                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]"
-                      >
+                      <label className="text-xs text-gray-500 font-body block mb-1">Subject</label>
+                      <select value={form.subject} onChange={e => setForm({...form, subject: e.target.value})}
+                        className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E]">
                         <option value="">{t.contactPage.selectTopic}</option>
-                        <option value="order">
-                          {t.contactPage.orderInquiry}
-                        </option>
-                        <option value="shipping">
-                          {t.contactPage.shippingQuestion}
-                        </option>
-                        <option value="product">
-                          {t.contactPage.productQuestion}
-                        </option>
-                        <option value="verification">
-                          {t.contactPage.idVerification}
-                        </option>
-                        <option value="rewards">
-                          {t.contactPage.rewardsProgram}
-                        </option>
+                        <option value="order">{t.contactPage.orderInquiry}</option>
+                        <option value="shipping">{t.contactPage.shippingQuestion}</option>
+                        <option value="product">{t.contactPage.productQuestion}</option>
+                        <option value="verification">{t.contactPage.idVerification}</option>
+                        <option value="rewards">{t.contactPage.rewardsProgram}</option>
                         <option value="other">{t.contactPage.other}</option>
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-body block mb-1">
-                      Message *
-                    </label>
-                    <textarea
-                      value={form.message}
-                      onChange={e =>
-                        setForm({ ...form, message: e.target.value })
-                      }
-                      rows={5}
-                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] resize-none"
-                      required
-                    />
+                    <label className="text-xs text-gray-500 font-body block mb-1">Message *</label>
+                    <textarea value={form.message} onChange={e => setForm({...form, message: e.target.value})} rows={5}
+                      className="w-full bg-white rounded-lg px-4 py-3 text-sm font-body border-none focus:ring-2 focus:ring-[#4B2D8E] resize-none" required />
                   </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2"
-                  >
+                  <button type="submit" className="w-full bg-[#F15929] hover:bg-[#d94d22] text-white font-display py-3.5 rounded-full transition-all flex items-center justify-center gap-2">
                     <Send size={18} /> {t.contactPage.sendMessageBtn}
                   </button>
                 </form>
@@ -199,92 +103,47 @@ export default function Contact() {
             {/* Contact Info */}
             <div className="space-y-6">
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h2 className="font-display text-xl text-[#4B2D8E] mb-4">
-                  {t.contactPage.getInTouch}
-                </h2>
+                <h2 className="font-display text-xl text-[#4B2D8E] mb-4">{t.contactPage.getInTouch}</h2>
                 <div className="space-y-4">
-                  <a
-                    href="tel:4372154722"
-                    className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
-                      <Phone size={18} className="text-white" />
-                    </div>
+                  <a href="tel:4372154722" className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0"><Phone size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm">
-                        {t.contactPage.callUs}
-                      </p>
-                      <p className="text-sm font-body text-gray-600">
-                        (437) 215-4722
-                      </p>
+                      <p className="font-display text-sm">{t.contactPage.callUs}</p>
+                      <p className="text-sm font-body text-gray-600">(437) 215-4722</p>
                     </div>
                   </a>
-                  <a
-                    href="mailto:support@mylegacycannabis.ca"
-                    className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0">
-                      <Mail size={18} className="text-white" />
-                    </div>
+                  <a href="mailto:support@mylegacycannabis.ca" className="flex items-center gap-3 text-[#333] hover:text-[#F15929] transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-[#4B2D8E] flex items-center justify-center shrink-0"><Mail size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm">
-                        {t.contactPage.emailUsLabel}
-                      </p>
-                      <p className="text-sm font-body text-gray-600">
-                        support@mylegacycannabis.ca
-                      </p>
+                      <p className="font-display text-sm">{t.contactPage.emailUsLabel}</p>
+                      <p className="text-sm font-body text-gray-600">support@mylegacycannabis.ca</p>
                     </div>
                   </a>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#F15929] flex items-center justify-center shrink-0">
-                      <Clock size={18} className="text-white" />
-                    </div>
+                    <div className="w-10 h-10 rounded-full bg-[#F15929] flex items-center justify-center shrink-0"><Clock size={18} className="text-white" /></div>
                     <div>
-                      <p className="font-display text-sm text-[#333]">
-                        {t.contactPage.hours}
-                      </p>
-                      <p className="text-sm font-body text-gray-600">
-                        {t.contactPage.allLocations}
-                      </p>
+                      <p className="font-display text-sm text-[#333]">{t.contactPage.hours}</p>
+                      <p className="text-sm font-body text-gray-600">{t.contactPage.allLocations}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="bg-[#F5F5F5] rounded-2xl p-6">
-                <h3 className="font-display text-lg text-[#4B2D8E] mb-3">
-                  {t.contactPage.ourLocations}
-                </h3>
+                <h3 className="font-display text-lg text-[#4B2D8E] mb-3">{t.contactPage.ourLocations}</h3>
                 <div className="space-y-3">
                   {storeLocations.map(loc => (
-                    <div
-                      key={loc.id}
-                      className="flex items-center gap-3 bg-white rounded-xl p-3"
-                    >
+                    <div key={loc.id} className="flex items-center gap-3 bg-white rounded-xl p-3">
                       <MapPin size={16} className="text-[#F15929] shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-display text-xs text-[#4B2D8E]">
-                          {loc.name.toUpperCase()}
-                        </p>
-                        <p className="text-xs text-gray-500 font-body truncate">
-                          {loc.address}, {loc.city}
-                        </p>
+                        <p className="font-display text-xs text-[#4B2D8E]">{loc.name.toUpperCase()}</p>
+                        <p className="text-xs text-gray-500 font-body truncate">{loc.address}, {loc.city}</p>
                       </div>
-                      <a
-                        href={`tel:${loc.phone.replace(/\D/g, "")}`}
-                        className="text-xs text-[#F15929] font-body hover:underline shrink-0"
-                      >
-                        {loc.phone}
-                      </a>
+                      <a href={`tel:${loc.phone.replace(/\D/g, '')}`} className="text-xs text-[#F15929] font-body hover:underline shrink-0">{loc.phone}</a>
                     </div>
                   ))}
                 </div>
-                <Link
-                  href="/locations"
-                  className="text-sm text-[#4B2D8E] hover:text-[#F15929] font-display mt-3 inline-block"
-                >
-                  {t.contactPage.viewAllLocations} →
-                </Link>
+                <Link href="/locations" className="text-sm text-[#4B2D8E] hover:text-[#F15929] font-display mt-3 inline-block">{t.contactPage.viewAllLocations} →</Link>
               </div>
             </div>
           </div>

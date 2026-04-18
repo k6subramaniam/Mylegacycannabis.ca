@@ -13,19 +13,17 @@ export interface FuzzyMatchResult {
   orderId: number;
   orderNumber: string;
   customerName: string;
-  confidence: number; // 0.0 to 1.0
-  reasons: string[]; // human-readable reasons
+  confidence: number;      // 0.0 to 1.0
+  reasons: string[];       // human-readable reasons
 }
 
 /**
  * Fuzzy match an e-transfer payment against pending orders.
  * Uses name similarity, amount proximity, and time window.
  */
-export async function fuzzyMatchPayment(email: {
-  senderName: string;
-  amount: number;
-  receivedAt: Date;
-}): Promise<FuzzyMatchResult | null> {
+export async function fuzzyMatchPayment(
+  email: { senderName: string; amount: number; receivedAt: Date }
+): Promise<FuzzyMatchResult | null> {
   // Get all pending e-transfer orders from the last 48 hours (wider window than 24h for delayed sends)
   const pendingOrders = await db.getPendingETransferOrders();
   if (pendingOrders.length === 0) return null;
@@ -42,9 +40,7 @@ export async function fuzzyMatchPayment(email: {
     score += nameSim * 0.4;
 
     if (nameSim >= 0.7) {
-      reasons.push(
-        `Name match: "${email.senderName}" ~ "${customerFullName}" (${(nameSim * 100).toFixed(0)}%)`
-      );
+      reasons.push(`Name match: "${email.senderName}" ~ "${customerFullName}" (${(nameSim * 100).toFixed(0)}%)`);
     }
 
     // Factor 2: Amount match (weight: 35%)
@@ -57,24 +53,20 @@ export async function fuzzyMatchPayment(email: {
     } else if (amountDiff <= 0.99) {
       // Within $1 — customer may have rounded
       score += 0.25;
-      reasons.push(
-        `Amount close: $${email.amount} vs $${orderAmount} (diff: $${amountDiff.toFixed(2)})`
-      );
-    } else if (amountDiff <= 5.0) {
-      score += 0.1;
+      reasons.push(`Amount close: $${email.amount} vs $${orderAmount} (diff: $${amountDiff.toFixed(2)})`);
+    } else if (amountDiff <= 5.00) {
+      score += 0.10;
       reasons.push(`Amount approximate: $${email.amount} vs $${orderAmount}`);
     }
 
     // Factor 3: Time proximity (weight: 15%)
-    const hoursSinceOrder =
-      (email.receivedAt.getTime() - new Date(order.createdAt).getTime()) /
-      (1000 * 60 * 60);
+    const hoursSinceOrder = (email.receivedAt.getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60);
 
     if (hoursSinceOrder >= 0 && hoursSinceOrder <= 2) {
       score += 0.15;
       reasons.push("Payment within 2h of order");
     } else if (hoursSinceOrder > 0 && hoursSinceOrder <= 6) {
-      score += 0.1;
+      score += 0.10;
       reasons.push("Payment within 6h of order");
     } else if (hoursSinceOrder > 0 && hoursSinceOrder <= 24) {
       score += 0.05;
@@ -83,10 +75,10 @@ export async function fuzzyMatchPayment(email: {
 
     // Factor 4: Only pending order for this customer (weight: 10%)
     const otherPending = pendingOrders.filter(
-      o => o.userId === order.userId && o.id !== order.id
+      (o) => o.userId === order.userId && o.id !== order.id
     );
     if (otherPending.length === 0) {
-      score += 0.1;
+      score += 0.10;
       reasons.push("Only pending order for this customer");
     }
 
@@ -150,8 +142,8 @@ function nameSimilarity(name1: string, name2: string): number {
 function normalizeName(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z\s]/g, "") // remove non-alpha
-    .replace(/\s+/g, " ") // collapse whitespace
+    .replace(/[^a-z\s]/g, "")  // remove non-alpha
+    .replace(/\s+/g, " ")      // collapse whitespace
     .trim();
 }
 
@@ -173,9 +165,9 @@ function levenshteinSimilarity(s1: string, s2: string): number {
     for (let j = 1; j <= len2; j++) {
       const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
       matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost // substitution
+        matrix[i - 1][j] + 1,       // deletion
+        matrix[i][j - 1] + 1,       // insertion
+        matrix[i - 1][j - 1] + cost  // substitution
       );
     }
   }

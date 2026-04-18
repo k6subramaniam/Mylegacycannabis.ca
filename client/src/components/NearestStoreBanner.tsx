@@ -20,11 +20,7 @@ interface NearestStoreData {
  * Respects opt-out cookie and dismissal. Only shows for Canadian visitors.
  * Lives inside the fixed <header> so it doesn't create a layout gap.
  */
-export default function NearestStoreBanner({
-  onVisibilityChange,
-}: {
-  onVisibilityChange?: (visible: boolean) => void;
-}) {
+export default function NearestStoreBanner({ onVisibilityChange }: { onVisibilityChange?: (visible: boolean) => void }) {
   const [data, setData] = useState<NearestStoreData | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -34,15 +30,13 @@ export default function NearestStoreBanner({
     if (document.cookie.includes("mlc-analytics-optout=1")) return;
 
     fetch("/api/geo/nearest-store", { credentials: "include" })
-      .then(r => (r.ok ? r.json() : null))
+      .then(r => r.ok ? r.json() : null)
       .then((d: NearestStoreData | null) => {
         if (d?.store && d.geo?.provinceCode) {
           setData(d);
         }
       })
-      .catch(() => {
-        /* silent */
-      });
+      .catch(() => { /* silent */ });
   }, []);
 
   // Notify parent (Layout) when visibility changes
@@ -67,9 +61,7 @@ export default function NearestStoreBanner({
             <span className="text-white/70">Near {data!.geo!.city}?</span>{" "}
             <span className="font-semibold">{data!.store!.name}</span>{" "}
             <span className="text-white/70">&mdash;</span>{" "}
-            <span className="text-white/80">
-              {data!.store!.address}, {data!.store!.city}
-            </span>
+            <span className="text-white/80">{data!.store!.address}, {data!.store!.city}</span>
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

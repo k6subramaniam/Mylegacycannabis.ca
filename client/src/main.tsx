@@ -1,7 +1,5 @@
-import posthog from "posthog-js";
-import { PostHogProvider } from "posthog-js/react";
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from "@shared/const";
+import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -54,22 +52,10 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-if (typeof window !== "undefined") {
-  posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY || "phc_dummy", {
-    api_host:
-      import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-    loaded: posthog => {
-      if (import.meta.env.DEV) posthog.debug();
-    },
-  });
-}
-
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <PostHogProvider client={posthog}>
-        <App />
-      </PostHogProvider>
+      <App />
     </QueryClientProvider>
   </trpc.Provider>
 );
@@ -80,10 +66,10 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
-      .then(reg => {
+      .then((reg) => {
         console.log("[SW] Registered, scope:", reg.scope);
       })
-      .catch(err => {
+      .catch((err) => {
         console.warn("[SW] Registration failed:", err?.message);
       });
   });

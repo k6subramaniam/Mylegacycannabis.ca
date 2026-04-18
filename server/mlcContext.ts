@@ -24,36 +24,11 @@ export const MLC_BUSINESS = {
 // ─── Store Locations ───
 
 export const MLC_LOCATIONS = [
-  {
-    name: "Mississauga",
-    address: "255 Dundas St W, Mississauga, ON L5B 1H4",
-    phone: "(437) 215-4722",
-    hours: "Open 24/7",
-  },
-  {
-    name: "Hamilton",
-    address: "123 King St E, Hamilton, ON L8N 1A9",
-    phone: "(905) 555-0123",
-    hours: "Open 24/7",
-  },
-  {
-    name: "Queen St Toronto",
-    address: "456 Queen St W, Toronto, ON M5V 2A8",
-    phone: "(416) 555-0456",
-    hours: "Open 24/7",
-  },
-  {
-    name: "Dundas Toronto",
-    address: "789 Dundas St W, Toronto, ON M6J 1V1",
-    phone: "(416) 555-0789",
-    hours: "Open 24/7",
-  },
-  {
-    name: "Merivale Ottawa",
-    address: "1642 Merivale Rd, Ottawa, ON K2G 4A1",
-    phone: "(613) 555-0164",
-    hours: "Open 24/7",
-  },
+  { name: "Mississauga", address: "255 Dundas St W, Mississauga, ON L5B 1H4", phone: "(437) 215-4722", hours: "Open 24/7" },
+  { name: "Hamilton", address: "123 King St E, Hamilton, ON L8N 1A9", phone: "(905) 555-0123", hours: "Open 24/7" },
+  { name: "Queen St Toronto", address: "456 Queen St W, Toronto, ON M5V 2A8", phone: "(416) 555-0456", hours: "Open 24/7" },
+  { name: "Dundas Toronto", address: "789 Dundas St W, Toronto, ON M6J 1V1", phone: "(416) 555-0789", hours: "Open 24/7" },
+  { name: "Merivale Ottawa", address: "1642 Merivale Rd, Ottawa, ON K2G 4A1", phone: "(613) 555-0164", hours: "Open 24/7" },
 ] as const;
 
 // ─── Product Categories & Grading System ───
@@ -72,84 +47,34 @@ export const MLC_PRODUCT_INFO = {
   gradingSystem: {
     description: "Products are graded by quality from highest to lowest",
     grades: [
-      {
-        grade: "AAAA",
-        label: "Quad",
-        description:
-          "Top-shelf, premium craft cannabis. Exceptional trichome coverage, perfect cure, complex terpene profiles.",
-      },
-      {
-        grade: "AAA+",
-        label: "Trip-A Plus",
-        description:
-          "Near-quad quality. Dense nugs, excellent potency, strong flavour.",
-      },
-      {
-        grade: "AAA",
-        label: "Trip-A",
-        description:
-          "High-quality flower. Great for daily use with solid effects.",
-      },
-      {
-        grade: "AAA-",
-        label: "Trip-A Minus",
-        description: "Above-average quality at value pricing.",
-      },
-      {
-        grade: "AA+",
-        label: "Double-A Plus",
-        description: "Good quality, great value. Reliable effects.",
-      },
-      {
-        grade: "AA",
-        label: "Double-A",
-        description: "Budget-friendly option with decent quality.",
-      },
-      {
-        grade: "SHAKE",
-        label: "Shake",
-        description:
-          "Small buds and trim. Perfect for edibles, joints, or bowls at the lowest price.",
-      },
+      { grade: "AAAA", label: "Quad", description: "Top-shelf, premium craft cannabis. Exceptional trichome coverage, perfect cure, complex terpene profiles." },
+      { grade: "AAA+", label: "Trip-A Plus", description: "Near-quad quality. Dense nugs, excellent potency, strong flavour." },
+      { grade: "AAA", label: "Trip-A", description: "High-quality flower. Great for daily use with solid effects." },
+      { grade: "AAA-", label: "Trip-A Minus", description: "Above-average quality at value pricing." },
+      { grade: "AA+", label: "Double-A Plus", description: "Good quality, great value. Reliable effects." },
+      { grade: "AA", label: "Double-A", description: "Budget-friendly option with decent quality." },
+      { grade: "SHAKE", label: "Shake", description: "Small buds and trim. Perfect for edibles, joints, or bowls at the lowest price." },
     ],
   },
-  weightOptions: [
-    "1g",
-    "3.5g (eighth)",
-    "7g (quarter)",
-    "14g (half oz)",
-    "28g (full oz)",
-  ],
-  strainTypes: [
-    "Indica (relaxing, body-focused)",
-    "Sativa (energizing, cerebral)",
-    "Hybrid (balanced)",
-    "CBD (minimal THC)",
-  ],
+  weightOptions: ["1g", "3.5g (eighth)", "7g (quarter)", "14g (half oz)", "28g (full oz)"],
+  strainTypes: ["Indica (relaxing, body-focused)", "Sativa (energizing, cerebral)", "Hybrid (balanced)", "CBD (minimal THC)"],
 } as const;
 
 // ─── Business Policies ───
 
 export const MLC_POLICIES = {
-  payment:
-    "Interac e-Transfer only. Payment is sent to the payment email provided in the order confirmation. An auto-deposit reference code is given at checkout.",
+  payment: "Interac e-Transfer only. Payment is sent to the payment email provided in the order confirmation. An auto-deposit reference code is given at checkout.",
   shipping: {
     carrier: "Canada Post",
     freeThreshold: "$150",
     minimumOrder: "$40",
-    estimatedDelivery:
-      "2-5 business days within Ontario, 4-8 for rest of Canada",
-    zones:
-      "Ontario ($10), Quebec ($12), Western Canada ($15), Atlantic ($18), Northern Territories ($25)",
+    estimatedDelivery: "2-5 business days within Ontario, 4-8 for rest of Canada",
+    zones: "Ontario ($10), Quebec ($12), Western Canada ($15), Atlantic ($18), Northern Territories ($25)",
   },
-  ageVerification:
-    "All customers must be 19+ (Ontario legal age). ID verification may be required before order processing.",
-  rewards:
-    "1 point per $1 spent. Points redeemable at checkout. Welcome bonus: 25 points. Referral bonus: 50 points.",
-  returns:
-    "No returns on cannabis products due to federal regulations. Damaged or incorrect orders are replaced at no cost.",
-  hours:
-    "Online orders accepted 24/7. Customer support available 10 AM – 10 PM daily.",
+  ageVerification: "All customers must be 19+ (Ontario legal age). ID verification may be required before order processing.",
+  rewards: "1 point per $1 spent. Points redeemable at checkout. Welcome bonus: 25 points. Referral bonus: 50 points.",
+  returns: "No returns on cannabis products due to federal regulations. Damaged or incorrect orders are replaced at no cost.",
+  hours: "Online orders accepted 24/7. Customer support available 10 AM – 10 PM daily.",
 } as const;
 
 // ─── Brand Voice & Style Guide ───

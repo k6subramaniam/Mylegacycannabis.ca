@@ -28,39 +28,24 @@ function getSiteUrl(): string {
     return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
   }
   // Fallback for dev
-  return (
-    process.env.SITE_URL ||
-    "https://mylegacycannabisca-production.up.railway.app"
-  );
+  return process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app";
 }
 
 // ─── Template variable replacement ───
-function renderTemplate(
-  html: string,
-  variables: Record<string, string>
-): string {
+function renderTemplate(html: string, variables: Record<string, string>): string {
   let rendered = html;
   for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(
-      new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-      value || ""
-    );
+    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value || "");
   }
   // Replace any remaining unreplaced variables with empty string
   rendered = rendered.replace(/\{\{[a-z_]+\}\}/g, "");
   return rendered;
 }
 
-function renderSubject(
-  subject: string,
-  variables: Record<string, string>
-): string {
+function renderSubject(subject: string, variables: Record<string, string>): string {
   let rendered = subject;
   for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(
-      new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-      value || ""
-    );
+    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value || "");
   }
   rendered = rendered.replace(/\{\{[a-z_]+\}\}/g, "");
   return rendered;
@@ -75,32 +60,26 @@ function renderSubject(
 export async function sendTemplatedEmail(
   slug: string,
   to: string,
-  variables: Record<string, string>
+  variables: Record<string, string>,
 ): Promise<boolean> {
   try {
     const template = await db.getEmailTemplateBySlug(slug);
     if (!template || !template.isActive) {
-      console.log(
-        `[TemplateEmail] Template "${slug}" not found or inactive — skipping.`
-      );
+      console.log(`[TemplateEmail] Template "${slug}" not found or inactive — skipping.`);
       return false;
     }
 
     const subject = renderSubject(template.subject, variables);
     const html = renderTemplate(template.bodyHtml, variables);
 
-    const isAdminTemplate =
-      slug.includes("admin") || slug.includes("pending-admin");
+    const isAdminTemplate = slug.includes("admin") || slug.includes("pending-admin");
     if (isAdminTemplate) {
       // Admin templates have full HTML — send raw, don't wrap again
       return sendAdminTemplatedEmail(subject, html);
     }
     return sendCustomerEmail(to, subject, html);
   } catch (err: any) {
-    console.error(
-      `[TemplateEmail] Error sending "${slug}" to ${to}:`,
-      err.message
-    );
+    console.error(`[TemplateEmail] Error sending "${slug}" to ${to}:`, err.message);
     return false;
   }
 }
@@ -113,21 +92,15 @@ async function sendToAdminAndCustomer(
   adminSlug: string,
   customerSlug: string,
   customerEmail: string,
-  variables: Record<string, string>
+  variables: Record<string, string>,
 ): Promise<void> {
   // Admin notification — fire and forget
   sendTemplatedEmail(adminSlug, ENV.adminEmail, variables).catch(err =>
-    console.warn(
-      `[TemplateEmail] Admin email "${adminSlug}" failed:`,
-      err.message
-    )
+    console.warn(`[TemplateEmail] Admin email "${adminSlug}" failed:`, err.message)
   );
   // Customer email
   sendTemplatedEmail(customerSlug, customerEmail, variables).catch(err =>
-    console.warn(
-      `[TemplateEmail] Customer email "${customerSlug}" failed:`,
-      err.message
-    )
+    console.warn(`[TemplateEmail] Customer email "${customerSlug}" failed:`, err.message)
   );
 }
 
@@ -136,18 +109,16 @@ async function sendToAdminAndCustomer(
 async function commonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
   // Check site_logo_url first (new unified key), then email_logo_url (legacy), then fallback
-  let logoUrl =
-    (await db.getSiteSetting("site_logo_url")) ||
-    (await db.getSiteSetting("email_logo_url")) ||
-    getDefaultLogoUrl();
+  let logoUrl = await db.getSiteSetting("site_logo_url")
+    || await db.getSiteSetting("email_logo_url")
+    || getDefaultLogoUrl();
   // Emails need absolute URLs — if stored as relative path, prepend site URL
   if (logoUrl && logoUrl.startsWith("/")) {
     logoUrl = `${base}${logoUrl}`;
   }
-  const paymentEmail =
-    (await db.getSiteSetting("payment_email")) ||
-    process.env.GMAIL_PAYMENT_EMAIL ||
-    "payments@mylegacycannabis.ca";
+  const paymentEmail = await db.getSiteSetting("payment_email")
+    || process.env.GMAIL_PAYMENT_EMAIL
+    || "payments@mylegacycannabis.ca";
   return {
     logo_url: logoUrl,
     site_url: base,
@@ -177,7 +148,7 @@ export async function triggerWelcomeEmail(params: {
   await sendTemplatedEmail("welcome-email", params.customerEmail, {
     customer_name: params.customerName,
     account_url: `${base}/account`,
-    ...(await commonVars()),
+    ...await commonVars(),
   });
 }
 
@@ -204,13 +175,11 @@ export async function triggerOrderConfirmation(params: {
     payment_reference: params.orderId,
     payment_instructions: `<div style="background-color:#FFF8E1;border-left:4px solid #FFD700;padding:20px;margin:20px 0;border-radius:4px;"><p style="margin:0 0 10px 0;font-weight:bold;color:#333;font-size:15px;">IMPORTANT: Include Your Order Number in the E-Transfer</p><p style="margin:0 0 8px 0;color:#555;font-size:14px;">When sending your Interac e-Transfer, please include this order number in the <strong>memo/message field</strong>:</p><p style="margin:0;background-color:#FFFFFF;border:2px solid #4B2DBE;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:18px;font-weight:bold;color:#4B2DBE;text-align:center;letter-spacing:2px;">${params.orderId}</p><p style="margin:10px 0 0 0;color:#888;font-size:12px;">This ensures your payment is matched instantly to your order.</p></div>`,
     action_url: `${base}/account`,
-    ...(await commonVars()),
+    ...await commonVars(),
   };
 
   // Customer gets order confirmation
-  const customerSlug = params.isGuest
-    ? "guest-order-placed"
-    : "order-confirmation";
+  const customerSlug = params.isGuest ? "guest-order-placed" : "order-confirmation";
   sendTemplatedEmail(customerSlug, params.customerEmail, vars).catch(err =>
     console.warn(`[TemplateEmail] Order confirmation failed:`, err.message)
   );
@@ -230,21 +199,17 @@ export async function triggerPaymentReceived(params: {
     order_id: params.orderId,
     order_total: `$${params.orderTotal}`,
     action_url: `${base}/admin/orders`,
-    ...(await commonVars()),
+    ...await commonVars(),
   };
 
   // Customer notification
-  const customerSlug = params.isGuest
-    ? "guest-payment-received"
-    : "payment-received-customer";
+  const customerSlug = params.isGuest ? "guest-payment-received" : "payment-received-customer";
   sendTemplatedEmail(customerSlug, params.customerEmail, vars).catch(err =>
     console.warn(`[TemplateEmail] Payment customer email failed:`, err.message)
   );
 
   // Admin notification
-  const adminSlug = params.isGuest
-    ? "guest-payment-admin"
-    : "payment-received-admin";
+  const adminSlug = params.isGuest ? "guest-payment-admin" : "payment-received-admin";
   sendTemplatedEmail(adminSlug, ENV.adminEmail, vars).catch(err =>
     console.warn(`[TemplateEmail] Payment admin email failed:`, err.message)
   );
@@ -264,21 +229,17 @@ export async function triggerIdSubmitted(params: {
     customer_name: params.customerName,
     customer_email: params.customerEmail,
     user_id: String(params.userId || "Guest"),
-    submission_date: new Date().toLocaleString("en-CA", {
-      timeZone: "America/Toronto",
-    }),
+    submission_date: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
     id_type: params.idType || "Government ID",
     admin_review_url: `${base}/admin/verifications`,
     order_id: "",
     order_total: "",
     action_url: `${base}/admin/verifications`,
-    ...(await commonVars()),
+    ...await commonVars(),
   };
 
   // Admin gets notified
-  const adminSlug = params.isGuest
-    ? "guest-id-pending-admin"
-    : "admin-id-pending";
+  const adminSlug = params.isGuest ? "guest-id-pending-admin" : "admin-id-pending";
   sendTemplatedEmail(adminSlug, ENV.adminEmail, vars).catch(err =>
     console.warn(`[TemplateEmail] ID pending admin email failed:`, err.message)
   );
@@ -297,7 +258,7 @@ export async function triggerIdApproved(params: {
     order_id: "",
     order_total: "",
     action_url: `${base}/shop`,
-    ...(await commonVars()),
+    ...await commonVars(),
   };
 
   const slug = params.isGuest ? "guest-id-verified" : "id-verified";
@@ -319,7 +280,7 @@ export async function triggerOrderShipped(params: {
     order_id: params.orderId,
     tracking_number: params.trackingNumber,
     tracking_url: params.trackingUrl,
-    ...(await commonVars()),
+    ...await commonVars(),
   });
 }
 
@@ -335,11 +296,9 @@ export async function triggerOrderStatusUpdate(params: {
     customer_name: params.customerName,
     order_id: params.orderId,
     order_status: params.orderStatus,
-    update_date: new Date().toLocaleString("en-CA", {
-      timeZone: "America/Toronto",
-    }),
+    update_date: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
     status_message: params.statusMessage,
-    ...(await commonVars()),
+    ...await commonVars(),
   });
 }
 
@@ -353,14 +312,12 @@ export async function triggerIdRejected(params: {
   const base = getSiteUrl();
   const vars = {
     customer_name: params.customerName,
-    rejection_reason:
-      params.rejectionReason ||
-      "The submitted ID could not be verified. Please resubmit a clear, valid government-issued photo ID.",
+    rejection_reason: params.rejectionReason || "The submitted ID could not be verified. Please resubmit a clear, valid government-issued photo ID.",
     resubmit_url: `${base}/id-verification`,
     order_id: "",
     order_total: "",
     action_url: `${base}/id-verification`,
-    ...(await commonVars()),
+    ...await commonVars(),
   };
 
   const slug = params.isGuest ? "guest-id-rejected" : "id-rejected";
@@ -385,8 +342,8 @@ export async function triggerPromotionalEmail(params: {
     action_url: `${base}/shop`,
     locations_url: `${base}/locations`,
     faq_url: `${base}/faq`,
-    ...(await commonVars()),
-    ...(params.customVars || {}),
+    ...await commonVars(),
+    ...params.customVars || {},
   };
 
   return sendTemplatedEmail(params.slug, params.recipientEmail, vars);
@@ -396,7 +353,7 @@ export async function triggerPromotionalEmail(params: {
 export async function getResolvedCommonVars(): Promise<Record<string, string>> {
   const base = getSiteUrl();
   return {
-    ...(await commonVars()),
+    ...await commonVars(),
     site_url: base,
     shop_url: `${base}/shop`,
     account_url: `${base}/account`,

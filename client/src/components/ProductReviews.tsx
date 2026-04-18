@@ -10,102 +10,55 @@
  * - All labels are internationalised via useT()
  */
 
-import { useState, useEffect, useMemo } from "react";
-import {
-  Star,
-  ThumbsUp,
-  ChevronDown,
-  ChevronUp,
-  User,
-  MessageSquare,
-  Pencil,
-  Info,
-  SlidersHorizontal,
-  X,
-  ArrowUpDown,
-} from "lucide-react";
-import { trpc } from "@/lib/trpc";
-import { useT } from "@/i18n";
-import { toast } from "sonner";
+import { useState, useEffect, useMemo } from 'react';
+import { Star, ThumbsUp, ChevronDown, ChevronUp, User, MessageSquare, Pencil, Info, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useT } from '@/i18n';
+import { toast } from 'sonner';
 
 // ────────────────────────────────────────────────────────────────
 // CONSTANTS
 // ────────────────────────────────────────────────────────────────
 
 const DESCRIPTOR_TAG_KEYS = [
-  "smooth",
-  "strong",
-  "mild",
-  "relaxing",
-  "energizing",
-  "flavorful",
-  "harsh",
-  "good-value",
-  "potent",
-  "beginner-friendly",
-  "fruity",
-  "earthy",
-  "sweet",
-  "gassy",
-  "long-lasting",
-  "fast-acting",
+  'smooth', 'strong', 'mild', 'relaxing', 'energizing', 'flavorful',
+  'harsh', 'good-value', 'potent', 'beginner-friendly', 'fruity',
+  'earthy', 'sweet', 'gassy', 'long-lasting', 'fast-acting',
 ] as const;
 
 const EFFECT_TAG_KEYS = [
-  "relaxing",
-  "sleepy",
-  "euphoric",
-  "focused",
-  "creative",
-  "social",
-  "pain-relief",
-  "anxiety-relief",
-  "hungry",
-  "uplifting",
+  'relaxing', 'sleepy', 'euphoric', 'focused', 'creative',
+  'social', 'pain-relief', 'anxiety-relief', 'hungry', 'uplifting',
 ] as const;
 
-const EXPERIENCE_LEVELS = ["beginner", "intermediate", "experienced"] as const;
-const USAGE_TIMINGS = ["daytime", "nighttime", "anytime"] as const;
+const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'experienced'] as const;
+const USAGE_TIMINGS = ['daytime', 'nighttime', 'anytime'] as const;
 
 // ────────────────────────────────────────────────────────────────
 // HELPERS
 // ────────────────────────────────────────────────────────────────
 
-function StarRating({
-  value,
-  onChange,
-  size = 24,
-  interactive = false,
-}: {
-  value: number;
-  onChange?: (v: number) => void;
-  size?: number;
-  interactive?: boolean;
-}) {
+function StarRating({ value, onChange, size = 24, interactive = false }: { value: number; onChange?: (v: number) => void; size?: number; interactive?: boolean }) {
   const [hover, setHover] = useState(0);
   return (
     <div className="flex gap-0.5" role="group" aria-label="Star rating">
-      {[1, 2, 3, 4, 5].map(star => (
+      {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
           type="button"
           disabled={!interactive}
-          className={
-            interactive
-              ? "cursor-pointer transition-transform hover:scale-110"
-              : "cursor-default"
-          }
+          className={interactive ? 'cursor-pointer transition-transform hover:scale-110' : 'cursor-default'}
           onMouseEnter={() => interactive && setHover(star)}
           onMouseLeave={() => interactive && setHover(0)}
           onClick={() => interactive && onChange?.(star)}
-          aria-label={`${star} star${star > 1 ? "s" : ""}`}
+          aria-label={`${star} star${star > 1 ? 's' : ''}`}
         >
           <Star
             size={size}
             className={
               (hover || value) >= star
-                ? "fill-[#F15929] text-[#F15929]"
-                : "fill-gray-200 text-gray-200"
+                ? 'fill-[#F15929] text-[#F15929]'
+                : 'fill-gray-200 text-gray-200'
             }
           />
         </button>
@@ -114,68 +67,40 @@ function StarRating({
   );
 }
 
-function SliderRow({
-  label,
-  value,
-  onChange,
-  leftLabel,
-  rightLabel,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  leftLabel: string;
-  rightLabel: string;
+function SliderRow({ label, value, onChange, leftLabel, rightLabel }: {
+  label: string; value: number; onChange: (v: number) => void;
+  leftLabel: string; rightLabel: string;
 }) {
   return (
     <div>
-      <label className="block font-display text-xs text-[#4B2D8E] mb-1">
-        {label}
-      </label>
+      <label className="block font-display text-xs text-[#4B2D8E] mb-1">{label}</label>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500 font-body w-16 text-right">
-          {leftLabel}
-        </span>
+        <span className="text-xs text-gray-500 font-body w-16 text-right">{leftLabel}</span>
         <input
           type="range"
-          min={1}
-          max={5}
-          step={1}
-          value={value}
-          onChange={e => onChange(parseInt(e.target.value))}
+          min={1} max={5} step={1} value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
           className="flex-1 accent-[#4B2D8E] h-2 cursor-pointer"
           aria-label={label}
         />
-        <span className="text-xs text-gray-500 font-body w-16">
-          {rightLabel}
-        </span>
+        <span className="text-xs text-gray-500 font-body w-16">{rightLabel}</span>
       </div>
       <div className="flex justify-between px-16 text-[10px] text-gray-400 mt-0.5">
-        {[1, 2, 3, 4, 5].map(n => (
-          <span key={n}>{n}</span>
-        ))}
+        {[1, 2, 3, 4, 5].map(n => <span key={n}>{n}</span>)}
       </div>
     </div>
   );
 }
 
-function TagToggle({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function TagToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-display transition-all border ${
         active
-          ? "bg-[#4B2D8E] text-white border-[#4B2D8E]"
-          : "bg-white text-gray-600 border-gray-300 hover:border-[#4B2D8E] hover:text-[#4B2D8E]"
+          ? 'bg-[#4B2D8E] text-white border-[#4B2D8E]'
+          : 'bg-white text-gray-600 border-gray-300 hover:border-[#4B2D8E] hover:text-[#4B2D8E]'
       }`}
     >
       {label}
@@ -187,46 +112,33 @@ function PillBadge({ tag, count }: { tag: string; count: number }) {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display bg-[#F5F0FF] text-[#4B2D8E] border border-[#E0D4F5]">
       {tag}
-      <span className="bg-[#4B2D8E] text-white rounded-full px-1 text-[10px] leading-4">
-        {count}
-      </span>
+      <span className="bg-[#4B2D8E] text-white rounded-full px-1 text-[10px] leading-4">{count}</span>
     </span>
   );
 }
 
 function formatDate(d: string | Date) {
-  return new Date(d).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(d).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // ────────────────────────────────────────────────────────────────
 // FILTER CHIP (small reusable toggle used by the filter bar)
 // ────────────────────────────────────────────────────────────────
 
-function FilterChip({
-  label,
-  active,
-  onClick,
-  color = "purple",
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  color?: "purple" | "orange" | "green";
+function FilterChip({ label, active, onClick, color = 'purple' }: {
+  label: string; active: boolean; onClick: () => void;
+  color?: 'purple' | 'orange' | 'green';
 }) {
   const styles = {
     purple: active
-      ? "bg-[#4B2D8E] text-white border-[#4B2D8E]"
-      : "bg-white text-gray-500 border-gray-200 hover:border-[#4B2D8E] hover:text-[#4B2D8E]",
+      ? 'bg-[#4B2D8E] text-white border-[#4B2D8E]'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-[#4B2D8E] hover:text-[#4B2D8E]',
     orange: active
-      ? "bg-[#F15929] text-white border-[#F15929]"
-      : "bg-white text-gray-500 border-gray-200 hover:border-[#F15929] hover:text-[#F15929]",
+      ? 'bg-[#F15929] text-white border-[#F15929]'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-[#F15929] hover:text-[#F15929]',
     green: active
-      ? "bg-green-600 text-white border-green-600"
-      : "bg-white text-gray-500 border-gray-200 hover:border-green-600 hover:text-green-600",
+      ? 'bg-green-600 text-white border-green-600'
+      : 'bg-white text-gray-500 border-gray-200 hover:border-green-600 hover:text-green-600',
   };
   return (
     <button
@@ -243,13 +155,13 @@ function FilterChip({
 // REVIEW FILTERS
 // ────────────────────────────────────────────────────────────────
 
-type SortOption = "newest" | "oldest" | "highest" | "lowest";
+type SortOption = 'newest' | 'oldest' | 'highest' | 'lowest';
 
 interface ReviewFilters {
-  starFilter: number | null; // null = all, 1-5 = exact
+  starFilter: number | null;      // null = all, 1-5 = exact
   sort: SortOption;
-  tagFilters: string[]; // intersection — review must have ALL selected
-  effectFilters: string[]; // intersection
+  tagFilters: string[];           // intersection — review must have ALL selected
+  effectFilters: string[];        // intersection
   experienceFilter: string | null;
   timingFilter: string | null;
   recommendedOnly: boolean;
@@ -257,7 +169,7 @@ interface ReviewFilters {
 
 const INITIAL_FILTERS: ReviewFilters = {
   starFilter: null,
-  sort: "newest",
+  sort: 'newest',
   tagFilters: [],
   effectFilters: [],
   experienceFilter: null,
@@ -268,7 +180,7 @@ const INITIAL_FILTERS: ReviewFilters = {
 function hasActiveFilters(f: ReviewFilters) {
   return (
     f.starFilter !== null ||
-    f.sort !== "newest" ||
+    f.sort !== 'newest' ||
     f.tagFilters.length > 0 ||
     f.effectFilters.length > 0 ||
     f.experienceFilter !== null ||
@@ -285,13 +197,9 @@ function collectAvailableOptions(reviews: any[]) {
   const timSet = new Map<string, number>();
   for (const r of reviews) {
     if (r.tags) for (const t of r.tags) tagSet.set(t, (tagSet.get(t) || 0) + 1);
-    if (r.effectTags)
-      for (const t of r.effectTags)
-        effectSet.set(t, (effectSet.get(t) || 0) + 1);
-    if (r.experienceLevel)
-      expSet.set(r.experienceLevel, (expSet.get(r.experienceLevel) || 0) + 1);
-    if (r.usageTiming)
-      timSet.set(r.usageTiming, (timSet.get(r.usageTiming) || 0) + 1);
+    if (r.effectTags) for (const t of r.effectTags) effectSet.set(t, (effectSet.get(t) || 0) + 1);
+    if (r.experienceLevel) expSet.set(r.experienceLevel, (expSet.get(r.experienceLevel) || 0) + 1);
+    if (r.usageTiming) timSet.set(r.usageTiming, (timSet.get(r.usageTiming) || 0) + 1);
   }
   return { tagSet, effectSet, expSet, timSet };
 }
@@ -306,16 +214,12 @@ function applyFilters(reviews: any[], f: ReviewFilters): any[] {
 
   // Tags (intersection)
   if (f.tagFilters.length > 0) {
-    result = result.filter(
-      r => r.tags && f.tagFilters.every(t => r.tags.includes(t))
-    );
+    result = result.filter(r => r.tags && f.tagFilters.every(t => r.tags.includes(t)));
   }
 
   // Effects (intersection)
   if (f.effectFilters.length > 0) {
-    result = result.filter(
-      r => r.effectTags && f.effectFilters.every(t => r.effectTags.includes(t))
-    );
+    result = result.filter(r => r.effectTags && f.effectFilters.every(t => r.effectTags.includes(t)));
   }
 
   // Experience level
@@ -335,43 +239,25 @@ function applyFilters(reviews: any[], f: ReviewFilters): any[] {
 
   // Sort
   switch (f.sort) {
-    case "oldest":
-      result.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
+    case 'oldest':
+      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       break;
-    case "highest":
-      result.sort(
-        (a, b) =>
-          b.rating - a.rating ||
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+    case 'highest':
+      result.sort((a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       break;
-    case "lowest":
-      result.sort(
-        (a, b) =>
-          a.rating - b.rating ||
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+    case 'lowest':
+      result.sort((a, b) => a.rating - b.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       break;
-    case "newest":
+    case 'newest':
     default:
-      result.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       break;
   }
 
   return result;
 }
 
-function ReviewFilterBar({
-  reviews,
-  filters,
-  onChange,
-}: {
+function ReviewFilterBar({ reviews, filters, onChange }: {
   reviews: any[];
   filters: ReviewFilters;
   onChange: (f: ReviewFilters) => void;
@@ -381,40 +267,13 @@ function ReviewFilterBar({
   const fl = (rv as any).filters || {};
   const [open, setOpen] = useState(false);
   const active = hasActiveFilters(filters);
-  const { tagSet, effectSet, expSet, timSet } = useMemo(
-    () => collectAvailableOptions(reviews),
-    [reviews]
-  );
+  const { tagSet, effectSet, expSet, timSet } = useMemo(() => collectAvailableOptions(reviews), [reviews]);
 
   // Sort tags/effects by frequency descending
-  const sortedTags = useMemo(
-    () =>
-      Array.from(tagSet.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(e => e[0]),
-    [tagSet]
-  );
-  const sortedEffects = useMemo(
-    () =>
-      Array.from(effectSet.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(e => e[0]),
-    [effectSet]
-  );
-  const sortedExp = useMemo(
-    () =>
-      Array.from(expSet.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(e => e[0]),
-    [expSet]
-  );
-  const sortedTim = useMemo(
-    () =>
-      Array.from(timSet.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(e => e[0]),
-    [timSet]
-  );
+  const sortedTags = useMemo(() => Array.from(tagSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [tagSet]);
+  const sortedEffects = useMemo(() => Array.from(effectSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [effectSet]);
+  const sortedExp = useMemo(() => Array.from(expSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [expSet]);
+  const sortedTim = useMemo(() => Array.from(timSet.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]), [timSet]);
 
   const toggleTagFilter = (tag: string) => {
     const next = filters.tagFilters.includes(tag)
@@ -429,11 +288,7 @@ function ReviewFilterBar({
     onChange({ ...filters, effectFilters: next });
   };
 
-  const noOptions =
-    sortedTags.length === 0 &&
-    sortedEffects.length === 0 &&
-    sortedExp.length === 0 &&
-    sortedTim.length === 0;
+  const noOptions = sortedTags.length === 0 && sortedEffects.length === 0 && sortedExp.length === 0 && sortedTim.length === 0;
 
   return (
     <div className="mb-4">
@@ -443,24 +298,14 @@ function ReviewFilterBar({
           type="button"
           onClick={() => setOpen(!open)}
           className={`flex items-center gap-1.5 text-xs font-display transition-colors ${
-            active ? "text-[#F15929]" : "text-gray-500 hover:text-[#4B2D8E]"
+            active ? 'text-[#F15929]' : 'text-gray-500 hover:text-[#4B2D8E]'
           }`}
         >
           <SlidersHorizontal size={14} />
-          {fl.filterReviews || "Filter & Sort"}
+          {fl.filterReviews || 'Filter & Sort'}
           {active && (
             <span className="bg-[#F15929] text-white text-[10px] rounded-full px-1.5 leading-4 ml-0.5">
-              {
-                [
-                  filters.starFilter !== null,
-                  filters.sort !== "newest",
-                  filters.tagFilters.length > 0,
-                  filters.effectFilters.length > 0,
-                  filters.experienceFilter !== null,
-                  filters.timingFilter !== null,
-                  filters.recommendedOnly,
-                ].filter(Boolean).length
-              }
+              {[filters.starFilter !== null, filters.sort !== 'newest', filters.tagFilters.length > 0, filters.effectFilters.length > 0, filters.experienceFilter !== null, filters.timingFilter !== null, filters.recommendedOnly].filter(Boolean).length}
             </span>
           )}
           {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -472,7 +317,7 @@ function ReviewFilterBar({
             className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-red-500 font-display transition-colors"
           >
             <X size={11} />
-            {fl.clearAll || "Clear all"}
+            {fl.clearAll || 'Clear all'}
           </button>
         )}
       </div>
@@ -487,15 +332,13 @@ function ReviewFilterBar({
               <ArrowUpDown size={12} className="text-gray-400" />
               <select
                 value={filters.sort}
-                onChange={e =>
-                  onChange({ ...filters, sort: e.target.value as SortOption })
-                }
+                onChange={(e) => onChange({ ...filters, sort: e.target.value as SortOption })}
                 className="text-[11px] font-display bg-white border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#4B2D8E] text-gray-600 cursor-pointer"
               >
-                <option value="newest">{fl.newest || "Newest"}</option>
-                <option value="oldest">{fl.oldest || "Oldest"}</option>
-                <option value="highest">{fl.highest || "Highest Rated"}</option>
-                <option value="lowest">{fl.lowest || "Lowest Rated"}</option>
+                <option value="newest">{fl.newest || 'Newest'}</option>
+                <option value="oldest">{fl.oldest || 'Oldest'}</option>
+                <option value="highest">{fl.highest || 'Highest Rated'}</option>
+                <option value="lowest">{fl.lowest || 'Lowest Rated'}</option>
               </select>
             </div>
 
@@ -503,34 +346,19 @@ function ReviewFilterBar({
 
             {/* Star filter */}
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-gray-400 font-display mr-0.5">
-                {fl.rating || "Rating"}:
-              </span>
-              {[5, 4, 3, 2, 1].map(star => (
+              <span className="text-[11px] text-gray-400 font-display mr-0.5">{fl.rating || 'Rating'}:</span>
+              {[5, 4, 3, 2, 1].map((star) => (
                 <button
                   key={star}
                   type="button"
-                  onClick={() =>
-                    onChange({
-                      ...filters,
-                      starFilter: filters.starFilter === star ? null : star,
-                    })
-                  }
+                  onClick={() => onChange({ ...filters, starFilter: filters.starFilter === star ? null : star })}
                   className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-display border transition-all ${
                     filters.starFilter === star
-                      ? "bg-[#F15929] text-white border-[#F15929]"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-[#F15929]"
+                      ? 'bg-[#F15929] text-white border-[#F15929]'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-[#F15929]'
                   }`}
                 >
-                  {star}
-                  <Star
-                    size={9}
-                    className={
-                      filters.starFilter === star
-                        ? "fill-white text-white"
-                        : "fill-[#F15929] text-[#F15929]"
-                    }
-                  />
+                  {star}<Star size={9} className={filters.starFilter === star ? 'fill-white text-white' : 'fill-[#F15929] text-[#F15929]'} />
                 </button>
               ))}
             </div>
@@ -539,14 +367,9 @@ function ReviewFilterBar({
 
             {/* Recommended toggle */}
             <FilterChip
-              label={`👍 ${fl.recommendedOnly || "Recommended"}`}
+              label={`👍 ${fl.recommendedOnly || 'Recommended'}`}
               active={filters.recommendedOnly}
-              onClick={() =>
-                onChange({
-                  ...filters,
-                  recommendedOnly: !filters.recommendedOnly,
-                })
-              }
+              onClick={() => onChange({ ...filters, recommendedOnly: !filters.recommendedOnly })}
               color="green"
             />
           </div>
@@ -554,11 +377,9 @@ function ReviewFilterBar({
           {/* Row 2: Tags (only if reviews have them) */}
           {sortedTags.length > 0 && (
             <div>
-              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">
-                {rv.descriptorTags}
-              </span>
+              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.descriptorTags}</span>
               <div className="flex flex-wrap gap-1.5 mt-1">
-                {sortedTags.map(tag => (
+                {sortedTags.map((tag) => (
                   <FilterChip
                     key={tag}
                     label={`${(rv.tags as any)[tag] || tag} (${tagSet.get(tag)})`}
@@ -574,11 +395,9 @@ function ReviewFilterBar({
           {/* Row 3: Effects */}
           {sortedEffects.length > 0 && (
             <div>
-              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">
-                {rv.effectsLabel}
-              </span>
+              <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.effectsLabel}</span>
               <div className="flex flex-wrap gap-1.5 mt-1">
-                {sortedEffects.map(tag => (
+                {sortedEffects.map((tag) => (
                   <FilterChip
                     key={tag}
                     label={`${(rv.effects as any)[tag] || tag} (${effectSet.get(tag)})`}
@@ -596,22 +415,14 @@ function ReviewFilterBar({
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               {sortedExp.length > 0 && (
                 <div>
-                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">
-                    {rv.experienceLabel}
-                  </span>
+                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.experienceLabel}</span>
                   <div className="flex gap-1.5 mt-1">
-                    {sortedExp.map(lvl => (
+                    {sortedExp.map((lvl) => (
                       <FilterChip
                         key={lvl}
                         label={`${(rv.experienceLevels as any)[lvl] || lvl} (${expSet.get(lvl)})`}
                         active={filters.experienceFilter === lvl}
-                        onClick={() =>
-                          onChange({
-                            ...filters,
-                            experienceFilter:
-                              filters.experienceFilter === lvl ? null : lvl,
-                          })
-                        }
+                        onClick={() => onChange({ ...filters, experienceFilter: filters.experienceFilter === lvl ? null : lvl })}
                         color="purple"
                       />
                     ))}
@@ -620,22 +431,14 @@ function ReviewFilterBar({
               )}
               {sortedTim.length > 0 && (
                 <div>
-                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">
-                    {rv.timingLabel}
-                  </span>
+                  <span className="text-[10px] text-gray-400 font-display uppercase tracking-wide">{rv.timingLabel}</span>
                   <div className="flex gap-1.5 mt-1">
-                    {sortedTim.map(tim => (
+                    {sortedTim.map((tim) => (
                       <FilterChip
                         key={tim}
                         label={`${(rv.timings as any)[tim] || tim} (${timSet.get(tim)})`}
                         active={filters.timingFilter === tim}
-                        onClick={() =>
-                          onChange({
-                            ...filters,
-                            timingFilter:
-                              filters.timingFilter === tim ? null : tim,
-                          })
-                        }
+                        onClick={() => onChange({ ...filters, timingFilter: filters.timingFilter === tim ? null : tim })}
                         color="purple"
                       />
                     ))}
@@ -646,10 +449,7 @@ function ReviewFilterBar({
           )}
 
           {noOptions && (
-            <p className="text-[11px] text-gray-400 font-body italic">
-              {fl.noFilterOptions ||
-                "No filter options available for current reviews."}
-            </p>
+            <p className="text-[11px] text-gray-400 font-body italic">{fl.noFilterOptions || 'No filter options available for current reviews.'}</p>
           )}
         </div>
       )}
@@ -668,51 +468,34 @@ interface ReviewFormProps {
   onCancelEdit?: () => void;
 }
 
-function ReviewForm({
-  productId,
-  onSuccess,
-  editReview,
-  onCancelEdit,
-}: ReviewFormProps) {
+function ReviewForm({ productId, onSuccess, editReview, onCancelEdit }: ReviewFormProps) {
   const { t } = useT();
   const rv = t.reviews;
   const isEditing = !!editReview;
 
   const [rating, setRating] = useState(editReview?.rating || 0);
-  const [title, setTitle] = useState(editReview?.title || "");
-  const [body, setBody] = useState(editReview?.body || "");
+  const [title, setTitle] = useState(editReview?.title || '');
+  const [body, setBody] = useState(editReview?.body || '');
   const [tags, setTags] = useState<string[]>(editReview?.tags || []);
-  const [strengthRating, setStrengthRating] = useState(
-    editReview?.strengthRating || 3
-  );
-  const [smoothnessRating, setSmoothnessRating] = useState(
-    editReview?.smoothnessRating || 3
-  );
-  const [effectTags, setEffectTags] = useState<string[]>(
-    editReview?.effectTags || []
-  );
-  const [experienceLevel, setExperienceLevel] = useState<string>(
-    editReview?.experienceLevel || ""
-  );
-  const [usageTiming, setUsageTiming] = useState<string>(
-    editReview?.usageTiming || ""
-  );
-  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(
-    editReview?.wouldRecommend ?? null
-  );
+  const [strengthRating, setStrengthRating] = useState(editReview?.strengthRating || 3);
+  const [smoothnessRating, setSmoothnessRating] = useState(editReview?.smoothnessRating || 3);
+  const [effectTags, setEffectTags] = useState<string[]>(editReview?.effectTags || []);
+  const [experienceLevel, setExperienceLevel] = useState<string>(editReview?.experienceLevel || '');
+  const [usageTiming, setUsageTiming] = useState<string>(editReview?.usageTiming || '');
+  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(editReview?.wouldRecommend ?? null);
 
   // Re-sync form if editReview changes
   useEffect(() => {
     if (editReview) {
       setRating(editReview.rating || 0);
-      setTitle(editReview.title || "");
-      setBody(editReview.body || "");
+      setTitle(editReview.title || '');
+      setBody(editReview.body || '');
       setTags(editReview.tags || []);
       setStrengthRating(editReview.strengthRating || 3);
       setSmoothnessRating(editReview.smoothnessRating || 3);
       setEffectTags(editReview.effectTags || []);
-      setExperienceLevel(editReview.experienceLevel || "");
-      setUsageTiming(editReview.usageTiming || "");
+      setExperienceLevel(editReview.experienceLevel || '');
+      setUsageTiming(editReview.usageTiming || '');
       setWouldRecommend(editReview.wouldRecommend ?? null);
     }
   }, [editReview]);
@@ -722,30 +505,26 @@ function ReviewForm({
       toast.success(rv.thankYou);
       onSuccess();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const updateMutation = trpc.store.updateReview.useMutation({
     onSuccess: () => {
-      toast.success(rv.reviewUpdated || "Review updated!");
+      toast.success(rv.reviewUpdated || 'Review updated!');
       onSuccess();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const toggleTag = (tag: string) =>
-    setTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   const toggleEffect = (tag: string) =>
-    setEffectTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
+    setEffectTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
-      toast.error("Please select a star rating");
+      toast.error('Please select a star rating');
       return;
     }
     const payload = {
@@ -756,8 +535,8 @@ function ReviewForm({
       strengthRating,
       smoothnessRating,
       effectTags: effectTags.length > 0 ? effectTags : undefined,
-      experienceLevel: experienceLevel ? (experienceLevel as any) : undefined,
-      usageTiming: usageTiming ? (usageTiming as any) : undefined,
+      experienceLevel: experienceLevel ? experienceLevel as any : undefined,
+      usageTiming: usageTiming ? usageTiming as any : undefined,
       wouldRecommend: wouldRecommend ?? undefined,
     };
     if (isEditing) {
@@ -770,42 +549,31 @@ function ReviewForm({
   const isPending = submitMutation.isPending || updateMutation.isPending;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-[#FAFAFA] rounded-2xl p-6 border border-gray-200 space-y-6"
-    >
+    <form onSubmit={handleSubmit} className="bg-[#FAFAFA] rounded-2xl p-6 border border-gray-200 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg text-[#4B2D8E]">
-          {isEditing ? rv.editReview || "Edit Your Review" : rv.writeReview}
+          {isEditing ? (rv.editReview || 'Edit Your Review') : rv.writeReview}
         </h3>
         {isEditing && onCancelEdit && (
-          <button
-            type="button"
-            onClick={onCancelEdit}
-            className="text-sm text-gray-500 hover:text-gray-700 font-display"
-          >
-            {rv.cancelEdit || "Cancel"}
+          <button type="button" onClick={onCancelEdit} className="text-sm text-gray-500 hover:text-gray-700 font-display">
+            {rv.cancelEdit || 'Cancel'}
           </button>
         )}
       </div>
 
       {/* Star Rating */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-          {rv.ratingLabel} *
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.ratingLabel} *</label>
         <StarRating value={rating} onChange={setRating} size={32} interactive />
       </div>
 
       {/* Title */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-1">
-          {rv.titleLabel}
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-1">{rv.titleLabel}</label>
         <input
           type="text"
           value={title}
-          onChange={e => setTitle(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           maxLength={255}
           placeholder={rv.titlePlaceholder}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-[#4B2D8E]"
@@ -814,12 +582,10 @@ function ReviewForm({
 
       {/* Body */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-1">
-          {rv.bodyLabel}
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-1">{rv.bodyLabel}</label>
         <textarea
           value={body}
-          onChange={e => setBody(e.target.value)}
+          onChange={(e) => setBody(e.target.value)}
           maxLength={2000}
           rows={3}
           placeholder={rv.bodyPlaceholder}
@@ -829,11 +595,9 @@ function ReviewForm({
 
       {/* Descriptor Tags */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-          {rv.descriptorTags}
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.descriptorTags}</label>
         <div className="flex flex-wrap gap-2">
-          {DESCRIPTOR_TAG_KEYS.map(key => (
+          {DESCRIPTOR_TAG_KEYS.map((key) => (
             <TagToggle
               key={key}
               label={(rv.tags as any)[key] || key}
@@ -864,11 +628,9 @@ function ReviewForm({
 
       {/* Effect Tags */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-          {rv.effectsLabel}
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.effectsLabel}</label>
         <div className="flex flex-wrap gap-2">
-          {EFFECT_TAG_KEYS.map(key => (
+          {EFFECT_TAG_KEYS.map((key) => (
             <TagToggle
               key={key}
               label={(rv.effects as any)[key] || key}
@@ -882,35 +644,27 @@ function ReviewForm({
       {/* Experience Level & Timing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-            {rv.experienceLabel}
-          </label>
+          <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.experienceLabel}</label>
           <div className="flex gap-2">
-            {EXPERIENCE_LEVELS.map(level => (
+            {EXPERIENCE_LEVELS.map((level) => (
               <TagToggle
                 key={level}
                 label={(rv.experienceLevels as any)[level]}
                 active={experienceLevel === level}
-                onClick={() =>
-                  setExperienceLevel(experienceLevel === level ? "" : level)
-                }
+                onClick={() => setExperienceLevel(experienceLevel === level ? '' : level)}
               />
             ))}
           </div>
         </div>
         <div>
-          <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-            {rv.timingLabel}
-          </label>
+          <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.timingLabel}</label>
           <div className="flex gap-2">
-            {USAGE_TIMINGS.map(timing => (
+            {USAGE_TIMINGS.map((timing) => (
               <TagToggle
                 key={timing}
                 label={(rv.timings as any)[timing]}
                 active={usageTiming === timing}
-                onClick={() =>
-                  setUsageTiming(usageTiming === timing ? "" : timing)
-                }
+                onClick={() => setUsageTiming(usageTiming === timing ? '' : timing)}
               />
             ))}
           </div>
@@ -919,17 +673,15 @@ function ReviewForm({
 
       {/* Would Recommend */}
       <div>
-        <label className="block font-display text-xs text-[#4B2D8E] mb-2">
-          {rv.recommendLabel}
-        </label>
+        <label className="block font-display text-xs text-[#4B2D8E] mb-2">{rv.recommendLabel}</label>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={() => setWouldRecommend(true)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-display border transition-all ${
               wouldRecommend === true
-                ? "bg-green-600 text-white border-green-600"
-                : "border-gray-300 text-gray-600 hover:border-green-600 hover:text-green-600"
+                ? 'bg-green-600 text-white border-green-600'
+                : 'border-gray-300 text-gray-600 hover:border-green-600 hover:text-green-600'
             }`}
           >
             <ThumbsUp size={14} />
@@ -940,8 +692,8 @@ function ReviewForm({
             onClick={() => setWouldRecommend(false)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-display border transition-all ${
               wouldRecommend === false
-                ? "bg-red-500 text-white border-red-500"
-                : "border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500"
+                ? 'bg-red-500 text-white border-red-500'
+                : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500'
             }`}
           >
             <ThumbsUp size={14} className="rotate-180" />
@@ -959,7 +711,7 @@ function ReviewForm({
         {isPending
           ? rv.submitting
           : isEditing
-            ? rv.updateReview || "Update Review"
+            ? (rv.updateReview || 'Update Review')
             : rv.submitReview}
       </button>
     </form>
@@ -970,15 +722,7 @@ function ReviewForm({
 // REVIEW CARD
 // ────────────────────────────────────────────────────────────────
 
-function ReviewCard({
-  review,
-  isOwn,
-  onEdit,
-}: {
-  review: any;
-  isOwn?: boolean;
-  onEdit?: () => void;
-}) {
+function ReviewCard({ review, isOwn, onEdit }: { review: any; isOwn?: boolean; onEdit?: () => void }) {
   const { t } = useT();
   const rv = t.reviews;
   const [expanded, setExpanded] = useState(false);
@@ -990,25 +734,14 @@ function ReviewCard({
   const hasSmoothness = !!review.smoothnessRating;
   const hasExperience = !!review.experienceLevel;
   const hasTiming = !!review.usageTiming;
-  const hasRecommend =
-    review.wouldRecommend !== null && review.wouldRecommend !== undefined;
-  const hasDetails =
-    hasTags ||
-    hasEffects ||
-    hasStrength ||
-    hasSmoothness ||
-    hasExperience ||
-    hasTiming ||
-    hasRecommend;
+  const hasRecommend = review.wouldRecommend !== null && review.wouldRecommend !== undefined;
+  const hasDetails = hasTags || hasEffects || hasStrength || hasSmoothness || hasExperience || hasTiming || hasRecommend;
 
   // Build a compact inline summary (shown always when details exist)
   const summaryParts: string[] = [];
-  if (hasStrength)
-    summaryParts.push(`${rv.strengthLabel} ${review.strengthRating}/5`);
-  if (hasSmoothness)
-    summaryParts.push(`${rv.smoothnessLabel} ${review.smoothnessRating}/5`);
-  if (hasExperience)
-    summaryParts.push((rv.experienceLevels as any)[review.experienceLevel]);
+  if (hasStrength) summaryParts.push(`${rv.strengthLabel} ${review.strengthRating}/5`);
+  if (hasSmoothness) summaryParts.push(`${rv.smoothnessLabel} ${review.smoothnessRating}/5`);
+  if (hasExperience) summaryParts.push((rv.experienceLevels as any)[review.experienceLevel]);
   if (hasTiming) summaryParts.push((rv.timings as any)[review.usageTiming]);
 
   return (
@@ -1022,9 +755,7 @@ function ReviewCard({
           <div className="flex items-center gap-2">
             <StarRating value={review.rating} size={14} />
             {review.title && (
-              <span className="font-display text-sm text-[#2C2C2C]">
-                — {review.title}
-              </span>
+              <span className="font-display text-sm text-[#2C2C2C]">— {review.title}</span>
             )}
           </div>
         </div>
@@ -1033,24 +764,18 @@ function ReviewCard({
             <button
               onClick={onEdit}
               className="flex items-center gap-1 text-xs text-[#4B2D8E] hover:text-[#3a2270] font-display transition-colors"
-              title={rv.editReview || "Edit"}
+              title={rv.editReview || 'Edit'}
             >
               <Pencil size={12} />
-              {rv.editLabel || "Edit"}
+              {rv.editLabel || 'Edit'}
             </button>
           )}
-          <span className="text-[11px] text-gray-400 font-body">
-            {formatDate(review.createdAt)}
-          </span>
+          <span className="text-[11px] text-gray-400 font-body">{formatDate(review.createdAt)}</span>
         </div>
       </div>
 
       {/* Body text */}
-      {review.body && (
-        <p className="text-sm text-gray-600 font-body leading-relaxed ml-[42px] mb-1">
-          {review.body}
-        </p>
-      )}
+      {review.body && <p className="text-sm text-gray-600 font-body leading-relaxed ml-[42px] mb-1">{review.body}</p>}
 
       {/* Compact detail summary + toggle */}
       {hasDetails && (
@@ -1062,24 +787,16 @@ function ReviewCard({
                 <ThumbsUp size={10} /> {rv.recommended}
               </span>
             )}
-            {hasTags &&
-              review.tags.slice(0, 3).map((tag: string) => (
-                <span
-                  key={tag}
-                  className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F0FF] text-[#4B2D8E] font-display"
-                >
-                  {(rv.tags as any)[tag] || tag}
-                </span>
-              ))}
-            {hasEffects &&
-              review.effectTags.slice(0, 2).map((tag: string) => (
-                <span
-                  key={tag}
-                  className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#F15929] font-display"
-                >
-                  {(rv.effects as any)[tag] || tag}
-                </span>
-              ))}
+            {hasTags && review.tags.slice(0, 3).map((tag: string) => (
+              <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F0FF] text-[#4B2D8E] font-display">
+                {(rv.tags as any)[tag] || tag}
+              </span>
+            ))}
+            {hasEffects && review.effectTags.slice(0, 2).map((tag: string) => (
+              <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#F15929] font-display">
+                {(rv.effects as any)[tag] || tag}
+              </span>
+            ))}
             {/* "more" toggle */}
             <button
               type="button"
@@ -1087,9 +804,7 @@ function ReviewCard({
               className="inline-flex items-center gap-0.5 text-[11px] text-gray-400 hover:text-[#4B2D8E] font-display transition-colors"
             >
               <Info size={11} />
-              {expanded
-                ? rv.lessDetails || "Less"
-                : rv.moreDetails || "Details"}
+              {expanded ? (rv.lessDetails || 'Less') : (rv.moreDetails || 'Details')}
             </button>
           </div>
 
@@ -1100,10 +815,7 @@ function ReviewCard({
               {hasTags && (
                 <div className="flex flex-wrap gap-1 pl-2">
                   {review.tags.map((tag: string) => (
-                    <span
-                      key={tag}
-                      className="px-1.5 py-0.5 rounded bg-[#F5F0FF] text-[#4B2D8E] font-display"
-                    >
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-[#F5F0FF] text-[#4B2D8E] font-display">
                       {(rv.tags as any)[tag] || tag}
                     </span>
                   ))}
@@ -1113,10 +825,7 @@ function ReviewCard({
               {hasEffects && (
                 <div className="flex flex-wrap gap-1 pl-2">
                   {review.effectTags.map((tag: string) => (
-                    <span
-                      key={tag}
-                      className="px-1.5 py-0.5 rounded bg-[#FFF4F0] text-[#F15929] font-display"
-                    >
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-[#FFF4F0] text-[#F15929] font-display">
                       {(rv.effects as any)[tag] || tag}
                     </span>
                   ))}
@@ -1124,7 +833,7 @@ function ReviewCard({
               )}
               {/* Metrics row */}
               {summaryParts.length > 0 && (
-                <p className="pl-2">{summaryParts.join(" · ")}</p>
+                <p className="pl-2">{summaryParts.join(' · ')}</p>
               )}
             </div>
           )}
@@ -1138,21 +847,11 @@ function ReviewCard({
 // MAIN EXPORT: ProductReviews
 // ────────────────────────────────────────────────────────────────
 
-export default function ProductReviews({
-  productId,
-  isLoggedIn,
-  userId,
-}: {
-  productId: number;
-  isLoggedIn: boolean;
-  userId?: number;
-}) {
+export default function ProductReviews({ productId, isLoggedIn, userId }: { productId: number; isLoggedIn: boolean; userId?: number }) {
   const { t } = useT();
   const rv = t.reviews;
 
-  const { data, isLoading, refetch } = trpc.store.productReviews.useQuery({
-    productId,
-  });
+  const { data, isLoading, refetch } = trpc.store.productReviews.useQuery({ productId });
   const [formOpen, setFormOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [editingReview, setEditingReview] = useState<any>(null);
@@ -1161,18 +860,11 @@ export default function ProductReviews({
   const reviews = data?.reviews || [];
   const agg = data?.aggregate;
   const isFiltering = hasActiveFilters(filters);
-  const filteredReviews = useMemo(
-    () => applyFilters(reviews, filters),
-    [reviews, filters]
-  );
-  const visibleReviews = showAll
-    ? filteredReviews
-    : filteredReviews.slice(0, 3);
+  const filteredReviews = useMemo(() => applyFilters(reviews, filters), [reviews, filters]);
+  const visibleReviews = showAll ? filteredReviews : filteredReviews.slice(0, 3);
 
   // Check if user already reviewed this product
-  const userReview = userId
-    ? reviews.find((r: any) => r.userId === userId)
-    : null;
+  const userReview = userId ? reviews.find((r: any) => r.userId === userId) : null;
   const hasReviewed = !!userReview;
 
   if (isLoading) return null;
@@ -1212,7 +904,7 @@ export default function ProductReviews({
             {hasReviewed ? (
               <>
                 <Pencil size={16} />
-                {rv.editReview || "Edit Your Review"}
+                {rv.editReview || 'Edit Your Review'}
               </>
             ) : (
               <>
@@ -1230,14 +922,10 @@ export default function ProductReviews({
           <div className="flex items-center flex-wrap gap-x-5 gap-y-2">
             {/* Average rating */}
             <div className="flex items-center gap-2">
-              <span className="font-display text-2xl text-[#4B2D8E] leading-none">
-                {agg.avgRating}
-              </span>
+              <span className="font-display text-2xl text-[#4B2D8E] leading-none">{agg.avgRating}</span>
               <div>
                 <StarRating value={Math.round(agg.avgRating)} size={14} />
-                <p className="text-[11px] text-gray-500 font-body">
-                  {agg.count} {rv.reviews}
-                </p>
+                <p className="text-[11px] text-gray-500 font-body">{agg.count} {rv.reviews}</p>
               </div>
             </div>
 
@@ -1246,36 +934,24 @@ export default function ProductReviews({
             {/* Avg Strength */}
             {agg.avgStrength !== null && (
               <div className="text-center">
-                <div className="font-display text-base text-[#4B2D8E] leading-tight">
-                  {agg.avgStrength}/5
-                </div>
-                <p className="text-[10px] text-gray-500 font-body">
-                  {rv.avgStrength}
-                </p>
+                <div className="font-display text-base text-[#4B2D8E] leading-tight">{agg.avgStrength}/5</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.avgStrength}</p>
               </div>
             )}
 
             {/* Avg Smoothness */}
             {agg.avgSmoothness !== null && (
               <div className="text-center">
-                <div className="font-display text-base text-[#4B2D8E] leading-tight">
-                  {agg.avgSmoothness}/5
-                </div>
-                <p className="text-[10px] text-gray-500 font-body">
-                  {rv.avgSmoothness}
-                </p>
+                <div className="font-display text-base text-[#4B2D8E] leading-tight">{agg.avgSmoothness}/5</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.avgSmoothness}</p>
               </div>
             )}
 
             {/* Recommend % */}
             {agg.recommendPercent !== null && (
               <div className="text-center">
-                <div className="font-display text-base text-green-600 leading-tight">
-                  {agg.recommendPercent}%
-                </div>
-                <p className="text-[10px] text-gray-500 font-body">
-                  {rv.recommended}
-                </p>
+                <div className="font-display text-base text-green-600 leading-tight">{agg.recommendPercent}%</div>
+                <p className="text-[10px] text-gray-500 font-body">{rv.recommended}</p>
               </div>
             )}
 
@@ -1284,21 +960,12 @@ export default function ProductReviews({
             {/* Top tags + effects — inline */}
             <div className="flex flex-wrap gap-1.5">
               {agg.topTags.slice(0, 4).map((t: any) => (
-                <PillBadge
-                  key={t.tag}
-                  tag={(rv.tags as any)[t.tag] || t.tag}
-                  count={t.count}
-                />
+                <PillBadge key={t.tag} tag={(rv.tags as any)[t.tag] || t.tag} count={t.count} />
               ))}
               {agg.topEffects.slice(0, 3).map((t: any) => (
-                <span
-                  key={t.tag}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display bg-[#FFF4F0] text-[#F15929] border border-[#FFD6C7]"
-                >
+                <span key={t.tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-display bg-[#FFF4F0] text-[#F15929] border border-[#FFD6C7]">
                   {(rv.effects as any)[t.tag] || t.tag}
-                  <span className="bg-[#F15929] text-white rounded-full px-1 text-[10px] leading-4">
-                    {t.count}
-                  </span>
+                  <span className="bg-[#F15929] text-white rounded-full px-1 text-[10px] leading-4">{t.count}</span>
                 </span>
               ))}
             </div>
@@ -1308,11 +975,7 @@ export default function ProductReviews({
 
       {/* Review filters — shown when there are reviews */}
       {reviews.length > 0 && (
-        <ReviewFilterBar
-          reviews={reviews}
-          filters={filters}
-          onChange={setFilters}
-        />
+        <ReviewFilterBar reviews={reviews} filters={filters} onChange={setFilters} />
       )}
 
       {/* Review form — new or edit */}
@@ -1336,10 +999,7 @@ export default function ProductReviews({
       {reviews.length === 0 ? (
         <p className="text-sm text-gray-500 font-body italic">{rv.noReviews}</p>
       ) : filteredReviews.length === 0 ? (
-        <p className="text-sm text-gray-500 font-body italic">
-          {(rv as any).filters?.noResults ||
-            "No reviews match the current filters."}
-        </p>
+        <p className="text-sm text-gray-500 font-body italic">{(rv as any).filters?.noResults || 'No reviews match the current filters.'}</p>
       ) : (
         <div className="space-y-3">
           {visibleReviews.map((r: any) => (
@@ -1360,14 +1020,9 @@ export default function ProductReviews({
           className="flex items-center gap-1 mt-4 text-sm font-display text-[#4B2D8E] hover:text-[#3a2270] transition-colors"
         >
           {showAll ? (
-            <>
-              Show Less <ChevronUp size={16} />
-            </>
+            <>Show Less <ChevronUp size={16} /></>
           ) : (
-            <>
-              Show All {filteredReviews.length} {rv.reviews}{" "}
-              <ChevronDown size={16} />
-            </>
+            <>Show All {filteredReviews.length} {rv.reviews} <ChevronDown size={16} /></>
           )}
         </button>
       )}

@@ -86,13 +86,12 @@ const DEFAULT_ETRANSFER_INDICATORS = [
   /has been automatically deposited/i,
   /you.ve received.*money/i,
   /received.*interac/i,
-  /virement\s*interac/i, // French (Desjardins, National Bank)
-  /a été automatiquement déposé/i, // French auto-deposit
+  /virement\s*interac/i,           // French (Desjardins, National Bank)
+  /a été automatiquement déposé/i,  // French auto-deposit
 ];
 
 /** Exported for the test endpoint in routers.ts */
-export const DEFAULT_ETRANSFER_INDICATORS_FOR_TEST =
-  DEFAULT_ETRANSFER_INDICATORS;
+export const DEFAULT_ETRANSFER_INDICATORS_FOR_TEST = DEFAULT_ETRANSFER_INDICATORS;
 
 // ─── ADMIN-CONFIGURABLE KEYWORD RULES ───
 // Stored in site_settings under key "etransfer_keyword_rules"
@@ -102,9 +101,9 @@ export const DEFAULT_ETRANSFER_INDICATORS_FOR_TEST =
 
 export interface KeywordRule {
   id: string;
-  name: string; // Human-readable rule name, e.g. "Interac auto-deposit"
-  operator: "AND" | "OR"; // How keywords within this rule combine
-  keywords: string[]; // Case-insensitive keyword/phrases
+  name: string;              // Human-readable rule name, e.g. "Interac auto-deposit"
+  operator: "AND" | "OR";    // How keywords within this rule combine
+  keywords: string[];        // Case-insensitive keyword/phrases
   enabled: boolean;
 }
 
@@ -157,10 +156,7 @@ function evaluateRule(rule: KeywordRule, text: string): boolean {
  * Rules are combined with OR (any rule match = true).
  * Falls back to hardcoded regex patterns if no rules are configured.
  */
-async function matchesKeywordRules(
-  subject: string,
-  body: string
-): Promise<boolean> {
+async function matchesKeywordRules(subject: string, body: string): Promise<boolean> {
   const rules = await getKeywordRules();
   const enabledRules = rules.filter(r => r.enabled);
 
@@ -246,11 +242,7 @@ const FINANCIAL_INSTITUTIONS: Array<{ pattern: RegExp; name: string }> = [
 /**
  * Detect the financial institution from email headers and body.
  */
-function extractFinancialInstitution(
-  fromHeader: string,
-  subject: string,
-  body: string
-): string {
+function extractFinancialInstitution(fromHeader: string, subject: string, body: string): string {
   const combined = `${fromHeader} ${subject} ${body}`;
   for (const fi of FINANCIAL_INSTITUTIONS) {
     if (fi.pattern.test(combined)) return fi.name;
@@ -275,10 +267,7 @@ function isETransferEmailSync(subject: string, body: string): boolean {
 /**
  * Async version: checks admin keyword rules first, then falls back to defaults.
  */
-async function isETransferEmail(
-  subject: string,
-  body: string
-): Promise<boolean> {
+async function isETransferEmail(subject: string, body: string): Promise<boolean> {
   // Try admin-configured rules first
   const rulesMatch = await matchesKeywordRules(subject, body);
   if (rulesMatch) return true;
@@ -292,28 +281,17 @@ async function isETransferEmail(
   return isETransferEmailSync(subject, body);
 }
 
-export function extractSenderName(
-  subject: string,
-  body: string,
-  fromHeader?: string
-): string {
+export function extractSenderName(subject: string, body: string, fromHeader?: string): string {
   const combined = `${subject} ${body}`;
 
   if (combined.match(/vous a envoyé/i)) {
-    const m = combined.match(
-      /Virement Interac\s*[:：]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+vous/i
-    );
-    if (m && m[1]) return m[1].trim();
+     const m = combined.match(/Virement Interac\s*[:：]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+vous/i);
+     if (m && m[1]) return m[1].trim();
   }
 
-  if (
-    combined.includes("Interac e-Transfer") &&
-    combined.includes("sent you")
-  ) {
-    const m = body.match(
-      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+(?:sent you|has sent)/i
-    );
-    if (m && m[1]) return m[1].trim();
+  if (combined.includes('Interac e-Transfer') && combined.includes('sent you')) {
+      const m = body.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+(?:sent you|has sent)/i);
+      if (m && m[1]) return m[1].trim();
   }
 
   for (const pattern of SENDER_PATTERNS) {
@@ -321,12 +299,7 @@ export function extractSenderName(
     if (m && m[1]) {
       const name = m[1].trim();
       // Avoid matching bank names, Interac, or generic words
-      if (
-        name.length > 2 &&
-        !/^(interac|the|your|this|bank|from|bmo|td|rbc|cibc|scotiabank|desjardins)$/i.test(
-          name
-        )
-      ) {
+      if (name.length > 2 && !/^(interac|the|your|this|bank|from|bmo|td|rbc|cibc|scotiabank|desjardins)$/i.test(name)) {
         return name;
       }
     }
@@ -337,11 +310,8 @@ export function extractSenderName(
     if (displayNameMatch && displayNameMatch[1]) {
       const name = displayNameMatch[1].trim();
       // Only use if it looks like a person name, not an institution
-      if (
-        name.length > 2 &&
-        !/^(interac|notify|no-?reply|payment|alert|info|service)/i.test(name) &&
-        !/(bank|financial|credit|trust)/i.test(name)
-      ) {
+      if (name.length > 2 && !/^(interac|notify|no-?reply|payment|alert|info|service)/i.test(name) &&
+          !/(bank|financial|credit|trust)/i.test(name)) {
         return name;
       }
     }
@@ -352,17 +322,9 @@ export function extractSenderName(
     if (emailMatch) {
       const domain = emailMatch[2].toLowerCase();
       // Only use personal email domains, not bank notification addresses
-      if (
-        !/(interac|bank|bmo|td|rbc|cibc|scotia|desjardins|notify|payment|alert)/i.test(
-          domain
-        )
-      ) {
+      if (!/(interac|bank|bmo|td|rbc|cibc|scotia|desjardins|notify|payment|alert)/i.test(domain)) {
         const localPart = emailMatch[1].replace(/[._-]/g, " ").trim();
-        if (localPart.length > 2)
-          return localPart
-            .split(" ")
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(" ");
+        if (localPart.length > 2) return localPart.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
       }
     }
   }
@@ -380,9 +342,7 @@ export function extractAmount(subject: string, body: string): number | null {
     }
   }
 
-  const m =
-    combined.match(/(?:\(CAD\)|CAD).*?([\d,]+\.?\d{0,2})/i) ||
-    combined.match(/([\d,]+\.?\d{0,2}).*?(?:\(CAD\)|CAD)/i);
+  const m = combined.match(/(?:\(CAD\)|CAD).*?([\d,]+\.?\d{0,2})/i) || combined.match(/([\d,]+\.?\d{0,2}).*?(?:\(CAD\)|CAD)/i);
   if (m && m[1]) return parseFloat(m[1].replace(/,/g, ""));
 
   const m2 = combined.match(/(?:Amount|Montant)\s*[:：]\s*([\d,]+\.?\d{0,2})/i);
@@ -410,13 +370,10 @@ const ORDER_PATTERNS = [
   /cmd\s*(\d{3,})/i,
   /order\s*#?\s*(\d{3,})/i,
   /#\s*(\d{3,})/i,
-  /Payment for\s*#?\s*(\d{3,})/i,
+  /Payment for\s*#?\s*(\d{3,})/i
 ];
 
-export function extractOrderNumber(
-  subject: string,
-  body?: string
-): string | null {
+export function extractOrderNumber(subject: string, body?: string): string | null {
   const combined = body ? `${subject}\n${body}` : subject;
   for (const pattern of ORDER_PATTERNS) {
     const m = combined.match(pattern);
@@ -503,9 +460,7 @@ function getEmailBody(payload: any): string {
 }
 
 function getHeader(headers: any[], name: string): string {
-  const h = headers?.find(
-    (h: any) => h.name?.toLowerCase() === name.toLowerCase()
-  );
+  const h = headers?.find((h: any) => h.name?.toLowerCase() === name.toLowerCase());
   return h?.value || "";
 }
 
@@ -521,80 +476,58 @@ export function fuzzyNameMatch(name1: string, name2: string): boolean {
   let clean1 = name1.toLowerCase().trim();
   let clean2 = name2.toLowerCase().trim();
 
-  if (clean1.includes(",")) {
-    const parts = clean1.split(",").map(p => p.trim());
+  if (clean1.includes(',')) {
+    const parts = clean1.split(',').map(p => p.trim());
     if (parts.length >= 2) {
-      clean1 = parts[1] + " " + parts[0];
+      clean1 = parts[1] + ' ' + parts[0];
     }
   }
 
-  if (clean2.includes(",")) {
-    const parts = clean2.split(",").map(p => p.trim());
+  if (clean2.includes(',')) {
+    const parts = clean2.split(',').map(p => p.trim());
     if (parts.length >= 2) {
-      clean2 = parts[1] + " " + parts[0];
+      clean2 = parts[1] + ' ' + parts[0];
     }
   }
 
-  clean1 = clean1
-    .replace(/[^A-Za-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  clean2 = clean2
-    .replace(/[^A-Za-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  clean1 = clean1.replace(/[^A-Za-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  clean2 = clean2.replace(/[^A-Za-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 
   if (clean1 === clean2) return true;
 
-  const parts1 = clean1.split(" ").filter(Boolean);
-  const parts2 = clean2.split(" ").filter(Boolean);
+  const parts1 = clean1.split(' ').filter(Boolean);
+  const parts2 = clean2.split(' ').filter(Boolean);
 
   // F L vs L F directly
-  const rev1 = clean1.split(" ").reverse().join(" ");
+  const rev1 = clean1.split(' ').reverse().join(' ');
   if (rev1 === clean2) return true;
 
   if (parts1.length >= 2 && parts2.length >= 2) {
     if (parts1[0] === parts2[0] && parts1[1] === parts2[1]) return true;
     if (parts1[0] === parts2[1] && parts1[1] === parts2[0]) return true;
-    if (
-      parts1[1] === parts2[1] &&
-      parts1[1].length > 2 &&
-      clean1 !== "john smith" &&
-      clean2 !== "john jones"
-    )
-      return true;
+    if (parts1[1] === parts2[1] && parts1[1].length > 2 && clean1 !== 'john smith' && clean2 !== 'john jones') return true;
   }
 
   const nicknames: Record<string, string[]> = {
-    matthew: ["matt"],
-    robert: ["rob", "bob", "bobby"],
-    christopher: ["chris"],
+    'matthew': ['matt'],
+    'robert': ['rob', 'bob', 'bobby'],
+    'christopher': ['chris']
   };
 
   if (parts1.length >= 1 && parts2.length >= 1) {
-    if (
-      nicknames[parts1[0]]?.includes(parts2[0]) ||
-      nicknames[parts2[0]]?.includes(parts1[0])
-    ) {
-      if (parts1.length === 1 && parts2.length === 1) return true;
-      if (parts1.length > 1 && parts2.length > 1 && parts1[1] === parts2[1])
-        return true;
+    if ((nicknames[parts1[0]]?.includes(parts2[0]) || nicknames[parts2[0]]?.includes(parts1[0]))) {
+        if (parts1.length === 1 && parts2.length === 1) return true;
+        if (parts1.length > 1 && parts2.length > 1 && parts1[1] === parts2[1]) return true;
     }
 
     if (parts1.length === 2 && parts2.length === 2) {
-      if (
-        parts1[1] === parts2[1] &&
-        (parts1[0].startsWith(parts2[0]) || parts2[0].startsWith(parts1[0]))
-      )
-        return true;
+       if (parts1[1] === parts2[1] && (parts1[0].startsWith(parts2[0]) || parts2[0].startsWith(parts1[0]))) return true;
     }
   }
 
   // Levenshtein
   const levenshtein = (a: string, b: string): number => {
-    const matrix = Array(b.length + 1)
-      .fill(null)
-      .map((_, i) => i);
+    const matrix = Array(b.length + 1).fill(null).map((_, i) => i);
     let lastDiag;
     for (let i = 1; i <= a.length; i++) {
       matrix[0] = i;
@@ -617,43 +550,28 @@ export function fuzzyNameMatch(name1: string, name2: string): boolean {
   return distance <= 2;
 }
 
-async function matchToOrder(
-  parsed: ParsedETransfer
-): Promise<MatchResult | null> {
+async function matchToOrder(parsed: ParsedETransfer): Promise<MatchResult | null> {
   const pendingOrders = await db.getPendingETransferOrders();
   if (pendingOrders.length === 0) return null;
 
   // ═══════════════════════════════════════════
   // STEP 1: KEYWORD MATCH (order # in memo/body)
   // ═══════════════════════════════════════════
-  const orderNumFromMemo =
-    extractOrderNumber(parsed.memo) || extractOrderNumber(parsed.bodySnippet);
+  const orderNumFromMemo = extractOrderNumber(parsed.memo) || extractOrderNumber(parsed.bodySnippet);
   if (orderNumFromMemo) {
     // The extracted order number is just the numeric part (e.g. "1234"), but the orderNumber in DB is typically "ML-12345" or similar.
     // We should check if the orderNumber string in DB ends with or includes the extracted number.
-    const match = pendingOrders.find(o =>
-      o.orderNumber.toUpperCase().endsWith(orderNumFromMemo)
-    );
+    const match = pendingOrders.find(o => o.orderNumber.toUpperCase().endsWith(orderNumFromMemo));
     if (match) {
       // Verify amount is close enough (within $1 to account for cent adjustment)
       if (parsed.amount !== null) {
         const amountDiff = Math.abs(parseFloat(match.total) - parsed.amount);
-        if (amountDiff <= 1.0) {
-          return {
-            orderId: match.id,
-            orderNumber: match.orderNumber,
-            confidence: "exact",
-            method: "memo_order_number",
-          };
+        if (amountDiff <= 1.00) {
+          return { orderId: match.id, orderNumber: match.orderNumber, confidence: "exact", method: "memo_order_number" };
         }
       }
       // Even without amount verification, order # in memo is strong signal
-      return {
-        orderId: match.id,
-        orderNumber: match.orderNumber,
-        confidence: "exact",
-        method: "memo_order_number",
-      };
+      return { orderId: match.id, orderNumber: match.orderNumber, confidence: "exact", method: "memo_order_number" };
     }
   }
 
@@ -668,12 +586,7 @@ async function matchToOrder(
     const order = pendingOrders.find(o => o.id === centMatch.orderId);
     if (order) {
       await markCentMatched(centMatch.orderId);
-      return {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        confidence: "exact",
-        method: "cent_amount_match",
-      };
+      return { orderId: order.id, orderNumber: order.orderNumber, confidence: "exact", method: "cent_amount_match" };
     }
   }
 
@@ -684,12 +597,7 @@ async function matchToOrder(
   });
 
   if (amountMatches.length === 1) {
-    return {
-      orderId: amountMatches[0].id,
-      orderNumber: amountMatches[0].orderNumber,
-      confidence: "high",
-      method: "exact_amount_unique",
-    };
+    return { orderId: amountMatches[0].id, orderNumber: amountMatches[0].orderNumber, confidence: "high", method: "exact_amount_unique" };
   }
 
   // Amount + name disambiguation when multiple amount matches
@@ -697,20 +605,10 @@ async function matchToOrder(
     for (const order of amountMatches) {
       const customerName = order.guestName || "";
       if (fuzzyNameMatch(parsed.senderName, customerName)) {
-        return {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          confidence: "high",
-          method: "amount_plus_name",
-        };
+        return { orderId: order.id, orderNumber: order.orderNumber, confidence: "high", method: "amount_plus_name" };
       }
     }
-    return {
-      orderId: amountMatches[0].id,
-      orderNumber: amountMatches[0].orderNumber,
-      confidence: "low",
-      method: "amount_multiple_matches",
-    };
+    return { orderId: amountMatches[0].id, orderNumber: amountMatches[0].orderNumber, confidence: "low", method: "amount_multiple_matches" };
   }
 
   // ═══════════════════════════════════════════
@@ -748,24 +646,15 @@ async function matchToOrder(
       matchConfidence: fuzzyResult.confidence.toFixed(2),
       matchReasons: JSON.stringify(fuzzyResult.reasons),
     });
-    console.log(
-      `[ETransfer] Fuzzy likely match: "${parsed.senderName}" -> order #${fuzzyResult.orderNumber} (${(fuzzyResult.confidence * 100).toFixed(0)}%) — flagged for review`
-    );
+    console.log(`[ETransfer] Fuzzy likely match: "${parsed.senderName}" -> order #${fuzzyResult.orderNumber} (${(fuzzyResult.confidence * 100).toFixed(0)}%) — flagged for review`);
     return null; // Don't auto-match, goes to review queue
   }
 
   // Legacy: Name-only match (no amount match)
   if (parsed.senderName) {
-    const nameMatches = pendingOrders.filter(o =>
-      fuzzyNameMatch(parsed.senderName, o.guestName || "")
-    );
+    const nameMatches = pendingOrders.filter(o => fuzzyNameMatch(parsed.senderName, o.guestName || ""));
     if (nameMatches.length === 1) {
-      return {
-        orderId: nameMatches[0].id,
-        orderNumber: nameMatches[0].orderNumber,
-        confidence: "low",
-        method: "name_only",
-      };
+      return { orderId: nameMatches[0].id, orderNumber: nameMatches[0].orderNumber, confidence: "low", method: "name_only" };
     }
   }
 
@@ -787,11 +676,7 @@ async function matchToOrder(
 
 // ─── MAIN POLL FUNCTION ───
 
-export async function pollETransferEmails(): Promise<{
-  processed: number;
-  matched: number;
-  errors: number;
-}> {
+export async function pollETransferEmails(): Promise<{ processed: number; matched: number; errors: number }> {
   const stats = { processed: 0, matched: 0, errors: 0 };
 
   if (!isGmailConfigured() || isGmailDisabled()) {
@@ -820,9 +705,7 @@ export async function pollETransferEmails(): Promise<{
       return stats;
     }
 
-    console.log(
-      `[ETransfer] Found ${messages.length} potential e-Transfer email(s)`
-    );
+    console.log(`[ETransfer] Found ${messages.length} potential e-Transfer email(s)`);
 
     for (const msg of messages) {
       try {
@@ -833,23 +716,13 @@ export async function pollETransferEmails(): Promise<{
         if (existing) {
           // Mark as processed in Gmail and skip
           if (labelId) {
-            await gmail.users.messages
-              .modify({
-                userId: "me",
-                id: emailId,
-                requestBody: { addLabelIds: [labelId] },
-              })
-              .catch(() => {});
+            await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
           }
           continue;
         }
 
         // Fetch full message
-        const msgRes = await gmail.users.messages.get({
-          userId: "me",
-          id: emailId,
-          format: "full",
-        });
+        const msgRes = await gmail.users.messages.get({ userId: "me", id: emailId, format: "full" });
         const payload = msgRes.data.payload;
         if (!payload) continue;
 
@@ -863,13 +736,7 @@ export async function pollETransferEmails(): Promise<{
         if (!(await isETransferEmail(subject, body))) {
           // Not an e-Transfer — label it and skip
           if (labelId) {
-            await gmail.users.messages
-              .modify({
-                userId: "me",
-                id: emailId,
-                requestBody: { addLabelIds: [labelId] },
-              })
-              .catch(() => {});
+            await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
           }
           continue;
         }
@@ -880,20 +747,14 @@ export async function pollETransferEmails(): Promise<{
           senderEmail: from,
           amount: extractAmount(subject, body),
           memo: extractMemo(body),
-          financialInstitution: extractFinancialInstitution(
-            from,
-            subject,
-            body
-          ),
+          financialInstitution: extractFinancialInstitution(from, subject, body),
           subject,
           bodySnippet: body.substring(0, 500),
           receivedAt: dateStr ? new Date(dateStr) : new Date(),
           emailId,
         };
 
-        console.log(
-          `[ETransfer] Parsed: sender="${parsed.senderName}" amount=$${parsed.amount} memo="${parsed.memo}" bank="${parsed.financialInstitution}"`
-        );
+        console.log(`[ETransfer] Parsed: sender="${parsed.senderName}" amount=$${parsed.amount} memo="${parsed.memo}" bank="${parsed.financialInstitution}"`);
 
         // Try to match
         const match = await matchToOrder(parsed);
@@ -913,24 +774,15 @@ export async function pollETransferEmails(): Promise<{
           matchedOrderNumber: match?.orderNumber || null,
           matchConfidence: match?.confidence || "none",
           matchMethod: match?.method || null,
-          status:
-            match &&
-            (match.confidence === "exact" || match.confidence === "high")
-              ? "auto_matched"
-              : "unmatched",
+          status: match && (match.confidence === "exact" || match.confidence === "high") ? "auto_matched" : "unmatched",
         };
 
         // If auto-matched, update the order's payment status
-        if (
-          match &&
-          (match.confidence === "exact" || match.confidence === "high")
-        ) {
+        if (match && (match.confidence === "exact" || match.confidence === "high")) {
           // ─── 1:1 CARDINALITY GUARD: prevent double-matching ───
           const alreadyMatched = await db.isOrderAlreadyMatched(match.orderId);
           if (alreadyMatched) {
-            console.warn(
-              `[ETransfer] ⚠️ Order ${match.orderNumber} already has a matched payment — treating as unmatched`
-            );
+            console.warn(`[ETransfer] ⚠️ Order ${match.orderNumber} already has a matched payment — treating as unmatched`);
             record.status = "unmatched";
             record.matchConfidence = "none";
             record.matchedOrderId = null;
@@ -944,99 +796,61 @@ export async function pollETransferEmails(): Promise<{
             // ─── LOW-VALUE AUTO-CONFIRM ───
             // If high confidence + exact amount + < $200: auto-promote to Payment: Confirmed AND Order: Confirmed
             const orderTotal = parsed.amount || 0;
-            const isExactAmount =
-              match.method.includes("amount") ||
-              match.method === "memo_order_number";
-            if (
-              (match.confidence === "exact" || match.confidence === "high") &&
-              isExactAmount &&
-              orderTotal < 200
-            ) {
-              await db.updateOrder(match.orderId, {
-                paymentStatus: "confirmed",
-                status: "confirmed",
-              } as any);
-              console.log(
-                `[ETransfer] ✅ Auto-confirmed (low value $${orderTotal} < $200) → order ${match.orderNumber} payment: confirmed, status: confirmed`
-              );
+            const isExactAmount = match.method.includes("amount") || match.method === "memo_order_number";
+            if ((match.confidence === "exact" || match.confidence === "high") && isExactAmount && orderTotal < 200) {
+              await db.updateOrder(match.orderId, { paymentStatus: "confirmed", status: "confirmed" } as any);
+              console.log(`[ETransfer] ✅ Auto-confirmed (low value $${orderTotal} < $200) → order ${match.orderNumber} payment: confirmed, status: confirmed`);
             } else {
-              await db.updateOrder(match.orderId, {
-                paymentStatus: "received",
-              } as any);
-              console.log(
-                `[ETransfer] ✅ Auto-matched $${parsed.amount} → order ${match.orderNumber} (${match.method}) — payment: received (admin review needed)`
-              );
+              await db.updateOrder(match.orderId, { paymentStatus: "received" } as any);
+              console.log(`[ETransfer] ✅ Auto-matched $${parsed.amount} → order ${match.orderNumber} (${match.method}) — payment: received (admin review needed)`);
             }
 
             stats.matched++;
 
             // Trigger payment confirmation email (fire-and-forget)
             try {
-              await sendPaymentReceivedNotification(
-                match.orderId,
-                match.orderNumber,
-                parsed.amount || 0
-              );
+              await sendPaymentReceivedNotification(match.orderId, match.orderNumber, parsed.amount || 0);
             } catch (emailErr) {
-              console.warn(
-                "[ETransfer] Failed to send payment confirmation email:",
-                emailErr
-              );
+              console.warn("[ETransfer] Failed to send payment confirmation email:", emailErr);
             }
           }
         } else {
           await db.createPaymentRecord(record);
           stats.processed++;
-          console.log(
-            `[ETransfer] ⚠️ Unmatched: $${parsed.amount} from "${parsed.senderName}" memo="${parsed.memo}"`
-          );
+          console.log(`[ETransfer] ⚠️ Unmatched: $${parsed.amount} from "${parsed.senderName}" memo="${parsed.memo}"`);
         }
 
         // Label as processed in Gmail
         if (labelId) {
-          await gmail.users.messages
-            .modify({
-              userId: "me",
-              id: emailId,
-              requestBody: { addLabelIds: [labelId] },
-            })
-            .catch(() => {});
+          await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
         }
+
       } catch (msgErr) {
         if (handleGmailError(SERVICE, msgErr)) break; // auth error — stop processing
-        console.warn(
-          `[${SERVICE}] Error processing message ${msg.id}: ${(msgErr as Error).message}`
-        );
+        console.warn(`[${SERVICE}] Error processing message ${msg.id}: ${(msgErr as Error).message}`);
         stats.errors++;
       }
     }
+
   } catch (err) {
     handleGmailError(SERVICE, err);
     stats.errors++;
   }
 
   if (stats.processed > 0 || stats.matched > 0 || stats.errors > 0) {
-    console.log(
-      `[${SERVICE}] Poll complete: ${stats.processed} processed, ${stats.matched} matched, ${stats.errors} errors`
-    );
+    console.log(`[${SERVICE}] Poll complete: ${stats.processed} processed, ${stats.matched} matched, ${stats.errors} errors`);
   }
   return stats;
 }
 
 // ─── MANUAL MATCH (admin) ───
 
-export async function manualMatchPayment(
-  paymentId: number,
-  orderId: number,
-  adminId: number
-): Promise<boolean> {
+export async function manualMatchPayment(paymentId: number, orderId: number, adminId: number): Promise<boolean> {
   try {
     // ─── 1:1 CARDINALITY GUARD ───
     const alreadyMatched = await db.isOrderAlreadyMatched(orderId);
     if (alreadyMatched) {
-      console.warn(
-        `[ETransfer] Cannot manual-match: order ${orderId} already has a linked payment`
-      );
+      console.warn(`[ETransfer] Cannot manual-match: order ${orderId} already has a linked payment`);
       return false;
     }
 
@@ -1052,9 +866,7 @@ export async function manualMatchPayment(
     // Update order payment status
     await db.updateOrder(orderId, { paymentStatus: "received" } as any);
 
-    console.log(
-      `[ETransfer] Admin ${adminId} manually matched payment ${paymentId} → order ${orderId}`
-    );
+    console.log(`[ETransfer] Admin ${adminId} manually matched payment ${paymentId} → order ${orderId}`);
     return true;
   } catch (err) {
     console.error("[ETransfer] Manual match error:", err);
@@ -1064,11 +876,7 @@ export async function manualMatchPayment(
 
 // ─── PAYMENT CONFIRMATION EMAIL ───
 
-async function sendPaymentReceivedNotification(
-  orderId: number,
-  orderNumber: string,
-  amount: number
-): Promise<void> {
+async function sendPaymentReceivedNotification(orderId: number, orderNumber: string, amount: number): Promise<void> {
   try {
     const { triggerPaymentReceived } = await import("./emailTemplateEngine");
     const orderData = await db.getOrderById(orderId);
@@ -1085,14 +893,9 @@ async function sendPaymentReceivedNotification(
       orderTotal: parseFloat(orderData.total).toFixed(2),
     });
 
-    console.log(
-      `[ETransfer] Payment confirmation sent to ${customerEmail} for order ${orderNumber}`
-    );
+    console.log(`[ETransfer] Payment confirmation sent to ${customerEmail} for order ${orderNumber}`);
   } catch (err) {
-    console.warn(
-      "[ETransfer] Could not send payment confirmation:",
-      (err as Error).message
-    );
+    console.warn("[ETransfer] Could not send payment confirmation:", (err as Error).message);
   }
 }
 

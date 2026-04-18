@@ -22,9 +22,7 @@ export function useSiteConfig() {
     maintenance: {
       enabled: data?.maintenance?.enabled ?? false,
       title: data?.maintenance?.title ?? "We'll Be Right Back",
-      message:
-        data?.maintenance?.message ??
-        "Our store is currently undergoing maintenance.",
+      message: data?.maintenance?.message ?? "Our store is currently undergoing maintenance.",
     },
     /** Store hours configuration */
     storeHours: {

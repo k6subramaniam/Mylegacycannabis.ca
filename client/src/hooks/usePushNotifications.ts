@@ -63,8 +63,8 @@ export function usePushNotifications(): PushState {
     }
 
     // Check if there's already an active subscription
-    navigator.serviceWorker.ready.then(reg => {
-      reg.pushManager.getSubscription().then(sub => {
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.pushManager.getSubscription().then((sub) => {
         setIsSubscribed(!!sub);
       });
     });
@@ -99,11 +99,8 @@ export function usePushNotifications(): PushState {
         // If ready fails, try re-registering
         reg = await navigator.serviceWorker.register("/sw.js");
         // Wait for activation
-        await new Promise<void>(resolve => {
-          if (reg.active) {
-            resolve();
-            return;
-          }
+        await new Promise<void>((resolve) => {
+          if (reg.active) { resolve(); return; }
           const sw = reg.installing || reg.waiting;
           if (sw) {
             sw.addEventListener("statechange", () => {
@@ -136,9 +133,7 @@ export function usePushNotifications(): PushState {
       // Subscribe with VAPID key
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          pushConfig.vapidPublicKey
-        ) as BufferSource,
+        applicationServerKey: urlBase64ToUint8Array(pushConfig.vapidPublicKey) as BufferSource,
       });
 
       const json = sub.toJSON();
@@ -183,12 +178,5 @@ export function usePushNotifications(): PushState {
     }
   }, [isSupported, unsubscribeMut]);
 
-  return {
-    isSupported,
-    isSubscribed,
-    isDenied,
-    loading,
-    subscribe,
-    unsubscribe,
-  };
+  return { isSupported, isSubscribed, isDenied, loading, subscribe, unsubscribe };
 }

@@ -1,37 +1,11 @@
 import { trpc } from "@/lib/trpc";
 import { useState, useCallback, useEffect } from "react";
 import {
-  DollarSign,
-  RefreshCw,
-  Check,
-  X,
-  Eye,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Ban,
-  Link2,
-  HelpCircle,
-  Mail,
-  Save,
-  Edit3,
-  Download,
-  Trash2,
-  AlertTriangle,
-  FileDown,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  ToggleLeft,
-  ToggleRight,
-  Zap,
-  FlaskConical,
-  Settings2,
-  Shield,
-  UserSearch,
-  Sparkles,
-  ThumbsDown,
+  DollarSign, RefreshCw, Check, X, Eye, AlertCircle,
+  CheckCircle2, Clock, Ban, Link2, HelpCircle, Mail, Save, Edit3,
+  Download, Trash2, AlertTriangle, FileDown, Info, ChevronDown, ChevronUp,
+  Plus, ToggleLeft, ToggleRight, Zap, FlaskConical, Settings2, Shield,
+  UserSearch, Sparkles, ThumbsDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -107,26 +81,16 @@ export default function AdminPayments() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearConfirmText, setClearConfirmText] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [reassignOrderId, setReassignOrderId] = useState<
-    Record<number, string>
-  >({});
+  const [reassignOrderId, setReassignOrderId] = useState<Record<number, string>>({});
   const [reassigningId, setReassigningId] = useState<number | null>(null);
 
   // ─── Keyword Rules State ───
   const [showKeywordRules, setShowKeywordRules] = useState(false);
-  const [keywordRules, setKeywordRules] = useState<
-    Array<{
-      id: string;
-      name: string;
-      operator: "AND" | "OR";
-      keywords: string[];
-      enabled: boolean;
-    }>
-  >([]);
+  const [keywordRules, setKeywordRules] = useState<Array<{
+    id: string; name: string; operator: "AND" | "OR"; keywords: string[]; enabled: boolean;
+  }>>([]);
   const [rulesLoaded, setRulesLoaded] = useState(false);
-  const [newKeywordInput, setNewKeywordInput] = useState<
-    Record<string, string>
-  >({});
+  const [newKeywordInput, setNewKeywordInput] = useState<Record<string, string>>({});
   const [testSubject, setTestSubject] = useState("");
   const [testBody, setTestBody] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
@@ -141,34 +105,31 @@ export default function AdminPayments() {
     { refetchInterval: 30000 }
   );
 
-  const { data: serviceStatus, refetch: refetchStatus } =
-    trpc.etransfer.status.useQuery();
+  const { data: serviceStatus, refetch: refetchStatus } = trpc.etransfer.status.useQuery();
   const { data: pendingOrders } = trpc.etransfer.pendingOrders.useQuery();
 
   // Unmatched Payments (Smart Matching Review Queue)
-  const { data: unmatchedPayments, refetch: refetchUnmatched } =
-    trpc.etransfer.getUnmatchedPayments.useQuery(undefined, {
-      refetchInterval: 30000,
-    });
+  const { data: unmatchedPayments, refetch: refetchUnmatched } = trpc.etransfer.getUnmatchedPayments.useQuery(
+    undefined,
+    { refetchInterval: 30000 }
+  );
 
-  const resolveUnmatchedMutation =
-    trpc.etransfer.resolveUnmatchedPayment.useMutation({
-      onSuccess: () => {
-        toast.success("Payment resolved and matched to order!");
-        refetchUnmatched();
-        refetch();
-      },
-      onError: err => toast.error(err.message),
-    });
+  const resolveUnmatchedMutation = trpc.etransfer.resolveUnmatchedPayment.useMutation({
+    onSuccess: () => {
+      toast.success("Payment resolved and matched to order!");
+      refetchUnmatched();
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
-  const dismissUnmatchedMutation =
-    trpc.etransfer.dismissUnmatchedPayment.useMutation({
-      onSuccess: () => {
-        toast.success("Payment dismissed from review queue");
-        refetchUnmatched();
-      },
-      onError: err => toast.error(err.message),
-    });
+  const dismissUnmatchedMutation = trpc.etransfer.dismissUnmatchedPayment.useMutation({
+    onSuccess: () => {
+      toast.success("Payment dismissed from review queue");
+      refetchUnmatched();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const updateEmailMutation = trpc.etransfer.updatePaymentEmail.useMutation({
     onSuccess: (res: any) => {
@@ -182,13 +143,11 @@ export default function AdminPayments() {
   });
 
   const pollMutation = trpc.etransfer.poll.useMutation({
-    onSuccess: stats => {
-      toast.success(
-        `Poll complete: ${stats.processed} processed, ${stats.matched} matched`
-      );
+    onSuccess: (stats) => {
+      toast.success(`Poll complete: ${stats.processed} processed, ${stats.matched} matched`);
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const matchMutation = trpc.etransfer.manualMatch.useMutation({
@@ -196,7 +155,7 @@ export default function AdminPayments() {
       toast.success("Payment matched to order!");
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const reassignMutation = trpc.etransfer.reassign.useMutation({
@@ -205,7 +164,7 @@ export default function AdminPayments() {
       setReassignOrderId({});
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const unmatchMutation = trpc.etransfer.unmatch.useMutation({
@@ -213,7 +172,7 @@ export default function AdminPayments() {
       toast.success("Payment unlinked from order");
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const ignoreMutation = trpc.etransfer.ignore.useMutation({
@@ -221,18 +180,16 @@ export default function AdminPayments() {
       toast.success("Payment ignored");
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const changeStatusMutation = trpc.etransfer.changeStatus.useMutation({
     onSuccess: (res: any) => {
-      toast.success(
-        `Status changed: ${STATUS_LABELS[res.oldStatus] || res.oldStatus} \u2192 ${STATUS_LABELS[res.newStatus] || res.newStatus}`
-      );
+      toast.success(`Status changed: ${STATUS_LABELS[res.oldStatus] || res.oldStatus} \u2192 ${STATUS_LABELS[res.newStatus] || res.newStatus}`);
       refetch();
       setExpandedId(null);
     },
-    onError: err => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const deleteMutation = trpc.etransfer.deleteRecord.useMutation({
@@ -268,7 +225,7 @@ export default function AdminPayments() {
   // Sync keyword rules from query data (replaces deprecated onSuccess)
   useEffect(() => {
     if (keywordRulesData && !rulesLoaded) {
-      setKeywordRules((keywordRulesData as any) || []);
+      setKeywordRules(keywordRulesData as any || []);
       setRulesLoaded(true);
     }
   }, [keywordRulesData, rulesLoaded]);
@@ -289,59 +246,37 @@ export default function AdminPayments() {
 
   // Keyword rule helpers
   const addRule = useCallback(() => {
-    setKeywordRules(prev => [
-      ...prev,
-      {
-        id: `rule_${Date.now()}`,
-        name: `Rule ${prev.length + 1}`,
-        operator: "OR" as const,
-        keywords: [],
-        enabled: true,
-      },
-    ]);
+    setKeywordRules(prev => [...prev, {
+      id: `rule_${Date.now()}`,
+      name: `Rule ${prev.length + 1}`,
+      operator: "OR" as const,
+      keywords: [],
+      enabled: true,
+    }]);
   }, []);
 
   const removeRule = useCallback((ruleId: string) => {
     setKeywordRules(prev => prev.filter(r => r.id !== ruleId));
   }, []);
 
-  const updateRule = useCallback(
-    (ruleId: string, updates: Partial<(typeof keywordRules)[0]>) => {
-      setKeywordRules(prev =>
-        prev.map(r => (r.id === ruleId ? { ...r, ...updates } : r))
-      );
-    },
-    []
-  );
+  const updateRule = useCallback((ruleId: string, updates: Partial<typeof keywordRules[0]>) => {
+    setKeywordRules(prev => prev.map(r => r.id === ruleId ? { ...r, ...updates } : r));
+  }, []);
 
-  const addKeywordToRule = useCallback(
-    (ruleId: string) => {
-      const kw = (newKeywordInput[ruleId] || "").trim();
-      if (!kw) return;
-      setKeywordRules(prev =>
-        prev.map(r =>
-          r.id === ruleId && !r.keywords.includes(kw)
-            ? { ...r, keywords: [...r.keywords, kw] }
-            : r
-        )
-      );
-      setNewKeywordInput(prev => ({ ...prev, [ruleId]: "" }));
-    },
-    [newKeywordInput]
-  );
+  const addKeywordToRule = useCallback((ruleId: string) => {
+    const kw = (newKeywordInput[ruleId] || "").trim();
+    if (!kw) return;
+    setKeywordRules(prev => prev.map(r =>
+      r.id === ruleId && !r.keywords.includes(kw) ? { ...r, keywords: [...r.keywords, kw] } : r
+    ));
+    setNewKeywordInput(prev => ({ ...prev, [ruleId]: "" }));
+  }, [newKeywordInput]);
 
-  const removeKeywordFromRule = useCallback(
-    (ruleId: string, keyword: string) => {
-      setKeywordRules(prev =>
-        prev.map(r =>
-          r.id === ruleId
-            ? { ...r, keywords: r.keywords.filter(k => k !== keyword) }
-            : r
-        )
-      );
-    },
-    []
-  );
+  const removeKeywordFromRule = useCallback((ruleId: string, keyword: string) => {
+    setKeywordRules(prev => prev.map(r =>
+      r.id === ruleId ? { ...r, keywords: r.keywords.filter(k => k !== keyword) } : r
+    ));
+  }, []);
 
   // ─── Export CSV ───
   const handleExportCSV = async () => {
@@ -352,20 +287,7 @@ export default function AdminPayments() {
         return;
       }
 
-      const headers = [
-        "ID",
-        "Date",
-        "Sender Name",
-        "Sender Email",
-        "Amount",
-        "Memo",
-        "Subject",
-        "Matched Order",
-        "Match Method",
-        "Confidence",
-        "Status",
-        "Admin Notes",
-      ];
+      const headers = ["ID", "Date", "Sender Name", "Sender Email", "Amount", "Memo", "Subject", "Matched Order", "Match Method", "Confidence", "Status", "Admin Notes"];
       const rows = allRecords.map((r: any) => [
         r.id,
         r.receivedAt ? new Date(r.receivedAt).toLocaleString("en-CA") : "",
@@ -423,19 +345,11 @@ export default function AdminPayments() {
         </div>
         <div className="flex items-center gap-2">
           {/* Service Status Badge */}
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-              serviceStatus?.configured
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-            }`}
-          >
-            <div
-              className={`w-2 h-2 rounded-full ${serviceStatus?.configured ? "bg-green-500" : "bg-red-500"}`}
-            />
-            {serviceStatus?.configured
-              ? "Gmail Connected"
-              : "Gmail Not Configured"}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+            serviceStatus?.configured ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${serviceStatus?.configured ? "bg-green-500" : "bg-red-500"}`} />
+            {serviceStatus?.configured ? "Gmail Connected" : "Gmail Not Configured"}
           </div>
 
           {/* Export CSV */}
@@ -466,10 +380,7 @@ export default function AdminPayments() {
             disabled={pollMutation.isPending || !serviceStatus?.configured}
             className="flex items-center gap-2 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
           >
-            <RefreshCw
-              size={14}
-              className={pollMutation.isPending ? "animate-spin" : ""}
-            />
+            <RefreshCw size={14} className={pollMutation.isPending ? "animate-spin" : ""} />
             {pollMutation.isPending ? "Polling..." : "Check Now"}
           </button>
         </div>
@@ -483,21 +394,13 @@ export default function AdminPayments() {
               <Mail size={18} className="text-[#4B2D8E]" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-800">
-                Customer-Facing Payment Email
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-800">Customer-Facing Payment Email</h3>
               <p className="text-xs text-gray-400 flex items-center gap-1">
                 Shown on Checkout, order confirmation emails, and FAQ
                 <span className="relative group">
                   <Info size={12} className="text-gray-300 cursor-help" />
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                    <strong>Global setting.</strong> Changing this email updates
-                    it everywhere: Checkout page, order confirmation emails,
-                    guest emails, and all templates using{" "}
-                    <code className="bg-white/20 px-1 rounded">
-                      {"{{payment_email}}"}
-                    </code>
-                    .
+                    <strong>Global setting.</strong> Changing this email updates it everywhere: Checkout page, order confirmation emails, guest emails, and all templates using <code className="bg-white/20 px-1 rounded">{"{{payment_email}}"}</code>.
                   </span>
                 </span>
               </p>
@@ -509,10 +412,7 @@ export default function AdminPayments() {
                 {serviceStatus?.paymentEmail || "payments@mylegacycannabis.ca"}
               </code>
               <button
-                onClick={() => {
-                  setEmailInput(serviceStatus?.paymentEmail || "");
-                  setEditingEmail(true);
-                }}
+                onClick={() => { setEmailInput(serviceStatus?.paymentEmail || ""); setEditingEmail(true); }}
                 className="p-2 text-gray-400 hover:text-[#4B2D8E] rounded-lg hover:bg-gray-100 transition-colors"
                 title="Edit payment email"
               >
@@ -527,19 +427,11 @@ export default function AdminPayments() {
                 onChange={e => setEmailInput(e.target.value)}
                 placeholder="e.g. payments@mylegacycannabis.ca"
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-mono w-72 focus:border-[#4B2D8E] focus:ring-2 focus:ring-[#4B2D8E]/20 outline-none"
-                onKeyDown={e => {
-                  if (e.key === "Enter" && emailInput.includes("@"))
-                    updateEmailMutation.mutate({ email: emailInput.trim() });
-                }}
+                onKeyDown={e => { if (e.key === "Enter" && emailInput.includes("@")) updateEmailMutation.mutate({ email: emailInput.trim() }); }}
               />
               <button
-                onClick={() => {
-                  if (emailInput.includes("@"))
-                    updateEmailMutation.mutate({ email: emailInput.trim() });
-                }}
-                disabled={
-                  updateEmailMutation.isPending || !emailInput.includes("@")
-                }
+                onClick={() => { if (emailInput.includes("@")) updateEmailMutation.mutate({ email: emailInput.trim() }); }}
+                disabled={updateEmailMutation.isPending || !emailInput.includes("@")}
                 className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 disabled:opacity-50 transition-all"
               >
                 <Save size={12} /> Save
@@ -566,29 +458,18 @@ export default function AdminPayments() {
               <Settings2 size={18} className="text-orange-600" />
             </div>
             <div className="text-left">
-              <h3 className="text-sm font-semibold text-gray-800">
-                E-Transfer Detection Keywords
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-800">E-Transfer Detection Keywords</h3>
               <p className="text-xs text-gray-400">
-                Configure AND / OR keyword rules to identify Interac e-Transfer
-                emails
+                Configure AND / OR keyword rules to identify Interac e-Transfer emails
                 {keywordRules.filter(r => r.enabled).length > 0 && (
                   <span className="ml-1.5 text-orange-600 font-medium">
-                    ({keywordRules.filter(r => r.enabled).length} active rule
-                    {keywordRules.filter(r => r.enabled).length !== 1
-                      ? "s"
-                      : ""}
-                    )
+                    ({keywordRules.filter(r => r.enabled).length} active rule{keywordRules.filter(r => r.enabled).length !== 1 ? "s" : ""})
                   </span>
                 )}
               </p>
             </div>
           </div>
-          {showKeywordRules ? (
-            <ChevronUp size={18} className="text-gray-400" />
-          ) : (
-            <ChevronDown size={18} className="text-gray-400" />
-          )}
+          {showKeywordRules ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
         </button>
 
         {showKeywordRules && (
@@ -596,17 +477,13 @@ export default function AdminPayments() {
             {/* Info banner */}
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mt-4 mb-4">
               <p className="text-xs text-blue-700">
-                <strong>How it works:</strong> Each rule defines keywords that
-                must be found in the email subject + body.
-                <strong> AND</strong> = all keywords must match.{" "}
-                <strong>OR</strong> = any keyword matches. Rules are combined
-                with OR (any rule match triggers detection).
+                <strong>How it works:</strong> Each rule defines keywords that must be found in the email subject + body.
+                <strong> AND</strong> = all keywords must match. <strong>OR</strong> = any keyword matches.
+                Rules are combined with OR (any rule match triggers detection).
               </p>
               <p className="text-xs text-blue-600 mt-1.5">
-                <strong>Custom rules are additive</strong> — they add to (not
-                replace) the built-in defaults below. If a custom rule uses the
-                same keyword as a default, there's no conflict — it simply
-                matches twice, which has no side effect.
+                <strong>Custom rules are additive</strong> — they add to (not replace) the built-in defaults below.
+                If a custom rule uses the same keyword as a default, there's no conflict — it simply matches twice, which has no side effect.
               </p>
             </div>
 
@@ -618,19 +495,13 @@ export default function AdminPayments() {
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {DEFAULT_DETECTION_PATTERNS.map(pattern => (
-                  <span
-                    key={pattern}
-                    className="inline-flex items-center px-2.5 py-1 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg"
-                  >
+                  <span key={pattern} className="inline-flex items-center px-2.5 py-1 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg">
                     {pattern}
                   </span>
                 ))}
               </div>
               <p className="text-[10px] text-gray-400 mt-2">
-                These regex-based patterns always run as a safety net. Your
-                custom rules below are checked first — if they match, the email
-                is detected. If not, these defaults still catch standard Interac
-                e-Transfer notifications.
+                These regex-based patterns always run as a safety net. Your custom rules below are checked first — if they match, the email is detected. If not, these defaults still catch standard Interac e-Transfer notifications.
               </p>
             </div>
 
@@ -640,46 +511,30 @@ export default function AdminPayments() {
                 <div
                   key={rule.id}
                   className={`border rounded-xl p-4 transition-all ${
-                    rule.enabled
-                      ? "border-gray-200 bg-white"
-                      : "border-gray-100 bg-gray-50 opacity-70"
+                    rule.enabled ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-70"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Enable/Disable toggle */}
                       <button
-                        onClick={() =>
-                          updateRule(rule.id, { enabled: !rule.enabled })
-                        }
+                        onClick={() => updateRule(rule.id, { enabled: !rule.enabled })}
                         className={`shrink-0 ${rule.enabled ? "text-green-500" : "text-gray-300"}`}
-                        title={
-                          rule.enabled
-                            ? "Enabled — click to disable"
-                            : "Disabled — click to enable"
-                        }
+                        title={rule.enabled ? "Enabled — click to disable" : "Disabled — click to enable"}
                       >
-                        {rule.enabled ? (
-                          <ToggleRight size={24} />
-                        ) : (
-                          <ToggleLeft size={24} />
-                        )}
+                        {rule.enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                       </button>
                       {/* Rule name (editable) */}
                       <input
                         value={rule.name}
-                        onChange={e =>
-                          updateRule(rule.id, { name: e.target.value })
-                        }
+                        onChange={e => updateRule(rule.id, { name: e.target.value })}
                         className="text-sm font-semibold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#4B2D8E] focus:outline-none px-1 py-0.5 min-w-0 flex-1"
                         placeholder="Rule name..."
                       />
                       {/* AND/OR toggle */}
                       <div className="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0">
                         <button
-                          onClick={() =>
-                            updateRule(rule.id, { operator: "AND" })
-                          }
+                          onClick={() => updateRule(rule.id, { operator: "AND" })}
                           className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                             rule.operator === "AND"
                               ? "bg-[#4B2D8E] text-white shadow-sm"
@@ -689,9 +544,7 @@ export default function AdminPayments() {
                           AND
                         </button>
                         <button
-                          onClick={() =>
-                            updateRule(rule.id, { operator: "OR" })
-                          }
+                          onClick={() => updateRule(rule.id, { operator: "OR" })}
                           className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                             rule.operator === "OR"
                               ? "bg-orange-500 text-white shadow-sm"
@@ -728,9 +581,7 @@ export default function AdminPayments() {
                       </span>
                     ))}
                     {rule.keywords.length === 0 && (
-                      <span className="text-xs text-gray-400 italic py-1">
-                        No keywords yet — add one below
-                      </span>
+                      <span className="text-xs text-gray-400 italic py-1">No keywords yet — add one below</span>
                     )}
                   </div>
 
@@ -738,18 +589,8 @@ export default function AdminPayments() {
                   <div className="flex items-center gap-2">
                     <input
                       value={newKeywordInput[rule.id] || ""}
-                      onChange={e =>
-                        setNewKeywordInput(prev => ({
-                          ...prev,
-                          [rule.id]: e.target.value,
-                        }))
-                      }
-                      onKeyDown={e => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addKeywordToRule(rule.id);
-                        }
-                      }}
+                      onChange={e => setNewKeywordInput(prev => ({ ...prev, [rule.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeywordToRule(rule.id); } }}
                       placeholder="Type a keyword or phrase and press Enter..."
                       className="flex-1 text-xs px-3 py-1.5 border border-gray-200 rounded-lg focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
                     />
@@ -786,11 +627,7 @@ export default function AdminPayments() {
                 disabled={saveRulesMutation.isPending}
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#4B2D8E] text-white rounded-lg text-sm font-medium hover:bg-[#3a2270] disabled:opacity-50 transition-all"
               >
-                {saveRulesMutation.isPending ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <Save size={14} />
-                )}
+                {saveRulesMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                 Save Rules
               </button>
             </div>
@@ -803,95 +640,58 @@ export default function AdminPayments() {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-                    Subject
-                  </label>
+                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Subject</label>
                   <input
                     value={testSubject}
-                    onChange={e => {
-                      setTestSubject(e.target.value);
-                      setTestResult(null);
-                    }}
+                    onChange={e => { setTestSubject(e.target.value); setTestResult(null); }}
                     placeholder='e.g. "INTERAC e-Transfer: John sent you $127.50"'
                     className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg mt-1 focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-                    Body Snippet
-                  </label>
+                  <label className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Body Snippet</label>
                   <input
                     value={testBody}
-                    onChange={e => {
-                      setTestBody(e.target.value);
-                      setTestResult(null);
-                    }}
+                    onChange={e => { setTestBody(e.target.value); setTestResult(null); }}
                     placeholder='e.g. "$127.50 has been automatically deposited"'
                     className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg mt-1 focus:border-[#4B2D8E] focus:ring-1 focus:ring-[#4B2D8E]/20 outline-none"
                   />
                 </div>
               </div>
               <button
-                onClick={() =>
-                  testRulesMutation.mutate({
-                    subject: testSubject,
-                    body: testBody,
-                  })
-                }
-                disabled={
-                  testRulesMutation.isPending || (!testSubject && !testBody)
-                }
+                onClick={() => testRulesMutation.mutate({ subject: testSubject, body: testBody })}
+                disabled={testRulesMutation.isPending || (!testSubject && !testBody)}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 disabled:opacity-50 transition-all"
               >
-                {testRulesMutation.isPending ? (
-                  <RefreshCw size={12} className="animate-spin" />
-                ) : (
-                  <Zap size={12} />
-                )}
+                {testRulesMutation.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
                 Test Detection
               </button>
 
               {testResult && (
-                <div
-                  className={`mt-3 p-3 rounded-lg border text-xs ${
-                    testResult.overallMatch
-                      ? "bg-green-50 border-green-200 text-green-800"
-                      : "bg-red-50 border-red-200 text-red-800"
-                  }`}
-                >
+                <div className={`mt-3 p-3 rounded-lg border text-xs ${
+                  testResult.overallMatch
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-50 border-red-200 text-red-800"
+                }`}>
                   <p className="font-bold mb-1">
-                    {testResult.overallMatch
-                      ? "MATCH — Would be detected as e-Transfer"
-                      : "NO MATCH — Would be skipped"}
+                    {testResult.overallMatch ? "MATCH — Would be detected as e-Transfer" : "NO MATCH — Would be skipped"}
                   </p>
                   <p className="text-[10px] mb-2">
-                    Custom rules:{" "}
-                    {testResult.customRulesMatch ? "MATCHED" : "no match"}{" "}
-                    &middot; Built-in defaults:{" "}
-                    {testResult.defaultMatch ? "MATCHED" : "no match"}
+                    Custom rules: {testResult.customRulesMatch ? "MATCHED" : "no match"} &middot;
+                    Built-in defaults: {testResult.defaultMatch ? "MATCHED" : "no match"}
                   </p>
                   {testResult.ruleResults?.length > 0 && (
                     <div className="space-y-1 pt-1 border-t border-current/10">
                       {testResult.ruleResults.map((rr: any) => (
-                        <div
-                          key={rr.ruleId}
-                          className="flex items-center gap-2"
-                        >
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold ${rr.match ? "bg-green-500" : "bg-gray-300"}`}
-                          >
+                        <div key={rr.ruleId} className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold ${rr.match ? "bg-green-500" : "bg-gray-300"}`}>
                             {rr.match ? "✓" : "×"}
                           </span>
                           <span className="font-medium">{rr.ruleName}</span>
-                          <span className="text-[10px] opacity-60">
-                            ({rr.operator})
-                          </span>
+                          <span className="text-[10px] opacity-60">({rr.operator})</span>
                           <span className="ml-auto text-[10px]">
                             {rr.keywordResults.map((kr: any) => (
-                              <span
-                                key={kr.keyword}
-                                className={`mr-1.5 ${kr.found ? "text-green-700 font-medium" : "text-red-600 line-through"}`}
-                              >
+                              <span key={kr.keyword} className={`mr-1.5 ${kr.found ? "text-green-700 font-medium" : "text-red-600 line-through"}`}>
                                 "{kr.keyword}"
                               </span>
                             ))}
@@ -922,38 +722,21 @@ export default function AdminPayments() {
                 </span>
               </div>
               <div className="text-left">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Smart Matching Review Queue
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-800">Smart Matching Review Queue</h3>
                 <p className="text-xs text-gray-400">
-                  Payments that couldn't be auto-matched — review likely matches
-                  and resolve with 1 click
+                  Payments that couldn't be auto-matched — review likely matches and resolve with 1 click
                 </p>
               </div>
             </div>
-            {showSmartQueue ? (
-              <ChevronUp size={18} className="text-gray-400" />
-            ) : (
-              <ChevronDown size={18} className="text-gray-400" />
-            )}
+            {showSmartQueue ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
           </button>
 
           {showSmartQueue && (
             <div className="px-5 pb-5 border-t border-orange-100">
               <div className="space-y-3 mt-4">
                 {unmatchedPayments.map((up: any) => {
-                  const confidence = up.matchConfidence
-                    ? parseFloat(up.matchConfidence)
-                    : 0;
-                  const reasons: string[] = up.matchReasons
-                    ? (() => {
-                        try {
-                          return JSON.parse(up.matchReasons);
-                        } catch {
-                          return [];
-                        }
-                      })()
-                    : [];
+                  const confidence = up.matchConfidence ? parseFloat(up.matchConfidence) : 0;
+                  const reasons: string[] = up.matchReasons ? (() => { try { return JSON.parse(up.matchReasons); } catch { return []; } })() : [];
                   const isNeedsReview = up.status === "needs_review";
                   const confPercent = Math.round(confidence * 100);
 
@@ -970,42 +753,23 @@ export default function AdminPayments() {
                         {/* Payment info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-800">
-                              {up.senderName}
-                            </span>
-                            <span className="text-sm font-bold text-green-700">
-                              ${parseFloat(up.amount).toFixed(2)}
-                            </span>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                isNeedsReview
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
+                            <span className="text-sm font-semibold text-gray-800">{up.senderName}</span>
+                            <span className="text-sm font-bold text-green-700">${parseFloat(up.amount).toFixed(2)}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isNeedsReview
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}>
                               {isNeedsReview ? "Likely Match" : "Unmatched"}
                             </span>
                             {up.receivedAt && (
                               <span className="text-[10px] text-gray-400">
-                                {new Date(up.receivedAt).toLocaleDateString(
-                                  "en-CA",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
+                                {new Date(up.receivedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                               </span>
                             )}
                           </div>
                           {up.memo && (
-                            <p
-                              className="text-xs text-gray-500 mt-1 truncate"
-                              title={up.memo}
-                            >
-                              Memo: {up.memo}
-                            </p>
+                            <p className="text-xs text-gray-500 mt-1 truncate" title={up.memo}>Memo: {up.memo}</p>
                           )}
                         </div>
 
@@ -1013,12 +777,7 @@ export default function AdminPayments() {
                         <div className="flex items-center gap-2 shrink-0">
                           {up.likelyOrderId ? (
                             <button
-                              onClick={() =>
-                                resolveUnmatchedMutation.mutate({
-                                  paymentId: up.id,
-                                  orderId: up.likelyOrderId,
-                                })
-                              }
+                              onClick={() => resolveUnmatchedMutation.mutate({ paymentId: up.id, orderId: up.likelyOrderId })}
                               disabled={resolveUnmatchedMutation.isPending}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 disabled:opacity-50 transition-all"
                               title="Accept the likely match"
@@ -1031,28 +790,20 @@ export default function AdminPayments() {
                               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white max-w-[170px]"
                               onChange={e => {
                                 if (e.target.value) {
-                                  resolveUnmatchedMutation.mutate({
-                                    paymentId: up.id,
-                                    orderId: parseInt(e.target.value),
-                                  });
+                                  resolveUnmatchedMutation.mutate({ paymentId: up.id, orderId: parseInt(e.target.value) });
                                 }
                               }}
                             >
                               <option value="">Match to order...</option>
                               {(pendingOrders || []).map((o: any) => (
                                 <option key={o.id} value={o.id}>
-                                  {o.orderNumber} - $
-                                  {parseFloat(o.total).toFixed(2)}
+                                  {o.orderNumber} - ${parseFloat(o.total).toFixed(2)}
                                 </option>
                               ))}
                             </select>
                           )}
                           <button
-                            onClick={() =>
-                              dismissUnmatchedMutation.mutate({
-                                paymentId: up.id,
-                              })
-                            }
+                            onClick={() => dismissUnmatchedMutation.mutate({ paymentId: up.id })}
                             disabled={dismissUnmatchedMutation.isPending}
                             className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs font-medium hover:bg-gray-50 hover:text-red-500 hover:border-red-200 disabled:opacity-50 transition-all"
                             title="Dismiss this payment"
@@ -1068,42 +819,27 @@ export default function AdminPayments() {
                         <div className="mt-3 bg-white rounded-lg border border-orange-100 p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Sparkles size={13} className="text-orange-500" />
-                            <span className="text-xs font-semibold text-orange-700">
-                              Likely Match Found
-                            </span>
-                            <span
-                              className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                confPercent >= 75
-                                  ? "bg-green-100 text-green-700"
-                                  : confPercent >= 50
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                              }`}
-                            >
+                            <span className="text-xs font-semibold text-orange-700">Likely Match Found</span>
+                            <span className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              confPercent >= 75
+                                ? "bg-green-100 text-green-700"
+                                : confPercent >= 50
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                            }`}>
                               {confPercent}% confidence
                             </span>
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-600">
                             {up.likelyCustomerName && (
-                              <span>
-                                Customer:{" "}
-                                <strong>{up.likelyCustomerName}</strong>
-                              </span>
+                              <span>Customer: <strong>{up.likelyCustomerName}</strong></span>
                             )}
-                            <span>
-                              Order ID:{" "}
-                              <strong className="font-mono text-[#4B2D8E]">
-                                #{up.likelyOrderId}
-                              </strong>
-                            </span>
+                            <span>Order ID: <strong className="font-mono text-[#4B2D8E]">#{up.likelyOrderId}</strong></span>
                           </div>
                           {reasons.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               {reasons.map((r: string, i: number) => (
-                                <span
-                                  key={i}
-                                  className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] rounded-md border border-orange-100"
-                                >
+                                <span key={i} className="inline-flex items-center px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] rounded-md border border-orange-100">
                                   {r}
                                 </span>
                               ))}
@@ -1126,28 +862,13 @@ export default function AdminPayments() {
           <div className="flex items-start gap-3">
             <AlertCircle size={18} className="text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-amber-800">
-                Gmail API Not Configured
-              </p>
+              <p className="text-sm font-medium text-amber-800">Gmail API Not Configured</p>
               <p className="text-xs text-amber-600 mt-1">
-                Set these environment variables in Railway to enable
-                auto-matching:
-                <br />
-                <code className="bg-amber-100 px-1 rounded">
-                  GMAIL_CLIENT_ID
-                </code>
-                ,{" "}
-                <code className="bg-amber-100 px-1 rounded">
-                  GMAIL_CLIENT_SECRET
-                </code>
-                ,{" "}
-                <code className="bg-amber-100 px-1 rounded">
-                  GMAIL_REFRESH_TOKEN
-                </code>
-                ,{" "}
-                <code className="bg-amber-100 px-1 rounded">
-                  GMAIL_PAYMENT_EMAIL
-                </code>
+                Set these environment variables in Railway to enable auto-matching:<br />
+                <code className="bg-amber-100 px-1 rounded">GMAIL_CLIENT_ID</code>,{" "}
+                <code className="bg-amber-100 px-1 rounded">GMAIL_CLIENT_SECRET</code>,{" "}
+                <code className="bg-amber-100 px-1 rounded">GMAIL_REFRESH_TOKEN</code>,{" "}
+                <code className="bg-amber-100 px-1 rounded">GMAIL_PAYMENT_EMAIL</code>
               </p>
             </div>
           </div>
@@ -1159,14 +880,9 @@ export default function AdminPayments() {
         {tabs.map(t => (
           <button
             key={t.key}
-            onClick={() => {
-              setTab(t.key);
-              setPage(1);
-            }}
+            onClick={() => { setTab(t.key); setPage(1); }}
             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.key
-                ? "bg-white text-[#4B2D8E] shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+              tab === t.key ? "bg-white text-[#4B2D8E] shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
             {t.label}
@@ -1209,30 +925,14 @@ export default function AdminPayments() {
           <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Sender
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Amount
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Memo
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Matched Order
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Confidence
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                  Actions
-                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Sender</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Memo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Matched Order</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Confidence</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -1240,74 +940,40 @@ export default function AdminPayments() {
                 const StatusIcon = STATUS_ICONS[p.status] || HelpCircle;
 
                 return (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
+                  <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {p.receivedAt
-                        ? new Date(p.receivedAt).toLocaleDateString("en-CA", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "\u2014"}
+                      {p.receivedAt ? new Date(p.receivedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "\u2014"}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-800">
-                        {p.senderName || "Unknown"}
-                      </p>
-                      {p.financialInstitution && (
-                        <p className="text-xs text-purple-500 font-medium">
-                          {p.financialInstitution}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400 truncate max-w-[180px]">
-                        {p.senderEmail || ""}
-                      </p>
+                      <p className="text-sm font-medium text-gray-800">{p.senderName || "Unknown"}</p>
+                      {p.financialInstitution && <p className="text-xs text-purple-500 font-medium">{p.financialInstitution}</p>}
+                      <p className="text-xs text-gray-400 truncate max-w-[180px]">{p.senderEmail || ""}</p>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-sm font-semibold text-gray-800">
-                        {p.amount
-                          ? `$${parseFloat(p.amount).toFixed(2)}`
-                          : "\u2014"}
+                        {p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <p
-                        className="text-sm text-gray-600 truncate max-w-[200px]"
-                        title={p.memo || ""}
-                      >
-                        {p.memo || (
-                          <span className="text-gray-400 italic">No memo</span>
-                        )}
+                      <p className="text-sm text-gray-600 truncate max-w-[200px]" title={p.memo || ""}>
+                        {p.memo || <span className="text-gray-400 italic">No memo</span>}
                       </p>
                     </td>
                     <td className="px-4 py-3">
                       {p.matchedOrderNumber ? (
                         <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/admin/orders/${p.matchedOrderId}`}
-                            className="text-sm font-mono text-[#4B2D8E] hover:underline"
-                          >
+                          <Link href={`/admin/orders/${p.matchedOrderId}`} className="text-sm font-mono text-[#4B2D8E] hover:underline">
                             {p.matchedOrderNumber}
                           </Link>
                           <button
-                            onClick={() =>
-                              setReassigningId(
-                                reassigningId === p.id ? null : p.id
-                              )
-                            }
+                            onClick={() => setReassigningId(reassigningId === p.id ? null : p.id)}
                             className="p-1 text-gray-400 hover:text-orange-500 rounded hover:bg-orange-50 transition-colors"
                             title="Reassign to different order"
                           >
                             <Edit3 size={11} />
                           </button>
                           <button
-                            onClick={() =>
-                              unmatchMutation.mutate({ paymentId: p.id })
-                            }
+                            onClick={() => unmatchMutation.mutate({ paymentId: p.id })}
                             disabled={unmatchMutation.isPending}
                             className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
                             title="Unlink from this order"
@@ -1318,32 +984,19 @@ export default function AdminPayments() {
                             <div className="flex items-center gap-1">
                               <select
                                 value={reassignOrderId[p.id] || ""}
-                                onChange={e =>
-                                  setReassignOrderId({
-                                    ...reassignOrderId,
-                                    [p.id]: e.target.value,
-                                  })
-                                }
+                                onChange={e => setReassignOrderId({ ...reassignOrderId, [p.id]: e.target.value })}
                                 className="text-xs border border-orange-200 rounded-lg px-2 py-1 bg-white max-w-[160px]"
                               >
                                 <option value="">New order...</option>
                                 {(pendingOrders || []).map((o: any) => (
                                   <option key={o.id} value={o.id}>
-                                    {o.orderNumber} - $
-                                    {parseFloat(o.total).toFixed(2)}
+                                    {o.orderNumber} - ${parseFloat(o.total).toFixed(2)}
                                   </option>
                                 ))}
                               </select>
                               {reassignOrderId[p.id] && (
                                 <button
-                                  onClick={() =>
-                                    reassignMutation.mutate({
-                                      paymentId: p.id,
-                                      newOrderId: parseInt(
-                                        reassignOrderId[p.id]
-                                      ),
-                                    })
-                                  }
+                                  onClick={() => reassignMutation.mutate({ paymentId: p.id, newOrderId: parseInt(reassignOrderId[p.id]) })}
                                   disabled={reassignMutation.isPending}
                                   className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
                                   title="Reassign"
@@ -1354,35 +1007,23 @@ export default function AdminPayments() {
                             </div>
                           )}
                         </div>
-                      ) : p.status === "unmatched" || p.status === "ignored" ? (
+                      ) : (p.status === "unmatched" || p.status === "ignored") ? (
                         <div className="flex items-center gap-1.5">
                           <select
                             value={matchOrderId[p.id] || ""}
-                            onChange={e =>
-                              setMatchOrderId({
-                                ...matchOrderId,
-                                [p.id]: e.target.value,
-                              })
-                            }
+                            onChange={e => setMatchOrderId({ ...matchOrderId, [p.id]: e.target.value })}
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white max-w-[180px]"
                           >
                             <option value="">Select order...</option>
                             {(pendingOrders || []).map((o: any) => (
                               <option key={o.id} value={o.id}>
-                                {o.orderNumber} - $
-                                {parseFloat(o.total).toFixed(2)} (
-                                {o.guestName || o.guestEmail})
+                                {o.orderNumber} - ${parseFloat(o.total).toFixed(2)} ({o.guestName || o.guestEmail})
                               </option>
                             ))}
                           </select>
                           {matchOrderId[p.id] && (
                             <button
-                              onClick={() =>
-                                matchMutation.mutate({
-                                  paymentId: p.id,
-                                  orderId: parseInt(matchOrderId[p.id]),
-                                })
-                              }
+                              onClick={() => matchMutation.mutate({ paymentId: p.id, orderId: parseInt(matchOrderId[p.id]) })}
                               disabled={matchMutation.isPending}
                               className="p-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
                               title="Match"
@@ -1392,22 +1033,16 @@ export default function AdminPayments() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400">
-                          {"\u2014"}
-                        </span>
+                        <span className="text-xs text-gray-400">{"\u2014"}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CONFIDENCE_COLORS[p.matchConfidence] || CONFIDENCE_COLORS.none}`}
-                      >
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CONFIDENCE_COLORS[p.matchConfidence] || CONFIDENCE_COLORS.none}`}>
                         {p.matchConfidence || "none"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || STATUS_COLORS.unmatched}`}
-                      >
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || STATUS_COLORS.unmatched}`}>
                         <StatusIcon size={12} />
                         {p.status.replace("_", " ")}
                       </span>
@@ -1415,9 +1050,7 @@ export default function AdminPayments() {
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() =>
-                            setExpandedId(expandedId === p.id ? null : p.id)
-                          }
+                          onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
                           className="p-1.5 text-gray-400 hover:text-[#4B2D8E] rounded-lg hover:bg-gray-100 transition-colors"
                           title="View details"
                         >
@@ -1425,9 +1058,7 @@ export default function AdminPayments() {
                         </button>
                         {p.status === "unmatched" && (
                           <button
-                            onClick={() =>
-                              ignoreMutation.mutate({ paymentId: p.id })
-                            }
+                            onClick={() => ignoreMutation.mutate({ paymentId: p.id })}
                             disabled={ignoreMutation.isPending}
                             className="p-1.5 text-gray-400 hover:text-amber-500 rounded-lg hover:bg-amber-50 transition-colors"
                             title="Ignore"
@@ -1437,12 +1068,7 @@ export default function AdminPayments() {
                         )}
                         {p.status === "ignored" && (
                           <button
-                            onClick={() =>
-                              changeStatusMutation.mutate({
-                                paymentId: p.id,
-                                status: "unmatched",
-                              })
-                            }
+                            onClick={() => changeStatusMutation.mutate({ paymentId: p.id, status: "unmatched" })}
                             disabled={changeStatusMutation.isPending}
                             className="p-1.5 text-gray-400 hover:text-green-500 rounded-lg hover:bg-green-50 transition-colors"
                             title="Restore to Unmatched"
@@ -1469,8 +1095,7 @@ export default function AdminPayments() {
           {total > 25 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
               <p className="text-sm text-gray-500">
-                Showing {(page - 1) * 25 + 1}-{Math.min(page * 25, total)} of{" "}
-                {total}
+                Showing {(page - 1) * 25 + 1}-{Math.min(page * 25, total)} of {total}
               </p>
               <div className="flex gap-1">
                 <button
@@ -1495,177 +1120,58 @@ export default function AdminPayments() {
 
       {/* ═══ Payment Details Modal ═══ */}
       {expandedId && payments.find((p: any) => p.id === expandedId) && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-          onClick={() => setExpandedId(null)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setExpandedId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
             {(() => {
               const p = payments.find((p: any) => p.id === expandedId)!;
               return (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-800 text-lg">
-                      Payment Details #{p.id}
-                    </h3>
-                    <button
-                      onClick={() => setExpandedId(null)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <X size={18} />
-                    </button>
+                    <h3 className="font-bold text-gray-800 text-lg">Payment Details #{p.id}</h3>
+                    <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wide">
-                          Sender
-                        </span>
-                        <p className="font-medium">
-                          {p.senderName || "Unknown"}
-                        </p>
-                        {p.senderEmail && (
-                          <p className="text-xs text-gray-400 break-all mt-0.5">
-                            {p.senderEmail}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wide">
-                          Amount
-                        </span>
-                        <p className="font-medium">
-                          {p.amount
-                            ? `$${parseFloat(p.amount).toFixed(2)}`
-                            : "\u2014"}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wide">
-                          Date
-                        </span>
-                        <p className="font-medium">
-                          {p.receivedAt
-                            ? new Date(p.receivedAt).toLocaleString("en-CA")
-                            : "\u2014"}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wide">
-                          Match Method
-                        </span>
-                        <p className="font-medium">
-                          {MATCH_METHOD_LABELS[p.matchMethod] ||
-                            (p.matchMethod?.startsWith("fuzzy_auto")
-                              ? "Fuzzy auto-match"
-                              : p.matchMethod) ||
-                            "Not matched"}
-                        </p>
-                        {p.matchMethod?.startsWith("fuzzy_auto:") && (
-                          <p className="text-[10px] text-gray-400 mt-0.5">
-                            {p.matchMethod.replace("fuzzy_auto: ", "")}
-                          </p>
-                        )}
-                      </div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Sender</span><p className="font-medium">{p.senderName || "Unknown"}</p>{p.senderEmail && <p className="text-xs text-gray-400 break-all mt-0.5">{p.senderEmail}</p>}</div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Amount</span><p className="font-medium">{p.amount ? `$${parseFloat(p.amount).toFixed(2)}` : "\u2014"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Date</span><p className="font-medium">{p.receivedAt ? new Date(p.receivedAt).toLocaleString("en-CA") : "\u2014"}</p></div>
+                      <div><span className="text-gray-400 text-xs uppercase tracking-wide">Match Method</span><p className="font-medium">{MATCH_METHOD_LABELS[p.matchMethod] || (p.matchMethod?.startsWith("fuzzy_auto") ? "Fuzzy auto-match" : p.matchMethod) || "Not matched"}</p>{p.matchMethod?.startsWith("fuzzy_auto:") && <p className="text-[10px] text-gray-400 mt-0.5">{p.matchMethod.replace("fuzzy_auto: ", "")}</p>}</div>
                       {p.financialInstitution && (
-                        <div className="col-span-2">
-                          <span className="text-gray-400 text-xs uppercase tracking-wide">
-                            Financial Institution
-                          </span>
-                          <p className="font-medium">
-                            {p.financialInstitution}
-                          </p>
-                        </div>
+                        <div className="col-span-2"><span className="text-gray-400 text-xs uppercase tracking-wide">Financial Institution</span><p className="font-medium">{p.financialInstitution}</p></div>
                       )}
                     </div>
-                    <div>
-                      <span className="text-gray-400 text-xs uppercase tracking-wide">
-                        Subject
-                      </span>
-                      <p className="font-medium break-words">
-                        {p.rawSubject || "\u2014"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 text-xs uppercase tracking-wide">
-                        Memo
-                      </span>
-                      <p className="font-medium break-words">
-                        {p.memo || "No memo"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 text-xs uppercase tracking-wide">
-                        Email Snippet
-                      </span>
-                      <p className="text-xs text-gray-500 break-words bg-gray-50 p-3 rounded-lg max-h-32 overflow-y-auto">
-                        {p.rawBodySnippet || "\u2014"}
-                      </p>
-                    </div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Subject</span><p className="font-medium break-words">{p.rawSubject || "\u2014"}</p></div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Memo</span><p className="font-medium break-words">{p.memo || "No memo"}</p></div>
+                    <div><span className="text-gray-400 text-xs uppercase tracking-wide">Email Snippet</span><p className="text-xs text-gray-500 break-words bg-gray-50 p-3 rounded-lg max-h-32 overflow-y-auto">{p.rawBodySnippet || "\u2014"}</p></div>
                     {p.matchedOrderNumber && (
                       <div className="flex items-center gap-2 pt-2 border-t">
                         <Link2 size={14} className="text-[#4B2D8E]" />
                         <span className="text-gray-400">Matched:</span>
-                        <Link
-                          href={`/admin/orders/${p.matchedOrderId}`}
-                          className="font-mono text-[#4B2D8E] hover:underline"
-                        >
-                          {p.matchedOrderNumber}
-                        </Link>
+                        <Link href={`/admin/orders/${p.matchedOrderId}`} className="font-mono text-[#4B2D8E] hover:underline">{p.matchedOrderNumber}</Link>
                       </div>
                     )}
                     {p.adminNotes && (
                       <div className="pt-2 border-t">
-                        <span className="text-gray-400 text-xs uppercase tracking-wide">
-                          Admin Notes
-                        </span>
-                        <p className="font-medium text-gray-600">
-                          {p.adminNotes}
-                        </p>
+                        <span className="text-gray-400 text-xs uppercase tracking-wide">Admin Notes</span>
+                        <p className="font-medium text-gray-600">{p.adminNotes}</p>
                       </div>
                     )}
                     {/* Status Changer */}
                     <div className="pt-3 border-t">
-                      <span className="text-gray-400 text-xs uppercase tracking-wide block mb-2">
-                        Change Status
-                      </span>
+                      <span className="text-gray-400 text-xs uppercase tracking-wide block mb-2">Change Status</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {(
-                          [
-                            "unmatched",
-                            "auto_matched",
-                            "manual_matched",
-                            "ignored",
-                          ] as const
-                        ).map(s => {
+                        {(["unmatched", "auto_matched", "manual_matched", "ignored"] as const).map(s => {
                           const Icon = STATUS_ICONS[s] || HelpCircle;
                           const isActive = p.status === s;
-                          const isMatchedStatus =
-                            s === "auto_matched" || s === "manual_matched";
+                          const isMatchedStatus = s === "auto_matched" || s === "manual_matched";
                           const hasOrder = !!p.matchedOrderId;
-                          const isDisabled =
-                            isActive ||
-                            changeStatusMutation.isPending ||
-                            (isMatchedStatus && !hasOrder);
+                          const isDisabled = isActive || changeStatusMutation.isPending || (isMatchedStatus && !hasOrder);
                           return (
                             <button
                               key={s}
-                              onClick={() => {
-                                if (!isDisabled)
-                                  changeStatusMutation.mutate({
-                                    paymentId: p.id,
-                                    status: s,
-                                  });
-                              }}
+                              onClick={() => { if (!isDisabled) changeStatusMutation.mutate({ paymentId: p.id, status: s }); }}
                               disabled={isDisabled}
-                              title={
-                                isMatchedStatus && !hasOrder
-                                  ? "Link an order first before marking as matched"
-                                  : STATUS_LABELS[s]
-                              }
+                              title={isMatchedStatus && !hasOrder ? "Link an order first before marking as matched" : STATUS_LABELS[s]}
                               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                 isActive
                                   ? `${STATUS_COLORS[s]} ring-2 ring-offset-1 ring-current cursor-default`
@@ -1681,20 +1187,14 @@ export default function AdminPayments() {
                         })}
                       </div>
                       {!p.matchedOrderId && (
-                        <p className="text-[10px] text-amber-500 mt-1.5">
-                          Matched statuses require an order link. Use the
-                          table&apos;s &quot;Select order&quot; dropdown first.
-                        </p>
+                        <p className="text-[10px] text-amber-500 mt-1.5">Matched statuses require an order link. Use the table&apos;s &quot;Select order&quot; dropdown first.</p>
                       )}
                     </div>
                   </div>
                   {/* Delete from modal */}
                   <div className="mt-5 pt-4 border-t border-gray-100 flex justify-end">
                     <button
-                      onClick={() => {
-                        setExpandedId(null);
-                        setDeletingId(p.id);
-                      }}
+                      onClick={() => { setExpandedId(null); setDeletingId(p.id); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
                     >
                       <Trash2 size={12} /> Delete Record
@@ -1709,30 +1209,19 @@ export default function AdminPayments() {
 
       {/* ═══ Delete Single Record Confirmation ═══ */}
       {deletingId !== null && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setDeletingId(null)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDeletingId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
                 <Trash2 size={18} className="text-red-600" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800">
-                  Delete Payment #{deletingId}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  This action cannot be undone
-                </p>
+                <h3 className="font-bold text-gray-800">Delete Payment #{deletingId}</h3>
+                <p className="text-xs text-gray-500">This action cannot be undone</p>
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-5">
-              Are you sure you want to permanently delete this payment record?
-              This will remove it from the database and it cannot be recovered.
+              Are you sure you want to permanently delete this payment record? This will remove it from the database and it cannot be recovered.
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -1746,11 +1235,7 @@ export default function AdminPayments() {
                 disabled={deleteMutation.isPending}
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-all"
               >
-                {deleteMutation.isPending ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
+                {deleteMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 Delete
               </button>
             </div>
@@ -1760,42 +1245,24 @@ export default function AdminPayments() {
 
       {/* ═══ Clear All History Confirmation ═══ */}
       {showClearConfirm && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setShowClearConfirm(false);
-            setClearConfirmText("");
-          }}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowClearConfirm(false); setClearConfirmText(""); }}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                 <AlertTriangle size={22} className="text-red-600" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-lg">
-                  Clear All Payment History
-                </h3>
-                <p className="text-xs text-red-500 font-medium">
-                  DANGER: This is irreversible
-                </p>
+                <h3 className="font-bold text-gray-800 text-lg">Clear All Payment History</h3>
+                <p className="text-xs text-red-500 font-medium">DANGER: This is irreversible</p>
               </div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-red-800">
-                This will permanently delete{" "}
-                <strong>all {total} payment records</strong> from the database.
-                This includes matched, unmatched, and ignored records. This
-                action <strong>cannot be undone</strong>.
+                This will permanently delete <strong>all {total} payment records</strong> from the database. This includes matched, unmatched, and ignored records. This action <strong>cannot be undone</strong>.
               </p>
             </div>
             <p className="text-sm text-gray-600 mb-3">
-              Type{" "}
-              <strong className="text-red-600 font-mono">DELETE ALL</strong> to
-              confirm:
+              Type <strong className="text-red-600 font-mono">DELETE ALL</strong> to confirm:
             </p>
             <input
               type="text"
@@ -1807,27 +1274,17 @@ export default function AdminPayments() {
             />
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => {
-                  setShowClearConfirm(false);
-                  setClearConfirmText("");
-                }}
+                onClick={() => { setShowClearConfirm(false); setClearConfirmText(""); }}
                 className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => clearHistoryMutation.mutate()}
-                disabled={
-                  clearConfirmText !== "DELETE ALL" ||
-                  clearHistoryMutation.isPending
-                }
+                disabled={clearConfirmText !== "DELETE ALL" || clearHistoryMutation.isPending}
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {clearHistoryMutation.isPending ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
+                {clearHistoryMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 Wipe All Records
               </button>
             </div>

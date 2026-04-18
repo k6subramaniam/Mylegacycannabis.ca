@@ -2336,6 +2336,7 @@ export async function getProductReviews(productId: number) {
     .orderBy(desc(schema.productReviews.createdAt));
 }
 
+
 export async function getProductReviewStats(productId: number) {
   if (!USE_PERSISTENT_DB) return _mem_getProductReviewStats(productId);
   const reviews = await getDb()

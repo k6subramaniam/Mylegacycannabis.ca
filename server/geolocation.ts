@@ -12,11 +12,11 @@ import { createHash } from "crypto";
 
 // ─── Types ───
 export interface GeoResult {
-  ipHash: string; // SHA-256 first 16 chars (PIPEDA-safe)
+  ipHash: string;         // SHA-256 first 16 chars (PIPEDA-safe)
   city: string;
-  province: string; // Full name, e.g. "Ontario"
-  provinceCode: string; // ISO-3166-2, e.g. "ON"
-  countryCode: string; // ISO-3166-1, e.g. "CA"
+  province: string;       // Full name, e.g. "Ontario"
+  provinceCode: string;   // ISO-3166-2, e.g. "ON"
+  countryCode: string;    // ISO-3166-1, e.g. "CA"
   isProxy: boolean;
 }
 
@@ -35,10 +35,8 @@ export function hashIP(ip: string): string {
   return createHash("sha256").update(ip).digest("hex").substring(0, 16);
 }
 
-const PRIVATE_IP_REGEX =
-  /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/;
-const IPV4_REGEX =
-  /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+const PRIVATE_IP_REGEX = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/;
+const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
 const IPV6_REGEX = /^[0-9a-fA-F:.]+$/; // dot needed for IPv4-mapped IPv6 (::ffff:1.2.3.4)
 
 function isPrivateIP(ip: string): boolean {
@@ -55,25 +53,17 @@ function isValidIP(ip: string): boolean {
  * FreeIPAPI expects plain IPv4, so strip the prefix.
  */
 function normalizeIP(ip: string): string {
-  if (ip.startsWith("::ffff:")) return ip.substring(7);
+  if (ip.startsWith('::ffff:')) return ip.substring(7);
   return ip;
 }
 
 // Canadian province code mapping
 const PROVINCE_CODE_MAP: Record<string, string> = {
-  Alberta: "AB",
-  "British Columbia": "BC",
-  Manitoba: "MB",
-  "New Brunswick": "NB",
-  "Newfoundland and Labrador": "NL",
-  "Northwest Territories": "NT",
-  "Nova Scotia": "NS",
-  Nunavut: "NU",
-  Ontario: "ON",
-  "Prince Edward Island": "PE",
-  Quebec: "QC",
-  Saskatchewan: "SK",
-  Yukon: "YT",
+  "Alberta": "AB", "British Columbia": "BC", "Manitoba": "MB",
+  "New Brunswick": "NB", "Newfoundland and Labrador": "NL",
+  "Northwest Territories": "NT", "Nova Scotia": "NS", "Nunavut": "NU",
+  "Ontario": "ON", "Prince Edward Island": "PE", "Quebec": "QC",
+  "Saskatchewan": "SK", "Yukon": "YT",
 };
 
 // ─── Cache eviction ───
@@ -84,9 +74,7 @@ function evictExpired(): void {
   });
   // If still over max, evict oldest entries
   if (GEO_CACHE.size > MAX_CACHE_SIZE) {
-    const sorted = Array.from(GEO_CACHE.entries()).sort(
-      (a, b) => a[1].expiresAt - b[1].expiresAt
-    );
+    const sorted = Array.from(GEO_CACHE.entries()).sort((a, b) => a[1].expiresAt - b[1].expiresAt);
     const toDelete = sorted.slice(0, GEO_CACHE.size - MAX_CACHE_SIZE + 1000);
     toDelete.forEach(([key]) => GEO_CACHE.delete(key));
   }
@@ -109,15 +97,12 @@ export async function lookupGeo(rawIp: string): Promise<GeoResult | null> {
   }
 
   try {
-    const res = await fetch(
-      `https://freeipapi.com/api/json/${encodeURIComponent(ip)}`,
-      {
-        signal: AbortSignal.timeout(3000),
-      }
-    );
+    const res = await fetch(`https://freeipapi.com/api/json/${encodeURIComponent(ip)}`, {
+      signal: AbortSignal.timeout(3000),
+    });
     if (!res.ok) return null;
 
-    const data = (await res.json()) as any;
+    const data = await res.json() as any;
     const province = data.regionName || "";
     const provinceCode = data.regionCode || PROVINCE_CODE_MAP[province] || "";
 
@@ -145,10 +130,7 @@ export async function lookupGeo(rawIp: string): Promise<GeoResult | null> {
  * Extract the real client IP from an Express request.
  * Requires `app.set("trust proxy", 1)` to be set.
  */
-export function getClientIP(req: {
-  ip?: string;
-  socket?: { remoteAddress?: string };
-}): string {
+export function getClientIP(req: { ip?: string; socket?: { remoteAddress?: string } }): string {
   const raw = req.ip || req.socket?.remoteAddress || "";
   return normalizeIP(raw);
 }
