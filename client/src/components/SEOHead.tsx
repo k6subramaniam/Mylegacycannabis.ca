@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { SITE_NAME, absoluteOgImage } from '@/lib/seo-config';
+import { useEffect } from "react";
+import { SITE_NAME, absoluteOgImage } from "@/lib/seo-config";
 
 interface SEOHeadProps {
   title: string;
@@ -16,83 +16,92 @@ export default function SEOHead({
   title,
   description,
   canonical,
-  ogType = 'website',
+  ogType = "website",
   ogImage,
   noindex,
   jsonLd,
 }: SEOHeadProps) {
   useEffect(() => {
-    const fullTitle = title.includes('My Legacy') ? title : `${title} | ${SITE_NAME}`;
+    const fullTitle = title.includes("My Legacy")
+      ? title
+      : `${title} | ${SITE_NAME}`;
     document.title = fullTitle;
 
-    const setMeta = (name: string, content: string, attr = 'name') => {
+    const setMeta = (name: string, content: string, attr = "name") => {
       let el = document.querySelector(`meta[${attr}="${name}"]`);
       if (!el) {
-        el = document.createElement('meta');
+        el = document.createElement("meta");
         el.setAttribute(attr, name);
         document.head.appendChild(el);
       }
-      el.setAttribute('content', content);
+      el.setAttribute("content", content);
     };
 
     // Core meta
-    setMeta('description', description);
-    setMeta('robots', noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');
+    setMeta("description", description);
+    setMeta(
+      "robots",
+      noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large"
+    );
 
     // Open Graph
-    setMeta('og:title', fullTitle, 'property');
-    setMeta('og:description', description, 'property');
-    setMeta('og:type', ogType, 'property');
-    setMeta('og:site_name', SITE_NAME, 'property');
-    setMeta('og:locale', 'en_CA', 'property');
-    if (canonical) setMeta('og:url', canonical, 'property');
+    setMeta("og:title", fullTitle, "property");
+    setMeta("og:description", description, "property");
+    setMeta("og:type", ogType, "property");
+    setMeta("og:site_name", SITE_NAME, "property");
+    setMeta("og:locale", "en_CA", "property");
+    if (canonical) setMeta("og:url", canonical, "property");
     // Ensure OG image is an absolute URL
-    setMeta('og:image', absoluteOgImage(ogImage), 'property');
-    setMeta('og:image:width', '1200', 'property');
-    setMeta('og:image:height', '630', 'property');
+    setMeta("og:image", absoluteOgImage(ogImage), "property");
+    setMeta("og:image:width", "1200", "property");
+    setMeta("og:image:height", "630", "property");
 
     // Twitter Card
-    setMeta('twitter:card', 'summary_large_image');
-    setMeta('twitter:title', fullTitle);
-    setMeta('twitter:description', description);
-    setMeta('twitter:image', absoluteOgImage(ogImage));
+    setMeta("twitter:card", "summary_large_image");
+    setMeta("twitter:title", fullTitle);
+    setMeta("twitter:description", description);
+    setMeta("twitter:image", absoluteOgImage(ogImage));
 
     // Canonical link
     if (canonical) {
-      let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+      let link = document.querySelector(
+        'link[rel="canonical"]'
+      ) as HTMLLinkElement;
       if (!link) {
-        link = document.createElement('link');
-        link.setAttribute('rel', 'canonical');
+        link = document.createElement("link");
+        link.setAttribute("rel", "canonical");
         document.head.appendChild(link);
       }
-      link.setAttribute('href', canonical);
+      link.setAttribute("href", canonical);
     }
 
     // Hreflang tags for en-CA (helps Google serve right language version)
     if (canonical) {
       const hreflangs = [
-        { lang: 'en-CA', href: canonical },
-        { lang: 'x-default', href: canonical },
+        { lang: "en-CA", href: canonical },
+        { lang: "x-default", href: canonical },
       ];
       // Remove stale hreflang links
-      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
+      document
+        .querySelectorAll('link[rel="alternate"][hreflang]')
+        .forEach(el => el.remove());
       hreflangs.forEach(({ lang, href }) => {
-        const link = document.createElement('link');
-        link.setAttribute('rel', 'alternate');
-        link.setAttribute('hreflang', lang);
-        link.setAttribute('href', href);
+        const link = document.createElement("link");
+        link.setAttribute("rel", "alternate");
+        link.setAttribute("hreflang", lang);
+        link.setAttribute("href", href);
         document.head.appendChild(link);
       });
     }
 
     // JSON-LD structured data (injected per-page)
-    const JSONLD_ID = 'seo-head-jsonld';
+    const JSONLD_ID = "seo-head-jsonld";
     const existing = document.getElementById(JSONLD_ID);
     if (existing) existing.remove();
     if (jsonLd) {
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.id = JSONLD_ID;
-      script.type = 'application/ld+json';
+      script.type = "application/ld+json";
       script.textContent = JSON.stringify(
         Array.isArray(jsonLd) ? jsonLd : jsonLd
       );

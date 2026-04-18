@@ -34,7 +34,8 @@ export function parseInteracEmail(
 ): ParsedInteracEmail | null {
   // Extract amount
   // Patterns: "$120.03", "CAD 120.03", "$1,234.56"
-  const amountMatch = body.match(/\$\s*([\d,]+\.\d{2})/) || subject.match(/\$\s*([\d,]+\.\d{2})/);
+  const amountMatch =
+    body.match(/\$\s*([\d,]+\.\d{2})/) || subject.match(/\$\s*([\d,]+\.\d{2})/);
   if (!amountMatch) return null;
   const amount = parseFloat(amountMatch[1].replace(/,/g, ""));
 
@@ -62,7 +63,9 @@ export function parseInteracEmail(
       // Avoid matching bank/system words
       if (
         name.length > 2 &&
-        !/^(interac|the|your|this|bank|from|bmo|td|rbc|cibc|scotiabank|desjardins|money|payment)$/i.test(name)
+        !/^(interac|the|your|this|bank|from|bmo|td|rbc|cibc|scotiabank|desjardins|money|payment)$/i.test(
+          name
+        )
       ) {
         senderName = name;
         break;
@@ -72,7 +75,9 @@ export function parseInteracEmail(
 
   // Also check subject line
   if (senderName === "Unknown") {
-    const subjectMatch = subject.match(/from\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){0,3})/i);
+    const subjectMatch = subject.match(
+      /from\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){0,3})/i
+    );
     if (subjectMatch) senderName = subjectMatch[1].trim();
   }
 

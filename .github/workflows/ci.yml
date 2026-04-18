@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '10.4.1'
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10.4.1"
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -150,7 +150,7 @@ jobs:
           key: modules-${{ hashFiles('pnpm-lock.yaml') }}
       - name: pnpm audit (production deps)
         run: pnpm audit --prod --audit-level=high
-        continue-on-error: true  # Warn but don't block (set to false when ready)
+        continue-on-error: true # Warn but don't block (set to false when ready)
       - name: Check for known vulnerable patterns
         run: |
           echo "=== Checking for publicProcedure on admin routes ==="
