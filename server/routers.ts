@@ -112,6 +112,7 @@ const MLC_BRAND_DNA = `BRANDING DNA / CORPORATE VISUAL IDENTITY:
 
 export const appRouter = router({
   system: systemRouter,
+
   // ─── NEWSLETTER ───
   newsletter: router({
     subscribe: publicProcedure
