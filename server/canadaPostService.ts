@@ -60,22 +60,45 @@ export interface PostOffice {
 // Maps store IDs/names to their origin postal codes for shipping calculations.
 // Falls back to env variables or the default Mississauga origin.
 export const STORE_ORIGIN_POSTALS: Record<string, string> = {
-  mississauga:   process.env.MLC_ORIGIN_POSTAL_MISSISSAUGA || "L5B1H4",
-  hamilton:      process.env.MLC_ORIGIN_POSTAL_HAMILTON     || "L8N1A9",
-  "queen-st":    process.env.MLC_ORIGIN_POSTAL_TORONTO      || "M5V2A8",
+  mississauga: process.env.MLC_ORIGIN_POSTAL_MISSISSAUGA || "L5B1H4",
+  hamilton: process.env.MLC_ORIGIN_POSTAL_HAMILTON || "L8N1A9",
+  "queen-st": process.env.MLC_ORIGIN_POSTAL_TORONTO || "M5V2A8",
   "dundas-toronto": process.env.MLC_ORIGIN_POSTAL_SCARBOROUGH || "M6J1V1",
-  ottawa:        process.env.MLC_ORIGIN_POSTAL_OTTAWA       || "K2G4A1",
+  ottawa: process.env.MLC_ORIGIN_POSTAL_OTTAWA || "K2G4A1",
 };
 
 const DEFAULT_ORIGIN = process.env.MLC_DEFAULT_ORIGIN_POSTAL || "L5B1H4"; // Mississauga
 
 // ─── SERVICE CODES ──────────────────────────────────────────────────────────
 
-export const DOMESTIC_SERVICES: Record<string, { name: string; days: string; guaranteed: boolean; icon: string }> = {
-  "DOM.RP": { name: "Regular Parcel",   days: "5–8 days",  guaranteed: false, icon: "Package" },
-  "DOM.EP": { name: "Expedited Parcel", days: "3–5 days",  guaranteed: false, icon: "Truck" },
-  "DOM.XP": { name: "Xpresspost",       days: "2–3 days",  guaranteed: true,  icon: "Zap" },
-  "DOM.PC": { name: "Priority",         days: "Next day",  guaranteed: true,  icon: "Timer" },
+export const DOMESTIC_SERVICES: Record<
+  string,
+  { name: string; days: string; guaranteed: boolean; icon: string }
+> = {
+  "DOM.RP": {
+    name: "Regular Parcel",
+    days: "5–8 days",
+    guaranteed: false,
+    icon: "Package",
+  },
+  "DOM.EP": {
+    name: "Expedited Parcel",
+    days: "3–5 days",
+    guaranteed: false,
+    icon: "Truck",
+  },
+  "DOM.XP": {
+    name: "Xpresspost",
+    days: "2–3 days",
+    guaranteed: true,
+    icon: "Zap",
+  },
+  "DOM.PC": {
+    name: "Priority",
+    days: "Next day",
+    guaranteed: true,
+    icon: "Timer",
+  },
 };
 
 // ─── CONFIGURATION ──────────────────────────────────────────────────────────
@@ -85,9 +108,17 @@ function getConfig() {
   const pass = process.env.CANADA_POST_API_PASS;
   const customer = process.env.CANADA_POST_CUSTOMER_NUMBER;
   const contract = process.env.CANADA_POST_CONTRACT_NUMBER;
-  const baseUrl = process.env.CANADA_POST_BASE_URL || "https://ct.soa-gw.canadapost.ca";
+  const baseUrl =
+    process.env.CANADA_POST_BASE_URL || "https://ct.soa-gw.canadapost.ca";
 
-  return { user, pass, customer, contract, baseUrl, configured: !!(user && pass && customer) };
+  return {
+    user,
+    pass,
+    customer,
+    contract,
+    baseUrl,
+    configured: !!(user && pass && customer),
+  };
 }
 
 export function isCanadaPostConfigured(): boolean {
@@ -109,7 +140,10 @@ function getAllBlocks(xml: string, tag: string): string[] {
 
 // ─── RATE CACHE (1-hour TTL) ────────────────────────────────────────────────
 
-interface CacheEntry { data: ShippingRate[]; expiresAt: number; }
+interface CacheEntry {
+  data: ShippingRate[];
+  expiresAt: number;
+}
 const rateCache = new Map<string, CacheEntry>();
 
 function getCacheKey(origin: string, dest: string, weight: number): string {
@@ -119,10 +153,42 @@ function getCacheKey(origin: string, dest: string, weight: number): string {
 // ─── FLAT-RATE FALLBACK ─────────────────────────────────────────────────────
 
 const FLAT_RATES: ShippingRate[] = [
-  { serviceCode: "DOM.RP", serviceName: "Regular Parcel",   price: 12.99, transitDays: 7,  estimateLabel: "5–8 business days",  guaranteed: false, icon: "Package" },
-  { serviceCode: "DOM.EP", serviceName: "Expedited Parcel", price: 16.99, transitDays: 4,  estimateLabel: "3–5 business days",  guaranteed: false, icon: "Truck" },
-  { serviceCode: "DOM.XP", serviceName: "Xpresspost",       price: 24.99, transitDays: 2,  estimateLabel: "2–3 business days",  guaranteed: true,  icon: "Zap" },
-  { serviceCode: "DOM.PC", serviceName: "Priority",         price: 34.99, transitDays: 1,  estimateLabel: "Next business day",  guaranteed: true,  icon: "Timer" },
+  {
+    serviceCode: "DOM.RP",
+    serviceName: "Regular Parcel",
+    price: 12.99,
+    transitDays: 7,
+    estimateLabel: "5–8 business days",
+    guaranteed: false,
+    icon: "Package",
+  },
+  {
+    serviceCode: "DOM.EP",
+    serviceName: "Expedited Parcel",
+    price: 16.99,
+    transitDays: 4,
+    estimateLabel: "3–5 business days",
+    guaranteed: false,
+    icon: "Truck",
+  },
+  {
+    serviceCode: "DOM.XP",
+    serviceName: "Xpresspost",
+    price: 24.99,
+    transitDays: 2,
+    estimateLabel: "2–3 business days",
+    guaranteed: true,
+    icon: "Zap",
+  },
+  {
+    serviceCode: "DOM.PC",
+    serviceName: "Priority",
+    price: 34.99,
+    transitDays: 1,
+    estimateLabel: "Next business day",
+    guaranteed: true,
+    icon: "Timer",
+  },
 ];
 
 // ─── API METHODS ────────────────────────────────────────────────────────────
@@ -135,7 +201,7 @@ export async function getShippingRates(
   originPostal: string,
   destPostal: string,
   weight: number = 0.5, // kg
-  dimensions?: { length: number; width: number; height: number }, // cm
+  dimensions?: { length: number; width: number; height: number } // cm
 ): Promise<ShippingRate[]> {
   const cacheKey = getCacheKey(originPostal, destPostal, weight);
   const cached = rateCache.get(cacheKey);
@@ -148,7 +214,7 @@ export async function getShippingRates(
   }
 
   const origin = originPostal.replace(/\s/g, "").toUpperCase();
-  const dest   = destPostal.replace(/\s/g, "").toUpperCase();
+  const dest = destPostal.replace(/\s/g, "").toUpperCase();
 
   const dim = dimensions || { length: 25, width: 18, height: 10 }; // default small box
 
@@ -186,7 +252,9 @@ export async function getShippingRates(
 
     if (!res.ok) {
       const body = await res.text();
-      console.warn(`[CanadaPost] Rate API ${res.status}: ${body.substring(0, 200)}`);
+      console.warn(
+        `[CanadaPost] Rate API ${res.status}: ${body.substring(0, 200)}`
+      );
       return FLAT_RATES;
     }
 
@@ -199,7 +267,8 @@ export async function getShippingRates(
       const svc = DOMESTIC_SERVICES[code];
       if (!svc) continue; // skip non-domestic / unrecognized
 
-      const priceStr = getTextContent(block, "due") || getTextContent(block, "base");
+      const priceStr =
+        getTextContent(block, "due") || getTextContent(block, "base");
       const price = parseFloat(priceStr);
       if (isNaN(price)) continue;
 
@@ -246,7 +315,9 @@ export async function getShippingRates(
 /**
  * Get tracking summary for a Canada Post PIN.
  */
-export async function getTrackingSummary(pin: string): Promise<TrackingSummary | null> {
+export async function getTrackingSummary(
+  pin: string
+): Promise<TrackingSummary | null> {
   const cfg = getConfig();
   if (!cfg.configured) return null;
 
@@ -254,17 +325,22 @@ export async function getTrackingSummary(pin: string): Promise<TrackingSummary |
 
   try {
     const auth = Buffer.from(`${cfg.user}:${cfg.pass}`).toString("base64");
-    const res = await fetch(`${cfg.baseUrl}/vis/track/pin/${cleanPin}/summary`, {
-      headers: {
-        Accept: "application/vnd.cpc.track-v2+xml",
-        Authorization: `Basic ${auth}`,
-      },
-    });
+    const res = await fetch(
+      `${cfg.baseUrl}/vis/track/pin/${cleanPin}/summary`,
+      {
+        headers: {
+          Accept: "application/vnd.cpc.track-v2+xml",
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
 
     if (!res.ok) {
       if (res.status === 404) return null;
       const body = await res.text();
-      console.warn(`[CanadaPost] Track API ${res.status}: ${body.substring(0, 200)}`);
+      console.warn(
+        `[CanadaPost] Track API ${res.status}: ${body.substring(0, 200)}`
+      );
       return null;
     }
 
@@ -279,7 +355,9 @@ export async function getTrackingSummary(pin: string): Promise<TrackingSummary |
 /**
  * Get detailed tracking events.
  */
-export async function getTrackingDetails(pin: string): Promise<TrackingSummary | null> {
+export async function getTrackingDetails(
+  pin: string
+): Promise<TrackingSummary | null> {
   const cfg = getConfig();
   if (!cfg.configured) return null;
 
@@ -302,7 +380,10 @@ export async function getTrackingDetails(pin: string): Promise<TrackingSummary |
     const xml = await res.text();
     return parseTrackingXml(cleanPin, xml);
   } catch (err) {
-    console.error("[CanadaPost] Tracking detail error:", (err as Error).message);
+    console.error(
+      "[CanadaPost] Tracking detail error:",
+      (err as Error).message
+    );
     return null;
   }
 }
@@ -313,21 +394,29 @@ function parseTrackingXml(pin: string, xml: string): TrackingSummary {
   const events: TrackingEvent[] = eventBlocks.map(block => ({
     date: getTextContent(block, "event-date"),
     time: getTextContent(block, "event-time"),
-    location: getTextContent(block, "event-site") || getTextContent(block, "event-province"),
+    location:
+      getTextContent(block, "event-site") ||
+      getTextContent(block, "event-province"),
     description: getTextContent(block, "event-description"),
   }));
 
   // Parse top-level fields
   const actualDelivery = getTextContent(xml, "actual-delivery-date");
-  const expectedDelivery = getTextContent(xml, "expected-delivery-date") || getTextContent(xml, "attempted-date");
+  const expectedDelivery =
+    getTextContent(xml, "expected-delivery-date") ||
+    getTextContent(xml, "attempted-date");
   const eventType = getTextContent(xml, "event-type");
   const eventDescription = getTextContent(xml, "event-description");
 
-  const delivered = !!actualDelivery || /delivered|livr/i.test(eventDescription) || eventType === "delivery";
+  const delivered =
+    !!actualDelivery ||
+    /delivered|livr/i.test(eventDescription) ||
+    eventType === "delivery";
 
   let status = "In Transit";
   if (delivered) status = "Delivered";
-  else if (/out.for.delivery/i.test(eventDescription)) status = "Out for Delivery";
+  else if (/out.for.delivery/i.test(eventDescription))
+    status = "Out for Delivery";
   else if (/item.accepted/i.test(eventDescription)) status = "Accepted";
   else if (/in.transit/i.test(eventDescription)) status = "In Transit";
   else if (/notice.left/i.test(eventDescription)) status = "Notice Left";
@@ -335,7 +424,8 @@ function parseTrackingXml(pin: string, xml: string): TrackingSummary {
   return {
     pin,
     status,
-    lastEvent: eventDescription || events[0]?.description || "Tracking info available",
+    lastEvent:
+      eventDescription || events[0]?.description || "Tracking info available",
     lastEventDate: events[0]?.date || null,
     delivered,
     expectedDelivery: expectedDelivery || null,
@@ -346,7 +436,10 @@ function parseTrackingXml(pin: string, xml: string): TrackingSummary {
 /**
  * Find nearby post offices by postal code.
  */
-export async function findPostOffices(postalCode: string, maxResults: number = 5): Promise<PostOffice[]> {
+export async function findPostOffices(
+  postalCode: string,
+  maxResults: number = 5
+): Promise<PostOffice[]> {
   const cfg = getConfig();
   if (!cfg.configured) return [];
 
@@ -354,12 +447,15 @@ export async function findPostOffices(postalCode: string, maxResults: number = 5
 
   try {
     const auth = Buffer.from(`${cfg.user}:${cfg.pass}`).toString("base64");
-    const res = await fetch(`${cfg.baseUrl}/rs/postoffice?d2po=true&postalCode=${clean}&maximumNumberOfResults=${maxResults}`, {
-      headers: {
-        Accept: "application/vnd.cpc.postoffice+xml",
-        Authorization: `Basic ${auth}`,
-      },
-    });
+    const res = await fetch(
+      `${cfg.baseUrl}/rs/postoffice?d2po=true&postalCode=${clean}&maximumNumberOfResults=${maxResults}`,
+      {
+        headers: {
+          Accept: "application/vnd.cpc.postoffice+xml",
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
 
     if (!res.ok) return [];
 
@@ -377,7 +473,10 @@ export async function findPostOffices(postalCode: string, maxResults: number = 5
       hours: getTextContent(block, "hours-list") || "See Canada Post website",
     }));
   } catch (err) {
-    console.error("[CanadaPost] Post office search error:", (err as Error).message);
+    console.error(
+      "[CanadaPost] Post office search error:",
+      (err as Error).message
+    );
     return [];
   }
 }
@@ -385,11 +484,19 @@ export async function findPostOffices(postalCode: string, maxResults: number = 5
 /**
  * Validate a Canadian postal code format.
  */
-export function validatePostalCode(code: string): { valid: boolean; formatted: string; error?: string } {
+export function validatePostalCode(code: string): {
+  valid: boolean;
+  formatted: string;
+  error?: string;
+} {
   const clean = code.replace(/\s/g, "").toUpperCase();
   const re = /^[A-Z]\d[A-Z]\d[A-Z]\d$/;
   if (!re.test(clean)) {
-    return { valid: false, formatted: clean, error: "Invalid Canadian postal code (format: A1A 1A1)" };
+    return {
+      valid: false,
+      formatted: clean,
+      error: "Invalid Canadian postal code (format: A1A 1A1)",
+    };
   }
   // Format nicely
   const formatted = `${clean.slice(0, 3)} ${clean.slice(3)}`;
@@ -414,8 +521,15 @@ export function getOriginPostal(storeNameOrId?: string): string {
  * Returns the number of orders updated.
  */
 export async function pollCanadaPostTracking(
-  shippedOrders: Array<{ id: number; orderNumber: string; trackingNumber: string | null }>,
-  updateCallback: (orderId: number, data: { status: string; delivered: boolean; expectedDelivery?: string }) => Promise<void>,
+  shippedOrders: Array<{
+    id: number;
+    orderNumber: string;
+    trackingNumber: string | null;
+  }>,
+  updateCallback: (
+    orderId: number,
+    data: { status: string; delivered: boolean; expectedDelivery?: string }
+  ) => Promise<void>
 ): Promise<{ checked: number; delivered: number; errors: number }> {
   const stats = { checked: 0, delivered: 0, errors: 0 };
 
@@ -436,11 +550,16 @@ export async function pollCanadaPostTracking(
           expectedDelivery: summary.expectedDelivery || undefined,
         });
         stats.delivered++;
-        console.log(`[CanadaPost] Order ${order.orderNumber} tracking ${order.trackingNumber} — delivered`);
+        console.log(
+          `[CanadaPost] Order ${order.orderNumber} tracking ${order.trackingNumber} — delivered`
+        );
       }
     } catch (err) {
       stats.errors++;
-      console.warn(`[CanadaPost] Tracking poll error for ${order.orderNumber}:`, (err as Error).message);
+      console.warn(
+        `[CanadaPost] Tracking poll error for ${order.orderNumber}:`,
+        (err as Error).message
+      );
     }
 
     // Rate-limit: 100ms between API calls

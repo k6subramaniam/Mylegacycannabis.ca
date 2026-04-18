@@ -306,7 +306,8 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   // "Use my account address" toggle state
-  const hasSavedAddress = isAuthenticated && !!user?.savedAddress?.street?.trim();
+  const hasSavedAddress =
+    isAuthenticated && !!user?.savedAddress?.street?.trim();
   const [useAccountAddress, setUseAccountAddress] = useState(false);
   const [saveAddressToAccount, setSaveAddressToAccount] = useState(false);
   const [form, setForm] = useState({

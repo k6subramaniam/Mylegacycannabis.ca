@@ -3,7 +3,7 @@
 **Document Version:** 1.0  
 **Date:** March 21, 2026  
 **Repository:** https://github.com/k6subramaniam/Mylegacycannabis.ca  
-**Production Host:** Railway  
+**Production Host:** Railway
 
 ---
 
@@ -41,53 +41,53 @@ The application is a **monolithic Node.js application** — the client-side Reac
 
 ### Frontend
 
-| Layer | Technology | Version |
-|---|---|---|
-| UI Framework | React | 19.2 |
-| Language | TypeScript | 5.9 |
-| Client-side Router | Wouter | 3.3 |
-| Styling | Tailwind CSS | 4.1 |
-| Component Library | Radix UI | (full suite) |
-| Icons | Lucide React | 0.453 |
-| Animations | Framer Motion | 12 |
-| Form Management | React Hook Form + Zod | 7.x / 4.x |
-| Data Fetching | TanStack React Query (via tRPC) | 5.x |
-| Toast Notifications | Sonner | 2.x |
-| Charts | Recharts | 2.x |
-| Carousel | Embla Carousel | 8.x |
-| OTP Input | input-otp | 1.x |
+| Layer               | Technology                      | Version      |
+| ------------------- | ------------------------------- | ------------ |
+| UI Framework        | React                           | 19.2         |
+| Language            | TypeScript                      | 5.9          |
+| Client-side Router  | Wouter                          | 3.3          |
+| Styling             | Tailwind CSS                    | 4.1          |
+| Component Library   | Radix UI                        | (full suite) |
+| Icons               | Lucide React                    | 0.453        |
+| Animations          | Framer Motion                   | 12           |
+| Form Management     | React Hook Form + Zod           | 7.x / 4.x    |
+| Data Fetching       | TanStack React Query (via tRPC) | 5.x          |
+| Toast Notifications | Sonner                          | 2.x          |
+| Charts              | Recharts                        | 2.x          |
+| Carousel            | Embla Carousel                  | 8.x          |
+| OTP Input           | input-otp                       | 1.x          |
 
 ### Backend
 
-| Layer | Technology | Version |
-|---|---|---|
-| Runtime | Node.js (ESM) | 20+ |
-| HTTP Server | Express | 4.21 |
-| Language | TypeScript | 5.9 |
-| API Layer | tRPC | 11.6 |
-| Auth / Sessions | Custom OTP + JOSE (JWT) | 6.x |
-| Session Transport | HTTP-only cookies | — |
+| Layer             | Technology              | Version |
+| ----------------- | ----------------------- | ------- |
+| Runtime           | Node.js (ESM)           | 20+     |
+| HTTP Server       | Express                 | 4.21    |
+| Language          | TypeScript              | 5.9     |
+| API Layer         | tRPC                    | 11.6    |
+| Auth / Sessions   | Custom OTP + JOSE (JWT) | 6.x     |
+| Session Transport | HTTP-only cookies       | —       |
 
 ### Data
 
-| Layer | Technology | Notes |
-|---|---|---|
-| ORM | Drizzle ORM | 0.44 |
-| Production Database | MySQL 2 | Hosted on Railway |
-| Local / Sandbox DB | In-memory store (`server/db.ts`) | No DB required locally |
-| File Storage | AWS S3-compatible API | Falls back to base64 data URLs |
+| Layer               | Technology                       | Notes                          |
+| ------------------- | -------------------------------- | ------------------------------ |
+| ORM                 | Drizzle ORM                      | 0.44                           |
+| Production Database | MySQL 2                          | Hosted on Railway              |
+| Local / Sandbox DB  | In-memory store (`server/db.ts`) | No DB required locally         |
+| File Storage        | AWS S3-compatible API            | Falls back to base64 data URLs |
 
 ### Build & Tooling
 
-| Tool | Purpose |
-|---|---|
-| Vite 7 | Client bundler (dev + production SPA build) |
-| esbuild | Server bundler (compiles TypeScript → ESM) |
-| pnpm 10 | Package manager |
-| tsx | TypeScript runner for development |
-| Vitest | Unit / integration testing |
-| Prettier | Code formatting |
-| drizzle-kit | DB schema generation & migration |
+| Tool        | Purpose                                     |
+| ----------- | ------------------------------------------- |
+| Vite 7      | Client bundler (dev + production SPA build) |
+| esbuild     | Server bundler (compiles TypeScript → ESM)  |
+| pnpm 10     | Package manager                             |
+| tsx         | TypeScript runner for development           |
+| Vitest      | Unit / integration testing                  |
+| Prettier    | Code formatting                             |
+| drizzle-kit | DB schema generation & migration            |
 
 ---
 
@@ -229,18 +229,18 @@ mylegacycannabis/
 
 All tables are defined in `drizzle/schema.ts` with MySQL dialect via Drizzle ORM.
 
-| Table | Key Columns | Purpose |
-|---|---|---|
-| `users` | `openId`, `name`, `email`, `phone`, `role`, `birthday`, `rewardPoints`, `idVerified`, `isLocked` | All customer and admin accounts |
-| `verification_codes` | `identifier`, `code`, `type` (email/sms), `purpose`, `expiresAt`, `verified` | OTP tokens for login/register |
-| `products` | `slug`, `name`, `category`, `price`, `thcContent`, `stock`, `isActive`, `isFeatured` | Product catalogue |
-| `orders` | `orderNumber`, `userId`, `status`, `paymentStatus`, `total`, `guestEmail`, `shippingAddress`, `trackingNumber` | All customer orders |
-| `order_items` | `orderId`, `productId`, `productName`, `price`, `quantity` | Line items per order |
-| `id_verifications` | `userId`, `frontImageUrl`, `selfieImageUrl`, `idType`, `status` (pending/approved/rejected) | Customer identity documents |
-| `shipping_zones` | `province`, `rate`, `freeThreshold`, `deliveryDays`, `isActive` | Province-based shipping rates |
-| `email_templates` | `slug`, `subject`, `htmlBody`, `isActive` | Transactional email templates |
-| `admin_activity_log` | `adminId`, `action`, `entityType`, `entityId`, `details` | Full audit trail of admin actions |
-| `rewards_history` | `userId`, `points`, `type`, `description` | Per-user points ledger |
+| Table                | Key Columns                                                                                                    | Purpose                           |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `users`              | `openId`, `name`, `email`, `phone`, `role`, `birthday`, `rewardPoints`, `idVerified`, `isLocked`               | All customer and admin accounts   |
+| `verification_codes` | `identifier`, `code`, `type` (email/sms), `purpose`, `expiresAt`, `verified`                                   | OTP tokens for login/register     |
+| `products`           | `slug`, `name`, `category`, `price`, `thcContent`, `stock`, `isActive`, `isFeatured`                           | Product catalogue                 |
+| `orders`             | `orderNumber`, `userId`, `status`, `paymentStatus`, `total`, `guestEmail`, `shippingAddress`, `trackingNumber` | All customer orders               |
+| `order_items`        | `orderId`, `productId`, `productName`, `price`, `quantity`                                                     | Line items per order              |
+| `id_verifications`   | `userId`, `frontImageUrl`, `selfieImageUrl`, `idType`, `status` (pending/approved/rejected)                    | Customer identity documents       |
+| `shipping_zones`     | `province`, `rate`, `freeThreshold`, `deliveryDays`, `isActive`                                                | Province-based shipping rates     |
+| `email_templates`    | `slug`, `subject`, `htmlBody`, `isActive`                                                                      | Transactional email templates     |
+| `admin_activity_log` | `adminId`, `action`, `entityType`, `entityId`, `details`                                                       | Full audit trail of admin actions |
+| `rewards_history`    | `userId`, `points`, `type`, `description`                                                                      | Per-user points ledger            |
 
 ---
 
@@ -276,28 +276,28 @@ Authenticated ✓
 
 ### Security Features
 
-| Feature | Implementation |
-|---|---|
-| **19+ Age Gate** | Triple-layer: client `onBlur`, pre-submit JS check, and server-side enforcement on `/api/auth/verify-otp` |
-| **Session Cookies** | HTTP-only, signed JWT via `jose` library (`JWT_SECRET` env var) |
-| **Account Locking** | `isLocked` flag on user; checked at OTP verify + every authenticated request |
-| **Admin Protection** | `adminProcedure` tRPC middleware checks `user.role === 'admin'` on every admin route |
-| **ID Verification** | Customers upload front ID + optional selfie; admin must approve before full access |
-| **Password-free** | No passwords stored — all auth is OTP-based or Google OAuth |
-| **Date Parsing** | UTC-safe birthday parsing (`split('-')`) to prevent timezone-boundary age miscalculation |
+| Feature              | Implementation                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| **19+ Age Gate**     | Triple-layer: client `onBlur`, pre-submit JS check, and server-side enforcement on `/api/auth/verify-otp` |
+| **Session Cookies**  | HTTP-only, signed JWT via `jose` library (`JWT_SECRET` env var)                                           |
+| **Account Locking**  | `isLocked` flag on user; checked at OTP verify + every authenticated request                              |
+| **Admin Protection** | `adminProcedure` tRPC middleware checks `user.role === 'admin'` on every admin route                      |
+| **ID Verification**  | Customers upload front ID + optional selfie; admin must approve before full access                        |
+| **Password-free**    | No passwords stored — all auth is OTP-based or Google OAuth                                               |
+| **Date Parsing**     | UTC-safe birthday parsing (`split('-')`) to prevent timezone-boundary age miscalculation                  |
 
 ---
 
 ## 7. External Services & Integrations
 
-| Service | Usage | Required? | Config Keys |
-|---|---|---|---|
-| **Twilio** | SMS OTP delivery | Optional (email fallback available) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` |
-| **Forge API** | OTP email delivery + owner push notifications | Optional (OTPs logged to console if unset) | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY` |
-| **Google OAuth** | Social sign-in | Optional | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| **AWS S3 / Cloudflare R2** | ID verification photo storage | Optional (base64 data URLs used as fallback) | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY` |
-| **MySQL** | Production database | Required in production | `DATABASE_URL` |
-| **Railway** | Hosting, deployment, managed MySQL | Required | `PORT` (set automatically) |
+| Service                    | Usage                                         | Required?                                    | Config Keys                                                      |
+| -------------------------- | --------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| **Twilio**                 | SMS OTP delivery                              | Optional (email fallback available)          | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` |
+| **Forge API**              | OTP email delivery + owner push notifications | Optional (OTPs logged to console if unset)   | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`               |
+| **Google OAuth**           | Social sign-in                                | Optional                                     | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                       |
+| **AWS S3 / Cloudflare R2** | ID verification photo storage                 | Optional (base64 data URLs used as fallback) | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`               |
+| **MySQL**                  | Production database                           | Required in production                       | `DATABASE_URL`                                                   |
+| **Railway**                | Hosting, deployment, managed MySQL            | Required                                     | `PORT` (set automatically)                                       |
 
 ---
 
@@ -306,6 +306,7 @@ Authenticated ✓
 ### Platform
 
 [Railway](https://railway.com) is the production hosting platform. It provides:
+
 - **Auto-deploy** on every push to the `main` branch
 - **Managed MySQL** database service
 - **Custom domain** support with automatic TLS (Let's Encrypt)
@@ -357,15 +358,15 @@ Express serves:
 
 ### Railway Plan
 
-| Setting | Value |
-|---|---|
-| Plan | Pro ($20 USD/month) |
-| RAM per service | Up to 32 GB (actual usage ~0.5 GB) |
-| CPU per service | Up to 32 vCPU (actual usage ~0.15 vCPU) |
-| Network egress | $0.05/GB (actual ~15 GB/month) |
-| Volume storage | $0.15/GB/month |
-| Auto-deploy | Enabled (GitHub integration) |
-| Region | US West (default) — can change to `us-east` for lower Canada latency |
+| Setting         | Value                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| Plan            | Pro ($20 USD/month)                                                  |
+| RAM per service | Up to 32 GB (actual usage ~0.5 GB)                                   |
+| CPU per service | Up to 32 vCPU (actual usage ~0.15 vCPU)                              |
+| Network egress  | $0.05/GB (actual ~15 GB/month)                                       |
+| Volume storage  | $0.15/GB/month                                                       |
+| Auto-deploy     | Enabled (GitHub integration)                                         |
+| Region          | US West (default) — can change to `us-east` for lower Canada latency |
 
 ### Environment Variables on Railway
 
@@ -400,22 +401,22 @@ GOOGLE_CLIENT_SECRET=<client-secret>
 
 Full reference for all supported environment variables:
 
-| Variable | Required | Description |
-|---|---|---|
-| `NODE_ENV` | Yes | `production` in Railway; `development` locally |
-| `PORT` | Auto | HTTP port (Railway injects this) |
-| `DATABASE_URL` | Yes (prod) | MySQL connection string, e.g. `mysql://user:pass@host:3306/db` |
-| `JWT_SECRET` | Yes | Secret key for signing session JWT cookies |
-| `VITE_APP_ID` | Yes | Application identifier (e.g. `mylegacycannabis`) |
-| `OWNER_OPEN_ID` | Yes | The `openId` of the admin/owner account |
-| `OAUTH_SERVER_URL` | Yes | Public base URL of the app (e.g. `https://mylegacycannabis.ca`) |
-| `BUILT_IN_FORGE_API_URL` | Optional | Endpoint for email/notification delivery |
-| `BUILT_IN_FORGE_API_KEY` | Optional | API key for Forge notification service |
-| `TWILIO_ACCOUNT_SID` | Optional | Twilio account SID for SMS OTP |
-| `TWILIO_AUTH_TOKEN` | Optional | Twilio auth token |
-| `TWILIO_PHONE_NUMBER` | Optional | Twilio sender number (Canadian long code) |
-| `GOOGLE_CLIENT_ID` | Optional | Google OAuth 2.0 client ID |
-| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth 2.0 client secret |
+| Variable                 | Required   | Description                                                     |
+| ------------------------ | ---------- | --------------------------------------------------------------- |
+| `NODE_ENV`               | Yes        | `production` in Railway; `development` locally                  |
+| `PORT`                   | Auto       | HTTP port (Railway injects this)                                |
+| `DATABASE_URL`           | Yes (prod) | MySQL connection string, e.g. `mysql://user:pass@host:3306/db`  |
+| `JWT_SECRET`             | Yes        | Secret key for signing session JWT cookies                      |
+| `VITE_APP_ID`            | Yes        | Application identifier (e.g. `mylegacycannabis`)                |
+| `OWNER_OPEN_ID`          | Yes        | The `openId` of the admin/owner account                         |
+| `OAUTH_SERVER_URL`       | Yes        | Public base URL of the app (e.g. `https://mylegacycannabis.ca`) |
+| `BUILT_IN_FORGE_API_URL` | Optional   | Endpoint for email/notification delivery                        |
+| `BUILT_IN_FORGE_API_KEY` | Optional   | API key for Forge notification service                          |
+| `TWILIO_ACCOUNT_SID`     | Optional   | Twilio account SID for SMS OTP                                  |
+| `TWILIO_AUTH_TOKEN`      | Optional   | Twilio auth token                                               |
+| `TWILIO_PHONE_NUMBER`    | Optional   | Twilio sender number (Canadian long code)                       |
+| `GOOGLE_CLIENT_ID`       | Optional   | Google OAuth 2.0 client ID                                      |
+| `GOOGLE_CLIENT_SECRET`   | Optional   | Google OAuth 2.0 client secret                                  |
 
 ---
 
@@ -486,28 +487,28 @@ pnpm run test
 
 Based on the current architecture at 4,000 orders/month, using real March 2026 pricing:
 
-| Service | Provider | Cost/month (CAD) |
-|---|---|---|
-| App + DB Hosting | Railway Pro | $27.60 |
-| Image Storage | Cloudflare R2 | $0.22 |
-| SMS OTP | Twilio (300 SMS/mo) | $7.38 |
-| Email OTP | Resend / SendGrid (free tier) | $0.00 |
-| Google OAuth | Google Identity | $0.00 |
-| SSL Certificate | Railway / Let's Encrypt | $0.00 |
-| Domain (.ca) | Namecheap | $1.75 |
-| **Total** | | **~$36.95 CAD/month** |
+| Service          | Provider                      | Cost/month (CAD)      |
+| ---------------- | ----------------------------- | --------------------- |
+| App + DB Hosting | Railway Pro                   | $27.60                |
+| Image Storage    | Cloudflare R2                 | $0.22                 |
+| SMS OTP          | Twilio (300 SMS/mo)           | $7.38                 |
+| Email OTP        | Resend / SendGrid (free tier) | $0.00                 |
+| Google OAuth     | Google Identity               | $0.00                 |
+| SSL Certificate  | Railway / Let's Encrypt       | $0.00                 |
+| Domain (.ca)     | Namecheap                     | $1.75                 |
+| **Total**        |                               | **~$36.95 CAD/month** |
 
 **Cost per order: ~$0.009 CAD (<1 cent)**
 
 ### Scaling Estimates
 
 | Monthly Orders | Est. Total OpEx (CAD) |
-|---|---|
-| 1,000 | ~$33 |
-| 4,000 | ~$37 ← current |
-| 10,000 | ~$55 |
-| 25,000 | ~$115 |
-| 50,000 | ~$245 |
+| -------------- | --------------------- |
+| 1,000          | ~$33                  |
+| 4,000          | ~$37 ← current        |
+| 10,000         | ~$55                  |
+| 25,000         | ~$115                 |
+| 50,000         | ~$245                 |
 
 ### Cost Optimisation Tips
 
@@ -518,4 +519,4 @@ Based on the current architecture at 4,000 orders/month, using real March 2026 p
 
 ---
 
-*Document generated from codebase at commit `5198197` — March 21, 2026*
+_Document generated from codebase at commit `5198197` — March 21, 2026_

@@ -14,13 +14,13 @@ on:
   workflow_dispatch:
     inputs:
       test_url:
-        description: 'URL to test against'
+        description: "URL to test against"
         required: false
-        default: 'https://mylegacycannabisca-production.up.railway.app'
+        default: "https://mylegacycannabisca-production.up.railway.app"
       test_filter:
-        description: 'Test filter (e.g., @smoke, @critical, @admin)'
+        description: "Test filter (e.g., @smoke, @critical, @admin)"
         required: false
-        default: ''
+        default: ""
 
 # Cancel in-progress runs for the same PR
 concurrency:
@@ -64,7 +64,7 @@ jobs:
     name: 🧪 Full E2E Suite
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: smoke  # Only run if smoke passes
+    needs: smoke # Only run if smoke passes
     strategy:
       fail-fast: false
       matrix:
@@ -96,7 +96,7 @@ jobs:
           TEST_USER_OTP: ${{ secrets.TEST_USER_OTP }}
           TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
           TEST_ADMIN_OTP: ${{ secrets.TEST_ADMIN_OTP }}
-          TEST_OTP_BYPASS: 'false'
+          TEST_OTP_BYPASS: "false"
 
       - name: Upload test report
         if: always()

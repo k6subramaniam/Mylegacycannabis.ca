@@ -57,18 +57,18 @@ const DELIVERY_INDICATORS = [
   /your\s+(?:package|item|shipment)\s+(?:has been|was)\s+delivered/i,
   /item\s+delivered/i,
   /delivered\s+(?:to|at|on)/i,
-  /livr[ée]e?\s+(?:avec|au|le|a)/i,   // French: delivered
-  /livraison\s+effectu[ée]e/i,        // French: delivery completed
+  /livr[ée]e?\s+(?:avec|au|le|a)/i, // French: delivered
+  /livraison\s+effectu[ée]e/i, // French: delivery completed
   /notice.*delivered/i,
   /successful\s+delivery/i,
 ];
 
 // Patterns to extract tracking numbers from emails
 const TRACKING_NUMBER_PATTERNS = [
-  /\b(\d{16})\b/,                         // 16-digit domestic PIN
-  /\b(\d{12})\b/,                         // 12-digit domestic PIN
-  /\b([A-Z]{2}\d{9}CA)\b/,              // S10 international (EE123456789CA)
-  /\b([A-Z]{2}\d{7}CA)\b/,              // Domestic (AB1234567CA)
+  /\b(\d{16})\b/, // 16-digit domestic PIN
+  /\b(\d{12})\b/, // 12-digit domestic PIN
+  /\b([A-Z]{2}\d{9}CA)\b/, // S10 international (EE123456789CA)
+  /\b([A-Z]{2}\d{7}CA)\b/, // Domestic (AB1234567CA)
   /tracking\s*(?:number|#|no\.?)\s*[:：]?\s*([A-Z0-9]{10,16})/i,
   /numero\s*de\s*suivi\s*[:：]?\s*([A-Z0-9]{10,16})/i, // French
 ];
@@ -124,7 +124,9 @@ function getEmailBody(payload: any): string {
 }
 
 function getHeader(headers: any[], name: string): string {
-  const h = headers?.find((h: any) => h.name?.toLowerCase() === name.toLowerCase());
+  const h = headers?.find(
+    (h: any) => h.name?.toLowerCase() === name.toLowerCase()
+  );
   return h?.value || "";
 }
 
@@ -148,7 +150,11 @@ function extractTrackingNumbers(subject: string, body: string): string[] {
 
 // ─── MAIN POLL FUNCTION ───
 
-export async function pollTrackingEmails(): Promise<{ processed: number; deliveredOrders: number; errors: number }> {
+export async function pollTrackingEmails(): Promise<{
+  processed: number;
+  deliveredOrders: number;
+  errors: number;
+}> {
   const stats = { processed: 0, deliveredOrders: 0, errors: 0 };
 
   if (!isGmailConfigured() || isGmailDisabled()) {
@@ -175,10 +181,15 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
       return stats;
     }
 
-    console.log(`[Tracking] Found ${messages.length} potential delivery email(s)`);
+    console.log(
+      `[Tracking] Found ${messages.length} potential delivery email(s)`
+    );
 
     // Get all shipped orders to cross-reference tracking numbers
-    const shippedOrders = await db.getAllOrders({ status: "shipped", limit: 500 });
+    const shippedOrders = await db.getAllOrders({
+      status: "shipped",
+      limit: 500,
+    });
     const ordersByTracking = new Map<string, any>();
     for (const order of shippedOrders.data) {
       if (order.trackingNumber) {
@@ -191,7 +202,11 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
         const emailId = msg.id!;
 
         // Fetch full message
-        const msgRes = await gmail.users.messages.get({ userId: "me", id: emailId, format: "full" });
+        const msgRes = await gmail.users.messages.get({
+          userId: "me",
+          id: emailId,
+          format: "full",
+        });
         const payload = msgRes.data.payload;
         if (!payload) continue;
 
@@ -202,7 +217,13 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
         // Check if this is actually a delivery notification
         if (!isDeliveryEmail(subject, body)) {
           if (labelId) {
-            await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
+            await gmail.users.messages
+              .modify({
+                userId: "me",
+                id: emailId,
+                requestBody: { addLabelIds: [labelId] },
+              })
+              .catch(() => {});
           }
           continue;
         }
@@ -222,7 +243,9 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
             // Award reward points
             const pointsResult = await db.awardOrderPoints(order.id);
             if (pointsResult) {
-              console.log(`[Tracking] Awarded ${pointsResult.points} points for delivered order #${order.orderNumber}`);
+              console.log(
+                `[Tracking] Awarded ${pointsResult.points} points for delivered order #${order.orderNumber}`
+              );
             }
 
             // Send status update email to customer
@@ -232,8 +255,11 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
                 customerEmail: order.guestEmail,
                 orderId: order.orderNumber || String(order.id),
                 orderStatus: "Delivered",
-                statusMessage: "Your order has been delivered. Thank you for shopping with MyLegacy Cannabis! We hope you enjoy your purchase.",
-              }).catch(err => console.warn("[Tracking] Status email failed:", err.message));
+                statusMessage:
+                  "Your order has been delivered. Thank you for shopping with MyLegacy Cannabis! We hope you enjoy your purchase.",
+              }).catch(err =>
+                console.warn("[Tracking] Status email failed:", err.message)
+              );
             }
 
             // Log admin activity
@@ -248,33 +274,45 @@ export async function pollTrackingEmails(): Promise<{ processed: number; deliver
 
             stats.deliveredOrders++;
             matched = true;
-            console.log(`[Tracking] Auto-delivered order ${order.orderNumber} (tracking: ${trackNum})`);
+            console.log(
+              `[Tracking] Auto-delivered order ${order.orderNumber} (tracking: ${trackNum})`
+            );
           }
         }
 
         if (!matched && trackingNumbers.length > 0) {
-          console.log(`[Tracking] Delivery email with tracking ${trackingNumbers.join(", ")} — no matching shipped orders found`);
+          console.log(
+            `[Tracking] Delivery email with tracking ${trackingNumbers.join(", ")} — no matching shipped orders found`
+          );
         }
 
         // Label as processed in Gmail
         if (labelId) {
-          await gmail.users.messages.modify({ userId: "me", id: emailId, requestBody: { addLabelIds: [labelId] } }).catch(() => {});
+          await gmail.users.messages
+            .modify({
+              userId: "me",
+              id: emailId,
+              requestBody: { addLabelIds: [labelId] },
+            })
+            .catch(() => {});
         }
-
       } catch (msgErr) {
         if (handleGmailError(SERVICE, msgErr)) break; // auth error — stop processing
-        console.warn(`[${SERVICE}] Error processing message ${msg.id}: ${(msgErr as Error).message}`);
+        console.warn(
+          `[${SERVICE}] Error processing message ${msg.id}: ${(msgErr as Error).message}`
+        );
         stats.errors++;
       }
     }
-
   } catch (err) {
     handleGmailError(SERVICE, err);
     stats.errors++;
   }
 
   if (stats.deliveredOrders > 0 || stats.errors > 0) {
-    console.log(`[${SERVICE}] Poll complete: ${stats.processed} processed, ${stats.deliveredOrders} auto-delivered, ${stats.errors} errors`);
+    console.log(
+      `[${SERVICE}] Poll complete: ${stats.processed} processed, ${stats.deliveredOrders} auto-delivered, ${stats.errors} errors`
+    );
   }
   return stats;
 }

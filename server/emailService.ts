@@ -429,7 +429,7 @@ export async function sendOTPEmail(
     </div>
   `;
 
-  console.log(`[OTP EMAIL] To: ${email} | Code: ${code} | Purpose: ${purpose}`);
+  console.log(`[OTP EMAIL] To: ${email} | Purpose: ${purpose}`);
 
   const sent = await sendMail({ to: email, subject, html });
 
@@ -469,7 +469,7 @@ export async function sendOTPSms(
 ): Promise<{ sent: boolean; reason?: string }> {
   if (!ENV.twilioAccountSid || !ENV.twilioAuthToken || !ENV.twilioPhoneNumber) {
     console.log(
-      `[OTP SMS] Twilio not configured. Phone: ${phone} | Code: ${code} | Purpose: ${purpose}`
+      `[OTP SMS] Twilio not configured. Phone: ${phone} | Purpose: ${purpose}`
     );
     return {
       sent: false,
