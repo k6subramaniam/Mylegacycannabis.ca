@@ -9,9 +9,3 @@
 **Vulnerability:** One-Time Password (OTP) codes were directly printed to the server console in fallback and debugging log statements.
 **Learning:** Debugging logs often capture sensitive state during edge cases (e.g., service failure fallbacks) where secrets are temporarily held in local variables.
 **Prevention:** Strictly audit all log statements for sensitive data. Use non-sensitive identifiers (like user ID or normalized phone) for log context and rely on the database as the secure source of truth for administrative verification of secrets.
-
-## 2025-05-18 - [Vulnerability Fix] Sensitive OTP Code Logged in CustomAuth SMS Fallback
-
-**Vulnerability:** One-Time Password (OTP) codes were directly printed to the server console in `[OTP FALLBACK]` debugging log statements when SMS failed.
-**Learning:** Debugging logs often capture sensitive state during edge cases (e.g., service failure fallbacks) where secrets are temporarily held in local variables.
-**Prevention:** Strictly audit all log statements for sensitive data. Use non-sensitive identifiers (like user ID or normalized phone) for log context and rely on the database as the secure source of truth for administrative verification of secrets.
