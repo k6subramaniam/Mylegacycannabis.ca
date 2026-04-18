@@ -1,27 +1,9 @@
 import { useLocation, Link, Redirect } from "wouter";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  ShieldCheck,
-  Truck,
-  Mail,
-  BarChart3,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  Menu,
-  X,
-  Settings,
-  ShieldAlert,
-  ImageUp,
-  MessageSquare,
-  DollarSign,
-  MapPin,
-  Brain,
-  ScrollText,
-  Loader2,
+  LayoutDashboard, Package, ShoppingCart, ShieldCheck, Truck,
+  Mail, BarChart3, Users, ChevronLeft, ChevronRight, LogOut,
+  Menu, X, Settings, ShieldAlert, ImageUp, MessageSquare, DollarSign, MapPin,
+  Brain, ScrollText, Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,11 +29,7 @@ const menuItems = [
   { icon: Brain, label: "Insights", path: "/admin/a7x" },
 ];
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { logoUrl } = useSiteConfig();
@@ -83,16 +61,9 @@ export default function AdminLayout({
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md mx-4">
           <ShieldAlert size={48} className="mx-auto text-red-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            Access Denied
-          </h1>
-          <p className="text-gray-500 mb-6">
-            You don't have admin privileges to access this area.
-          </p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-2.5 bg-[#4B2D8E] text-white rounded-xl font-medium hover:bg-[#3d2574] transition-colors"
-          >
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h1>
+          <p className="text-gray-500 mb-6">You don't have admin privileges to access this area.</p>
+          <Link href="/" className="inline-block px-6 py-2.5 bg-[#4B2D8E] text-white rounded-xl font-medium hover:bg-[#3d2574] transition-colors">
             Back to Store
           </Link>
         </div>
@@ -108,45 +79,23 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}
-      >
+      <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          {sidebarOpen && (
-            <img
-              src={resolvedLogo}
-              alt="My Legacy"
-              className="h-9"
-              width="160"
-              height="36"
-            />
-          )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            {sidebarOpen ? (
-              <ChevronLeft size={18} />
-            ) : (
-              <ChevronRight size={18} />
-            )}
+          {sidebarOpen && <img src={resolvedLogo} alt="My Legacy" className="h-9" width="160" height="36" />}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
         </div>
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map(item => (
-            <Link
-              key={item.path}
-              href={item.path}
+          {menuItems.map((item) => (
+            <Link key={item.path} href={item.path}
               className={`flex items-center gap-3 mx-3 my-1 px-3 py-2.5 rounded-xl transition-all ${
                 isActive(item.path)
                   ? "bg-[#4B2D8E] text-white shadow-md"
                   : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
+              }`}>
               <item.icon size={20} className="shrink-0" />
-              {sidebarOpen && (
-                <span className="text-sm font-medium">{item.label}</span>
-              )}
+              {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
             </Link>
           ))}
         </nav>
@@ -154,30 +103,18 @@ export default function AdminLayout({
           {sidebarOpen ? (
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#4B2D8E] flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                {(user?.name || "A").charAt(0).toUpperCase()}
+                {(user?.name || 'A').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">
-                  {user?.name || "Admin"}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {user?.email || "My Legacy Cannabis"}
-                </p>
+                <p className="text-sm font-medium text-gray-800 truncate">{user?.name || 'Admin'}</p>
+                <p className="text-xs text-gray-400 truncate">{user?.email || 'My Legacy Cannabis'}</p>
               </div>
-              <Link
-                href="/"
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-[#4B2D8E] transition-colors"
-                title="Back to Store"
-              >
+              <Link href="/" className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-[#4B2D8E] transition-colors" title="Back to Store">
                 <LogOut size={16} />
               </Link>
             </div>
           ) : (
-            <Link
-              href="/"
-              className="w-full flex justify-center p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-[#4B2D8E] transition-colors"
-              title="Back to Store"
-            >
+            <Link href="/" className="w-full flex justify-center p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-[#4B2D8E] transition-colors" title="Back to Store">
               <LogOut size={18} />
             </Link>
           )}
@@ -188,47 +125,28 @@ export default function AdminLayout({
       <div className="flex flex-col flex-1 overflow-hidden">
         <header className="md:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100"
-            >
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-lg hover:bg-gray-100">
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <img
-              src={resolvedLogo}
-              alt="My Legacy"
-              className="h-8"
-              width="140"
-              height="32"
-            />
+            <img src={resolvedLogo} alt="My Legacy" className="h-8" width="140" height="32" />
           </div>
-          <span className="text-xs font-semibold text-[#4B2D8E] bg-[#4B2D8E]/10 px-3 py-1 rounded-full">
-            ADMIN
-          </span>
+          <span className="text-xs font-semibold text-[#4B2D8E] bg-[#4B2D8E]/10 px-3 py-1 rounded-full">ADMIN</span>
         </header>
 
         {mobileMenuOpen && (
           <div className="md:hidden fixed inset-0 top-[57px] bg-white z-50 overflow-y-auto">
             <nav className="p-4">
-              {menuItems.map(item => (
-                <Link
-                  key={item.path}
-                  href={item.path}
+              {menuItems.map((item) => (
+                <Link key={item.path} href={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 ${
-                    isActive(item.path)
-                      ? "bg-[#4B2D8E] text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
+                    isActive(item.path) ? "bg-[#4B2D8E] text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}>
                   <item.icon size={20} />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               ))}
               <hr className="my-4" />
-              <Link
-                href="/"
-                className="flex items-center gap-3 px-4 py-3 text-[#4B2D8E] hover:bg-gray-100 rounded-xl w-full"
-              >
+              <Link href="/" className="flex items-center gap-3 px-4 py-3 text-[#4B2D8E] hover:bg-gray-100 rounded-xl w-full">
                 <LogOut size={20} />
                 <span className="font-medium">Back to Store</span>
               </Link>
@@ -237,7 +155,9 @@ export default function AdminLayout({
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
   );

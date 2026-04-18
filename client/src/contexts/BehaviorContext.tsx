@@ -4,8 +4,8 @@
  * with useBehavior() anywhere.
  */
 
-import React, { createContext, useContext, type ReactNode } from "react";
-import { useBehaviorTracker } from "@/hooks/useBehaviorTracker";
+import React, { createContext, useContext, type ReactNode } from 'react';
+import { useBehaviorTracker } from '@/hooks/useBehaviorTracker';
 
 type BehaviorTrackerAPI = ReturnType<typeof useBehaviorTracker>;
 

@@ -20,12 +20,7 @@ export type FileContent = {
   type: "file_url";
   file_url: {
     url: string;
-    mime_type?:
-      | "audio/mpeg"
-      | "audio/wav"
-      | "application/pdf"
-      | "audio/mp4"
-      | "video/mp4";
+    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
   };
 };
 
@@ -234,17 +229,9 @@ const CONFIG_CACHE_TTL = 60_000;
 
 export async function getAiConfig(): Promise<AiConfig> {
   const now = Date.now();
-  if (_configCache && now - _configCacheTime < CONFIG_CACHE_TTL)
-    return _configCache;
+  if (_configCache && now - _configCacheTime < CONFIG_CACHE_TTL) return _configCache;
 
-  const [
-    provider,
-    apiKey,
-    model,
-    fallbackProvider,
-    fallbackApiKey,
-    fallbackModel,
-  ] = await Promise.all([
+  const [provider, apiKey, model, fallbackProvider, fallbackApiKey, fallbackModel] = await Promise.all([
     db.getSiteSetting("ai_provider"),
     db.getSiteSetting("ai_api_key"),
     db.getSiteSetting("ai_model"),
@@ -254,15 +241,11 @@ export async function getAiConfig(): Promise<AiConfig> {
   ]);
 
   const config: AiConfig = {
-    provider: (provider === "gemini" ? "gemini" : "openai") as
-      | "openai"
-      | "gemini",
+    provider: (provider === "gemini" ? "gemini" : "openai") as "openai" | "gemini",
     apiKey: apiKey || ENV.forgeApiKey || "",
     baseUrl: ENV.forgeApiUrl || undefined,
     model: model || undefined,
-    fallbackProvider: fallbackProvider
-      ? (fallbackProvider as "openai" | "gemini")
-      : undefined,
+    fallbackProvider: fallbackProvider ? (fallbackProvider as "openai" | "gemini") : undefined,
     fallbackApiKey: fallbackApiKey || undefined,
     fallbackModel: fallbackModel || undefined,
   };
@@ -347,20 +330,14 @@ const normalizeResponseFormat = ({
 
 // ─── Gemini native API adapter ───
 
-function messagesToGeminiContents(messages: Message[]): {
-  systemInstruction?: any;
-  contents: any[];
-} {
+function messagesToGeminiContents(messages: Message[]): { systemInstruction?: any; contents: any[] } {
   let systemInstruction: any = undefined;
   const contents: any[] = [];
 
   for (const msg of messages) {
-    const textContent =
-      typeof msg.content === "string"
-        ? msg.content
-        : ensureArray(msg.content)
-            .map(p => (typeof p === "string" ? p : (p as any).text || ""))
-            .join("\n");
+    const textContent = typeof msg.content === "string"
+      ? msg.content
+      : ensureArray(msg.content).map(p => typeof p === "string" ? p : (p as any).text || "").join("\n");
 
     if (msg.role === "system") {
       systemInstruction = { parts: [{ text: textContent }] };
@@ -375,21 +352,14 @@ function messagesToGeminiContents(messages: Message[]): {
   return { systemInstruction, contents };
 }
 
-async function invokeGeminiNative(
-  params: InvokeParams,
-  config: AiConfig
-): Promise<InvokeResult> {
+async function invokeGeminiNative(params: InvokeParams, config: AiConfig): Promise<InvokeResult> {
   const model = config.model || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
   const maxTokens = params.maxTokens || params.max_tokens || 32768;
 
-  const { systemInstruction, contents } = messagesToGeminiContents(
-    params.messages
-  );
+  const { systemInstruction, contents } = messagesToGeminiContents(params.messages);
 
-  const wantsJson =
-    params.responseFormat?.type === "json_object" ||
-    params.response_format?.type === "json_object";
+  const wantsJson = params.responseFormat?.type === "json_object" || params.response_format?.type === "json_object";
 
   const body: Record<string, any> = {
     contents,
@@ -408,9 +378,7 @@ async function invokeGeminiNative(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `Gemini API error ${response.status}: ${errorText.slice(0, 500)}`
-    );
+    throw new Error(`Gemini API error ${response.status}: ${errorText.slice(0, 500)}`);
   }
 
   const data = await response.json();
@@ -421,20 +389,16 @@ async function invokeGeminiNative(
     id: `gemini-${Date.now()}`,
     created: Math.floor(Date.now() / 1000),
     model,
-    choices: [
-      {
-        index: 0,
-        message: { role: "assistant", content: text },
-        finish_reason: data.candidates?.[0]?.finishReason || "stop",
-      },
-    ],
-    usage: data.usageMetadata
-      ? {
-          prompt_tokens: data.usageMetadata.promptTokenCount || 0,
-          completion_tokens: data.usageMetadata.candidatesTokenCount || 0,
-          total_tokens: data.usageMetadata.totalTokenCount || 0,
-        }
-      : undefined,
+    choices: [{
+      index: 0,
+      message: { role: "assistant", content: text },
+      finish_reason: data.candidates?.[0]?.finishReason || "stop",
+    }],
+    usage: data.usageMetadata ? {
+      prompt_tokens: data.usageMetadata.promptTokenCount || 0,
+      completion_tokens: data.usageMetadata.candidatesTokenCount || 0,
+      total_tokens: data.usageMetadata.totalTokenCount || 0,
+    } : undefined,
   };
 }
 
@@ -444,7 +408,7 @@ async function invokeSingleProvider(
   params: InvokeParams,
   provider: "openai" | "gemini",
   apiKey: string,
-  model?: string
+  model?: string,
 ): Promise<InvokeResult> {
   if (provider === "gemini") {
     return invokeGeminiNative(params, {
@@ -471,7 +435,7 @@ async function invokeSingleProvider(
 
   const normalizedToolChoice = normalizeToolChoice(
     params.toolChoice || params.tool_choice,
-    params.tools
+    params.tools,
   );
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
@@ -498,9 +462,7 @@ async function invokeSingleProvider(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed (${provider}): ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`
-    );
+    throw new Error(`LLM invoke failed (${provider}): ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`);
   }
 
   return (await response.json()) as InvokeResult;
@@ -514,15 +476,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   // Helper: attempt fallback if configured
   const tryFallback = async (primaryErr: any): Promise<InvokeResult> => {
     if (config.fallbackApiKey && config.fallbackProvider) {
-      console.warn(
-        `[AI] Primary (${config.provider}) failed: ${primaryErr.message?.slice(0, 100)}. Trying fallback (${config.fallbackProvider})...`
-      );
-      return invokeSingleProvider(
-        params,
-        config.fallbackProvider,
-        config.fallbackApiKey,
-        config.fallbackModel
-      );
+      console.warn(`[AI] Primary (${config.provider}) failed: ${primaryErr.message?.slice(0, 100)}. Trying fallback (${config.fallbackProvider})...`);
+      return invokeSingleProvider(params, config.fallbackProvider, config.fallbackApiKey, config.fallbackModel);
     }
     throw primaryErr;
   };
@@ -535,11 +490,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       return tryFallback(err);
     }
   }
-  if (
-    config.provider === "gemini" &&
-    config.apiKey &&
-    config.apiKey !== ENV.forgeApiKey
-  ) {
+  if (config.provider === "gemini" && config.apiKey && config.apiKey !== ENV.forgeApiKey) {
     try {
       return await invokeGeminiNative(params, config);
     } catch (err: any) {
@@ -561,20 +512,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     apiKey = ENV.forgeApiKey;
     modelName = "gemini-2.5-flash";
   } else {
-    throw new Error(
-      "No AI API key configured. Go to Admin > Settings > AI Configuration to set one up."
-    );
+    throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
   }
 
   const {
-    messages,
-    tools,
-    toolChoice,
-    tool_choice,
-    outputSchema,
-    output_schema,
-    responseFormat,
-    response_format,
+    messages, tools, toolChoice, tool_choice,
+    outputSchema, output_schema, responseFormat, response_format,
   } = params;
 
   const payload: Record<string, unknown> = {
@@ -583,10 +526,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   };
 
   if (tools && tools.length > 0) payload.tools = tools;
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
   if (normalizedToolChoice) payload.tool_choice = normalizedToolChoice;
 
   const maxTokens = params.maxTokens || params.max_tokens || 32768;
@@ -596,30 +536,19 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.thinking = { budget_tokens: 1024 };
   }
 
-  const normalizedResponseFormat = normalizeResponseFormat({
-    responseFormat,
-    response_format,
-    outputSchema,
-    output_schema,
-  });
-  if (normalizedResponseFormat)
-    payload.response_format = normalizedResponseFormat;
+  const normalizedResponseFormat = normalizeResponseFormat({ responseFormat, response_format, outputSchema, output_schema });
+  if (normalizedResponseFormat) payload.response_format = normalizedResponseFormat;
 
   try {
     const response = await fetch(apiUrl, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(
-        `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`
-      );
+      throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText.slice(0, 500)}`);
     }
 
     return (await response.json()) as InvokeResult;

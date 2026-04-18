@@ -12,76 +12,24 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ─── ENUMS ───
-export const authMethodEnum = pgEnum("auth_method", [
-  "phone",
-  "email",
-  "google",
-]);
+export const authMethodEnum = pgEnum("auth_method", ["phone", "email", "google"]);
 export const roleEnum = pgEnum("role", ["user", "admin"]);
-export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
-  "sms",
-  "email",
-]);
-export const verificationCodePurposeEnum = pgEnum("verification_code_purpose", [
-  "login",
-  "register",
-  "verify",
-]);
+export const verificationCodeTypeEnum = pgEnum("verification_code_type", ["sms", "email"]);
+export const verificationCodePurposeEnum = pgEnum("verification_code_purpose", ["login", "register", "verify"]);
 export const productCategoryEnum = pgEnum("product_category", [
-  "flower",
-  "pre-rolls",
-  "edibles",
-  "vapes",
-  "concentrates",
-  "accessories",
-  "ounce-deals",
-  "shake-n-bake",
+  "flower", "pre-rolls", "edibles", "vapes", "concentrates", "accessories", "ounce-deals", "shake-n-bake",
 ]);
-export const strainTypeEnum = pgEnum("strain_type", [
-  "Sativa",
-  "Indica",
-  "Hybrid",
-  "CBD",
-  "N/A",
-]);
+export const strainTypeEnum = pgEnum("strain_type", ["Sativa", "Indica", "Hybrid", "CBD", "N/A"]);
 export const orderStatusEnum = pgEnum("order_status", [
-  "pending",
-  "confirmed",
-  "processing",
-  "shipped",
-  "delivered",
-  "cancelled",
-  "refunded",
+  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded",
 ]);
 export const paymentStatusEnum = pgEnum("payment_status", [
-  "pending",
-  "received",
-  "confirmed",
-  "partially_refunded",
-  "refunded",
+  "pending", "received", "confirmed", "partially_refunded", "refunded",
 ]);
-export const verificationStatusEnum = pgEnum("verification_status", [
-  "pending",
-  "approved",
-  "rejected",
-]);
-export const rewardsTypeEnum = pgEnum("rewards_type", [
-  "earned",
-  "redeemed",
-  "bonus",
-  "deducted",
-  "admin_add",
-  "admin_deduct",
-  "birthday",
-  "referral",
-  "review",
-]);
+export const verificationStatusEnum = pgEnum("verification_status", ["pending", "approved", "rejected"]);
+export const rewardsTypeEnum = pgEnum("rewards_type", ["earned", "redeemed", "bonus", "deducted", "admin_add", "admin_deduct", "birthday", "referral", "review"]);
 
-export const couponTypeEnum = pgEnum("coupon_type", [
-  "percentage",
-  "fixed_amount",
-  "free_shipping",
-]);
+export const couponTypeEnum = pgEnum("coupon_type", ["percentage", "fixed_amount", "free_shipping"]);
 
 // ─── USERS ───
 export const users = pgTable("users", {
@@ -187,16 +135,10 @@ export const orders = pgTable("orders", {
   guestName: varchar("guest_name", { length: 255 }),
   guestPhone: varchar("guest_phone", { length: 20 }),
   status: orderStatusEnum("status").default("pending").notNull(),
-  paymentStatus: paymentStatusEnum("payment_status")
-    .default("pending")
-    .notNull(),
+  paymentStatus: paymentStatusEnum("payment_status").default("pending").notNull(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  shippingCost: numeric("shipping_cost", { precision: 10, scale: 2 })
-    .default("0")
-    .notNull(),
-  discount: numeric("discount", { precision: 10, scale: 2 })
-    .default("0")
-    .notNull(),
+  shippingCost: numeric("shipping_cost", { precision: 10, scale: 2 }).default("0").notNull(),
+  discount: numeric("discount", { precision: 10, scale: 2 }).default("0").notNull(),
   pointsRedeemed: integer("points_redeemed").default(0).notNull(),
   total: numeric("total", { precision: 10, scale: 2 }).notNull(),
   shippingAddress: json("shipping_address").$type<{
@@ -212,12 +154,9 @@ export const orders = pgTable("orders", {
   notes: text("notes"),
   adminNotes: text("admin_notes"),
   couponCode: varchar("coupon_code", { length: 50 }),
-  couponDiscount: numeric("coupon_discount", {
-    precision: 10,
-    scale: 2,
-  }).default("0"),
+  couponDiscount: numeric("coupon_discount", { precision: 10, scale: 2 }).default("0"),
   // ─── Canada Post integration fields ───
-  shippingMethod: varchar("shipping_method", { length: 30 }), // e.g. DOM.RP, DOM.EP, DOM.XP, DOM.PC
+  shippingMethod: varchar("shipping_method", { length: 30 }),       // e.g. DOM.RP, DOM.EP, DOM.XP, DOM.PC
   shippingMethodName: varchar("shipping_method_name", { length: 100 }), // e.g. "Xpresspost"
   shippingOriginPostal: varchar("shipping_origin_postal", { length: 10 }),
   shippingDestPostal: varchar("shipping_dest_postal", { length: 10 }),
@@ -385,12 +324,8 @@ export const referralTracking = pgTable("referral_tracking", {
   referrerId: integer("referrer_id").notNull(),
   refereeId: integer("referee_id").notNull(),
   referralCodeId: integer("referral_code_id").notNull(),
-  referrerPointsAwarded: boolean("referrer_points_awarded")
-    .default(false)
-    .notNull(),
-  refereePointsAwarded: boolean("referee_points_awarded")
-    .default(false)
-    .notNull(),
+  referrerPointsAwarded: boolean("referrer_points_awarded").default(false).notNull(),
+  refereePointsAwarded: boolean("referee_points_awarded").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -409,12 +344,12 @@ export const productReviews = pgTable("product_reviews", {
   // ── Structured recommendation tags (JSON arrays of string tags) ──
   // These capture how customers actually describe their experience,
   // forming the basis for future AI-powered recommendations.
-  tags: json("tags").$type<string[]>(), // e.g. ["smooth","relaxing","good-value"]
-  strengthRating: integer("strength_rating"), // 1-5 (1=mild, 5=very strong)
-  smoothnessRating: integer("smoothness_rating"), // 1-5 (1=harsh, 5=very smooth)
+  tags: json("tags").$type<string[]>(),           // e.g. ["smooth","relaxing","good-value"]
+  strengthRating: integer("strength_rating"),       // 1-5 (1=mild, 5=very strong)
+  smoothnessRating: integer("smoothness_rating"),   // 1-5 (1=harsh, 5=very smooth)
   effectTags: json("effect_tags").$type<string[]>(), // e.g. ["relaxing","sleepy","euphoric","focused","creative","social","pain-relief","anxiety-relief"]
   experienceLevel: varchar("experience_level", { length: 20 }), // "beginner", "intermediate", "experienced"
-  usageTiming: varchar("usage_timing", { length: 20 }), // "daytime", "nighttime", "anytime"
+  usageTiming: varchar("usage_timing", { length: 20 }),         // "daytime", "nighttime", "anytime"
   wouldRecommend: boolean("would_recommend"),
   // ── Moderation & rewards ──
   isApproved: boolean("is_approved").default(true).notNull(),
@@ -461,16 +396,8 @@ export type SiteSetting = typeof siteSettings.$inferSelect;
 export type InsertSiteSetting = typeof siteSettings.$inferInsert;
 
 // ─── E-TRANSFER PAYMENT RECORDS ───
-export const etransferMatchConfidenceEnum = pgEnum(
-  "etransfer_match_confidence",
-  ["exact", "high", "low", "none"]
-);
-export const etransferStatusEnum = pgEnum("etransfer_status", [
-  "auto_matched",
-  "manual_matched",
-  "unmatched",
-  "ignored",
-]);
+export const etransferMatchConfidenceEnum = pgEnum("etransfer_match_confidence", ["exact", "high", "low", "none"]);
+export const etransferStatusEnum = pgEnum("etransfer_status", ["auto_matched", "manual_matched", "unmatched", "ignored"]);
 
 export const paymentRecords = pgTable("payment_records", {
   id: serial("id").primaryKey(),
@@ -481,13 +408,12 @@ export const paymentRecords = pgTable("payment_records", {
   memo: text("memo"),
   financialInstitution: varchar("financial_institution", { length: 255 }),
   rawSubject: varchar("raw_subject", { length: 500 }),
-  rawBodySnippet: text("raw_body_snippet"), // first 500 chars for debugging
+  rawBodySnippet: text("raw_body_snippet"),       // first 500 chars for debugging
   receivedAt: timestamp("received_at"),
   matchedOrderId: integer("matched_order_id"),
   matchedOrderNumber: varchar("matched_order_number", { length: 30 }),
-  matchConfidence:
-    etransferMatchConfidenceEnum("match_confidence").default("none"),
-  matchMethod: varchar("match_method", { length: 100 }), // "memo_order_number", "exact_amount", "amount_name", "manual"
+  matchConfidence: etransferMatchConfidenceEnum("match_confidence").default("none"),
+  matchMethod: varchar("match_method", { length: 100 }),  // "memo_order_number", "exact_amount", "amount_name", "manual"
   status: etransferStatusEnum("status").default("unmatched").notNull(),
   reviewedBy: integer("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
@@ -503,9 +429,9 @@ export type InsertPaymentRecord = typeof paymentRecords.$inferInsert;
 // On server startup, files are materialized to dist/public/uploads/ from DB.
 export const fileStore = pgTable("file_store", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 512 }).notNull().unique(), // e.g. "uploads/site-logo.png"
+  key: varchar("key", { length: 512 }).notNull().unique(),     // e.g. "uploads/site-logo.png"
   contentType: varchar("content_type", { length: 100 }).notNull(),
-  data: text("data").notNull(), // base64-encoded file contents
+  data: text("data").notNull(),                                  // base64-encoded file contents
   sizeBytes: integer("size_bytes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -517,33 +443,25 @@ export type InsertFileStoreEntry = typeof fileStore.$inferInsert;
 // ─── USER BEHAVIOR TRACKING ───
 // Captures page views, clicks, time-on-page, and shopping patterns per user/session.
 export const behaviorEventTypeEnum = pgEnum("behavior_event_type", [
-  "page_view",
-  "product_view",
-  "category_view",
-  "add_to_cart",
-  "remove_from_cart",
-  "search",
-  "click",
-  "checkout_start",
-  "checkout_complete",
-  "review_submit",
-  "wishlist_add",
+  "page_view", "product_view", "category_view", "add_to_cart",
+  "remove_from_cart", "search", "click", "checkout_start",
+  "checkout_complete", "review_submit", "wishlist_add",
 ]);
 
 export const userBehavior = pgTable("user_behavior", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"), // null for anonymous visitors
+  userId: integer("user_id"),                                // null for anonymous visitors
   sessionId: varchar("session_id", { length: 64 }).notNull(), // browser session fingerprint
   eventType: behaviorEventTypeEnum("event_type").notNull(),
-  page: varchar("page", { length: 500 }), // URL path
-  productId: integer("product_id"), // when event is product-related
+  page: varchar("page", { length: 500 }),                    // URL path
+  productId: integer("product_id"),                          // when event is product-related
   productSlug: varchar("product_slug", { length: 255 }),
   category: varchar("category", { length: 100 }),
   searchQuery: varchar("search_query", { length: 255 }),
-  metadata: json("metadata").$type<Record<string, any>>(), // flexible extra data (time_on_page_ms, click_target, etc.)
-  dwellTimeMs: integer("dwell_time_ms"), // time spent on page in milliseconds
+  metadata: json("metadata").$type<Record<string, any>>(),   // flexible extra data (time_on_page_ms, click_target, etc.)
+  dwellTimeMs: integer("dwell_time_ms"),                     // time spent on page in milliseconds
   // ── Geo-analytics (PIPEDA-compliant: no raw IP, no lat/lng, no postal code) ──
-  ipHash: varchar("ip_hash", { length: 16 }), // SHA-256 first 16 chars of IP
+  ipHash: varchar("ip_hash", { length: 16 }),                // SHA-256 first 16 chars of IP
   city: varchar("city", { length: 100 }),
   province: varchar("province", { length: 100 }),
   provinceCode: varchar("province_code", { length: 5 }),
@@ -559,26 +477,17 @@ export type InsertUserBehavior = typeof userBehavior.$inferInsert;
 // Stores an AI-generated summary of each user's preferences, patterns, and profile.
 export const aiUserMemory = pgTable("ai_user_memory", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique(), // one memory per registered user
+  userId: integer("user_id").notNull().unique(),             // one memory per registered user
   preferredCategories: json("preferred_categories").$type<string[]>(),
   preferredStrains: json("preferred_strains").$type<string[]>(),
   priceRange: json("price_range").$type<{ min: number; max: number }>(),
-  shoppingPatterns: text("shopping_patterns"), // AI-generated natural language summary
-  reviewHistory:
-    json("review_history").$type<
-      Array<{ productId: number; rating: number; date: string }>
-    >(),
-  lastProducts:
-    json("last_products").$type<
-      Array<{ slug: string; name: string; viewedAt: string }>
-    >(),
+  shoppingPatterns: text("shopping_patterns"),                // AI-generated natural language summary
+  reviewHistory: json("review_history").$type<Array<{ productId: number; rating: number; date: string }>>(),
+  lastProducts: json("last_products").$type<Array<{ slug: string; name: string; viewedAt: string }>>(),
   totalOrders: integer("total_orders").default(0),
   totalSpent: numeric("total_spent", { precision: 10, scale: 2 }).default("0"),
-  avgOrderValue: numeric("avg_order_value", {
-    precision: 10,
-    scale: 2,
-  }).default("0"),
-  aiSummary: text("ai_summary"), // AI-generated holistic user profile
+  avgOrderValue: numeric("avg_order_value", { precision: 10, scale: 2 }).default("0"),
+  aiSummary: text("ai_summary"),                             // AI-generated holistic user profile
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -590,9 +499,9 @@ export type InsertAiUserMemory = typeof aiUserMemory.$inferInsert;
 // Stores the latest AI-consumable snapshot of site-wide knowledge (products, FAQ, policies, etc.)
 export const siteKnowledgeSync = pgTable("site_knowledge_sync", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).notNull().unique(), // e.g. "active_products", "faq", "policies", "terms"
-  content: text("content").notNull(), // JSON or markdown content
-  contentHash: varchar("content_hash", { length: 64 }), // SHA-256 hash to detect changes
+  key: varchar("key", { length: 100 }).notNull().unique(),   // e.g. "active_products", "faq", "policies", "terms"
+  content: text("content").notNull(),                         // JSON or markdown content
+  contentHash: varchar("content_hash", { length: 64 }),       // SHA-256 hash to detect changes
   lastSyncedAt: timestamp("last_synced_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -605,14 +514,14 @@ export type InsertSiteKnowledgeSync = typeof siteKnowledgeSync.$inferInsert;
 // The circuit-breaker in pushService.ts handles expired subscriptions (410 Gone).
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"), // null for anonymous subscribers
-  endpoint: text("endpoint").notNull().unique(), // push service endpoint URL
-  keysP256dh: text("keys_p256dh").notNull(), // ECDH public key
-  keysAuth: text("keys_auth").notNull(), // auth secret
+  userId: integer("user_id"),                                    // null for anonymous subscribers
+  endpoint: text("endpoint").notNull().unique(),                 // push service endpoint URL
+  keysP256dh: text("keys_p256dh").notNull(),                     // ECDH public key
+  keysAuth: text("keys_auth").notNull(),                         // auth secret
   active: boolean("active").default(true).notNull(),
-  userAgent: varchar("user_agent", { length: 500 }), // browser/device fingerprint
+  userAgent: varchar("user_agent", { length: 500 }),             // browser/device fingerprint
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastPushedAt: timestamp("last_pushed_at"), // last successful push
+  lastPushedAt: timestamp("last_pushed_at"),                     // last successful push
 });
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
@@ -627,7 +536,7 @@ export const pushNotificationLog = pgTable("push_notification_log", {
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body"),
   url: varchar("url", { length: 500 }),
-  tag: varchar("tag", { length: 100 }), // e.g. "order-status", "new-drop", "tier-upgrade", "winback"
+  tag: varchar("tag", { length: 100 }),                          // e.g. "order-status", "new-drop", "tier-upgrade", "winback"
   status: varchar("status", { length: 20 }).default("sent").notNull(), // sent, delivered, clicked, failed, expired
   errorMessage: text("error_message"),
   sentAt: timestamp("sent_at").defaultNow().notNull(),

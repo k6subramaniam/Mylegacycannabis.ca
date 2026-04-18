@@ -16,8 +16,7 @@ import * as db from "./db";
 // ─── CONFIG ───
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT =
-  process.env.VAPID_SUBJECT || "mailto:admin@mylegacycannabis.ca";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@mylegacycannabis.ca";
 
 let _configured = false;
 
@@ -32,9 +31,7 @@ export function getVapidPublicKey(): string {
 /** Call once at server startup */
 export function initPushService(): void {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    console.log(
-      "[Push] VAPID keys not configured — push notifications disabled"
-    );
+    console.log("[Push] VAPID keys not configured — push notifications disabled");
     return;
   }
 
@@ -61,7 +58,7 @@ export interface PushPayload {
 async function sendToSubscription(
   sub: { id: number; endpoint: string; keysP256dh: string; keysAuth: string },
   payload: PushPayload,
-  userId?: number | null
+  userId?: number | null,
 ): Promise<boolean> {
   if (!_configured) return false;
 
@@ -78,65 +75,52 @@ async function sendToSubscription(
     // Update last pushed timestamp
     await db.updatePushSubscriptionLastPushed(sub.id).catch(() => {});
     // Log success
-    await db
-      .logPushNotification({
-        subscriptionId: sub.id,
-        userId: userId ?? null,
-        title: payload.title,
-        body: payload.body,
-        url: payload.url ?? null,
-        tag: payload.tag ?? null,
-        status: "sent",
-      })
-      .catch(() => {});
+    await db.logPushNotification({
+      subscriptionId: sub.id,
+      userId: userId ?? null,
+      title: payload.title,
+      body: payload.body,
+      url: payload.url ?? null,
+      tag: payload.tag ?? null,
+      status: "sent",
+    }).catch(() => {});
     return true;
   } catch (err: any) {
     const statusCode = err?.statusCode || err?.code;
 
     if (statusCode === 410 || statusCode === 404) {
       // Subscription expired — remove it
-      console.log(
-        `[Push] Subscription expired (${statusCode}) — removing endpoint`
-      );
+      console.log(`[Push] Subscription expired (${statusCode}) — removing endpoint`);
       await db.deletePushSubscription(sub.endpoint).catch(() => {});
-      await db
-        .logPushNotification({
-          subscriptionId: sub.id,
-          userId: userId ?? null,
-          title: payload.title,
-          body: payload.body,
-          url: payload.url ?? null,
-          tag: payload.tag ?? null,
-          status: "expired",
-          errorMessage: `HTTP ${statusCode}`,
-        })
-        .catch(() => {});
+      await db.logPushNotification({
+        subscriptionId: sub.id,
+        userId: userId ?? null,
+        title: payload.title,
+        body: payload.body,
+        url: payload.url ?? null,
+        tag: payload.tag ?? null,
+        status: "expired",
+        errorMessage: `HTTP ${statusCode}`,
+      }).catch(() => {});
     } else {
-      console.warn(
-        `[Push] Send failed (${statusCode}): ${err?.message?.substring(0, 100)}`
-      );
-      await db
-        .logPushNotification({
-          subscriptionId: sub.id,
-          userId: userId ?? null,
-          title: payload.title,
-          body: payload.body,
-          url: payload.url ?? null,
-          tag: payload.tag ?? null,
-          status: "failed",
-          errorMessage: String(err?.message).substring(0, 500),
-        })
-        .catch(() => {});
+      console.warn(`[Push] Send failed (${statusCode}): ${err?.message?.substring(0, 100)}`);
+      await db.logPushNotification({
+        subscriptionId: sub.id,
+        userId: userId ?? null,
+        title: payload.title,
+        body: payload.body,
+        url: payload.url ?? null,
+        tag: payload.tag ?? null,
+        status: "failed",
+        errorMessage: String(err?.message).substring(0, 500),
+      }).catch(() => {});
     }
     return false;
   }
 }
 
 // ─── SEND TO A SPECIFIC USER ───
-export async function sendPushToUser(
-  userId: number,
-  payload: PushPayload
-): Promise<{ sent: number; failed: number }> {
+export async function sendPushToUser(userId: number, payload: PushPayload): Promise<{ sent: number; failed: number }> {
   if (!_configured) return { sent: 0, failed: 0 };
 
   const subs = await db.getUserPushSubscriptions(userId);
@@ -151,9 +135,7 @@ export async function sendPushToUser(
 }
 
 // ─── BROADCAST TO ALL ACTIVE SUBSCRIBERS ───
-export async function broadcastPush(
-  payload: PushPayload
-): Promise<{ sent: number; failed: number; expired: number }> {
+export async function broadcastPush(payload: PushPayload): Promise<{ sent: number; failed: number; expired: number }> {
   if (!_configured) return { sent: 0, failed: 0, expired: 0 };
 
   const subs = await db.getActivePushSubscriptions();
@@ -176,15 +158,8 @@ export async function broadcastPush(
     }
   }
 
-  console.log(
-    `[Push] Broadcast: ${stats.sent} sent, ${stats.failed} failed (${subs.length} total subscribers)`
-  );
-  db.logSystem({
-    level: stats.failed > 0 ? "warn" : "info",
-    source: "push",
-    action: "broadcast",
-    message: `Push broadcast: ${stats.sent} sent, ${stats.failed} failed — "${payload.title}"`,
-  }).catch(() => {});
+  console.log(`[Push] Broadcast: ${stats.sent} sent, ${stats.failed} failed (${subs.length} total subscribers)`);
+  db.logSystem({ level: stats.failed > 0 ? "warn" : "info", source: "push", action: "broadcast", message: `Push broadcast: ${stats.sent} sent, ${stats.failed} failed — "${payload.title}"` }).catch(() => {});
   return stats;
 }
 
@@ -194,7 +169,7 @@ export async function broadcastPush(
 export async function notifyOrderStatusChange(
   userId: number,
   orderNumber: string,
-  status: string
+  status: string,
 ): Promise<void> {
   const messages: Record<string, PushPayload> = {
     confirmed: {
@@ -232,7 +207,7 @@ export async function notifyOrderStatusChange(
 export async function notifyPaymentReceived(
   userId: number,
   orderNumber: string,
-  amount: number
+  amount: number,
 ): Promise<void> {
   await sendPushToUser(userId, {
     title: "Payment Received",
@@ -244,7 +219,7 @@ export async function notifyPaymentReceived(
 
 export async function notifyTierUpgrade(
   userId: number,
-  newTier: string
+  newTier: string,
 ): Promise<void> {
   await sendPushToUser(userId, {
     title: "Tier Upgrade!",
@@ -256,7 +231,7 @@ export async function notifyTierUpgrade(
 
 export async function notifyNewProductDrop(
   productName: string,
-  slug: string
+  slug: string,
 ): Promise<void> {
   await broadcastPush({
     title: "New Drop",
@@ -272,22 +247,16 @@ export async function sendWinbackNotifications(): Promise<number> {
   let sent = 0;
 
   for (const sub of allSubs) {
-    const lastPush = sub.lastPushedAt
-      ? new Date(sub.lastPushedAt).getTime()
-      : 0;
+    const lastPush = sub.lastPushedAt ? new Date(sub.lastPushedAt).getTime() : 0;
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     if (lastPush < thirtyDaysAgo) {
-      const ok = await sendToSubscription(
-        sub,
-        {
-          title: "We miss you",
-          body: "New arrivals since your last visit. Come check them out.",
-          url: "/shop?sort=newest",
-          tag: "winback",
-        },
-        sub.userId
-      );
+      const ok = await sendToSubscription(sub, {
+        title: "We miss you",
+        body: "New arrivals since your last visit. Come check them out.",
+        url: "/shop?sort=newest",
+        tag: "winback",
+      }, sub.userId);
       if (ok) sent++;
     }
   }

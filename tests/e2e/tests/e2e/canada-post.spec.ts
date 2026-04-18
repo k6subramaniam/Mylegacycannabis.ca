@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import path from "path";
+import { test, expect } from '@playwright/test';
+import path from 'path';
 
 /**
  * CANADA POST INTEGRATION TESTS — PRs #7, #104
@@ -7,28 +7,28 @@ import path from "path";
  * Tag: @critical @shipping @canada-post
  */
 
-const USER_AUTH = path.join("./tests/e2e", "../.auth/user.json");
-const ADMIN_AUTH = path.join("./tests/e2e", "../.auth/admin.json");
+const USER_AUTH = path.join('./tests/e2e', '../.auth/user.json');
+const ADMIN_AUTH = path.join('./tests/e2e', '../.auth/admin.json');
 
-test.describe("Canada Post Integration @critical @shipping @canada-post", () => {
+test.describe('Canada Post Integration @critical @shipping @canada-post', () => {
+
   // ═══════════════════════════════════════
   // SHIPPING RATE LOOKUP
   // ═══════════════════════════════════════
 
-  test.describe("Rate Lookup", () => {
-    test("shipping rates API returns valid options for Canadian postal codes", async ({
-      request,
-    }) => {
-      const res = await request.post("/api/shipping/rates", {
+  test.describe('Rate Lookup', () => {
+
+    test('shipping rates API returns valid options for Canadian postal codes', async ({ request }) => {
+      const res = await request.post('/api/shipping/rates', {
         data: {
-          destinationPostalCode: "M5V1A1",
+          destinationPostalCode: 'M5V1A1',
           weight: 0.5,
-          storeId: "toronto-queen-west",
+          storeId: 'toronto-queen-west',
         },
       });
 
       if (res.status() === 404) {
-        test.skip(true, "Shipping rates endpoint not deployed yet");
+        test.skip(true, 'Shipping rates endpoint not deployed yet');
         return;
       }
 
@@ -39,8 +39,8 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
 
           // Each rate should have required fields
           for (const rate of data.rates) {
-            expect(rate).toHaveProperty("serviceCode");
-            expect(rate).toHaveProperty("totalPrice");
+            expect(rate).toHaveProperty('serviceCode');
+            expect(rate).toHaveProperty('totalPrice');
             expect(rate.totalPrice).toBeGreaterThan(0);
           }
         } else if (data.fallbackRates) {
@@ -50,16 +50,16 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
       }
     });
 
-    test("rate lookup rejects invalid postal codes", async ({ request }) => {
-      const res = await request.post("/api/shipping/rates", {
+    test('rate lookup rejects invalid postal codes', async ({ request }) => {
+      const res = await request.post('/api/shipping/rates', {
         data: {
-          destinationPostalCode: "INVALID",
+          destinationPostalCode: 'INVALID',
           weight: 0.5,
         },
       });
 
       if (res.status() === 404) {
-        test.skip(true, "Shipping rates endpoint not deployed");
+        test.skip(true, 'Shipping rates endpoint not deployed');
         return;
       }
 
@@ -72,24 +72,23 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
   // TRACKING
   // ═══════════════════════════════════════
 
-  test.describe("Tracking", () => {
-    test("tracking API validates PIN format", async ({ request }) => {
+  test.describe('Tracking', () => {
+
+    test('tracking API validates PIN format', async ({ request }) => {
       // Invalid tracking number
-      const res = await request.get("/api/shipping/track/ABC");
+      const res = await request.get('/api/shipping/track/ABC');
       if (res.status() === 404) {
-        test.skip(true, "Tracking endpoint not deployed");
+        test.skip(true, 'Tracking endpoint not deployed');
         return;
       }
       expect(res.status()).toBe(400);
     });
 
-    test("tracking endpoint accepts valid Canada Post PIN format", async ({
-      request,
-    }) => {
+    test('tracking endpoint accepts valid Canada Post PIN format', async ({ request }) => {
       // Valid format (16 digits) — won't match a real parcel but should not crash
-      const res = await request.get("/api/shipping/track/1234567890123456");
+      const res = await request.get('/api/shipping/track/1234567890123456');
       if (res.status() === 404) {
-        test.skip(true, "Tracking endpoint not deployed");
+        test.skip(true, 'Tracking endpoint not deployed');
         return;
       }
       // Should be 200 (no data) or 400/404 (not found) — not 500
@@ -101,24 +100,23 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
   // POSTAL CODE VALIDATION
   // ═══════════════════════════════════════
 
-  test.describe("Postal Code Validation", () => {
-    test("validates correct Canadian postal codes", async ({ request }) => {
-      const res = await request.get(
-        "/api/shipping/validate-postal?code=M5V1A1"
-      );
+  test.describe('Postal Code Validation', () => {
+
+    test('validates correct Canadian postal codes', async ({ request }) => {
+      const res = await request.get('/api/shipping/validate-postal?code=M5V1A1');
       if (res.status() === 404) {
-        test.skip(true, "Postal validation not deployed");
+        test.skip(true, 'Postal validation not deployed');
         return;
       }
       const data = await res.json();
       expect(data.valid).toBe(true);
-      expect(data.formatted).toBe("M5V 1A1");
+      expect(data.formatted).toBe('M5V 1A1');
     });
 
-    test("rejects invalid postal codes", async ({ request }) => {
-      const res = await request.get("/api/shipping/validate-postal?code=12345");
+    test('rejects invalid postal codes', async ({ request }) => {
+      const res = await request.get('/api/shipping/validate-postal?code=12345');
       if (res.status() === 404) {
-        test.skip(true, "Postal validation not deployed");
+        test.skip(true, 'Postal validation not deployed');
         return;
       }
       const data = await res.json();
@@ -130,22 +128,18 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
   // CUSTOMER-FACING TRACKING UI
   // ═══════════════════════════════════════
 
-  test.describe("Order Tracking UI", () => {
+  test.describe('Order Tracking UI', () => {
     test.use({ storageState: USER_AUTH });
 
-    test("account orders page shows tracking info for shipped orders", async ({
-      page,
-    }) => {
-      await page.goto("/account");
+    test('account orders page shows tracking info for shipped orders', async ({ page }) => {
+      await page.goto('/account');
 
-      const ordersTab = page.getByRole("button", { name: /orders/i });
+      const ordersTab = page.getByRole('button', { name: /orders/i });
       await ordersTab.click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState('networkidle');
 
       // Check if any orders have tracking numbers
-      const trackingElements = page.locator(
-        '[class*="tracking"], a[href*="canadapost"], [data-testid*="tracking"]'
-      );
+      const trackingElements = page.locator('[class*="tracking"], a[href*="canadapost"], [data-testid*="tracking"]');
       const count = await trackingElements.count();
 
       if (count > 0) {
@@ -162,43 +156,32 @@ test.describe("Canada Post Integration @critical @shipping @canada-post", () => 
   // ADMIN TRACKING WIDGET
   // ═══════════════════════════════════════
 
-  test.describe("Admin Tracking", () => {
+  test.describe('Admin Tracking', () => {
     test.use({ storageState: ADMIN_AUTH });
 
-    test("admin can add tracking number to an order", async ({ page }) => {
-      await page.goto("/admin");
+    test('admin can add tracking number to an order', async ({ page }) => {
+      await page.goto('/admin');
 
-      const ordersLink = page
-        .getByRole("link", { name: /orders/i })
-        .or(page.getByRole("button", { name: /orders/i }));
-      if (
-        !(await ordersLink.isVisible({ timeout: 3_000 }).catch(() => false))
-      ) {
-        test.skip(true, "Orders not visible in admin");
+      const ordersLink = page.getByRole('link', { name: /orders/i }).or(page.getByRole('button', { name: /orders/i }));
+      if (!(await ordersLink.isVisible({ timeout: 3_000 }).catch(() => false))) {
+        test.skip(true, 'Orders not visible in admin');
         return;
       }
       await ordersLink.click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState('networkidle');
 
       // Look for tracking input field or "Add Tracking" button on any order
-      const trackingInput = page
-        .locator('input[placeholder*="tracking"], input[name*="tracking"]')
-        .first();
-      const addTrackingBtn = page
-        .getByRole("button", { name: /add tracking|tracking/i })
-        .first();
+      const trackingInput = page.locator('input[placeholder*="tracking"], input[name*="tracking"]').first();
+      const addTrackingBtn = page.getByRole('button', { name: /add tracking|tracking/i }).first();
 
-      const hasTrackingUI =
-        (await trackingInput
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false)) ||
-        (await addTrackingBtn.isVisible({ timeout: 2_000 }).catch(() => false));
+      const hasTrackingUI = await trackingInput.isVisible({ timeout: 3_000 }).catch(() => false)
+        || await addTrackingBtn.isVisible({ timeout: 2_000 }).catch(() => false);
 
       // Just verify the UI exists without actually modifying orders
       if (hasTrackingUI) {
         // Tracking number validation: Canada Post format should be accepted
         if (await trackingInput.isVisible().catch(() => false)) {
-          await trackingInput.fill("1234567890123456");
+          await trackingInput.fill('1234567890123456');
           // Should not show a validation error for this format
         }
       }

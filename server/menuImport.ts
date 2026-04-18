@@ -17,10 +17,10 @@ import { getMlcContextBrief } from "./mlcContext";
 // ─── Types ───
 
 export interface ParsedMenuItem {
-  category: string; // "Indica Flower", "Sativa Flower", "Hybrid Flower", "Ounce Deals", "Shake n Bake"
-  grade: string; // "AAAA", "AAA+", "AAA", "AAA-", "AA+", "AA", "SHAKE"
-  strain: string; // e.g. "PINK TACO"
-  thc: string; // e.g. "29-33%"
+  category: string;     // "Indica Flower", "Sativa Flower", "Hybrid Flower", "Ounce Deals", "Shake n Bake"
+  grade: string;        // "AAAA", "AAA+", "AAA", "AAA-", "AA+", "AA", "SHAKE"
+  strain: string;       // e.g. "PINK TACO"
+  thc: string;          // e.g. "29-33%"
   isNew: boolean;
   prices: {
     "1g"?: string | null;
@@ -32,14 +32,12 @@ export interface ParsedMenuItem {
 }
 
 export interface MenuImportPayload {
-  items: Array<
-    ParsedMenuItem & {
-      stock: number; // Admin sets this before import
-      include: boolean; // Admin can exclude items
-    }
-  >;
-  deactivateOldFlower: boolean; // Deactivate flower products not in this import
-  defaultStock: number; // Default stock for all items
+  items: Array<ParsedMenuItem & {
+    stock: number;         // Admin sets this before import
+    include: boolean;      // Admin can exclude items
+  }>;
+  deactivateOldFlower: boolean;   // Deactivate flower products not in this import
+  defaultStock: number;           // Default stock for all items
 }
 
 // ─── Vision parsing ───
@@ -69,15 +67,10 @@ Example output format:
   {"category":"Sativa Flower","grade":"AAA","strain":"VANILLA LIME","thc":"25-27%","isNew":false,"prices":{"1g":null,"3.5g":"$20","7g":"$50","14g":"$70","28g":"$139"}}
 ]`;
 
-export async function parseMenuImage(
-  base64Image: string,
-  mimeType: string = "image/png"
-): Promise<ParsedMenuItem[]> {
+export async function parseMenuImage(base64Image: string, mimeType: string = "image/png"): Promise<ParsedMenuItem[]> {
   const config = await getAiConfig();
 
-  console.log(
-    `[MenuImport] Sending image to ${config.provider} vision for parsing...`
-  );
+  console.log(`[MenuImport] Sending image to ${config.provider} vision for parsing...`);
   const startTime = Date.now();
 
   let raw = "";
@@ -90,89 +83,60 @@ export async function parseMenuImage(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: MENU_PARSE_PROMPT },
-              { inlineData: { mimeType, data: base64Image } },
-            ],
-          },
-        ],
+        contents: [{
+          parts: [
+            { text: MENU_PARSE_PROMPT },
+            { inlineData: { mimeType, data: base64Image } },
+          ],
+        }],
         generationConfig: { maxOutputTokens: 8000, temperature: 0.1 },
       }),
     });
     if (!resp.ok) {
       const errText = await resp.text();
-      throw new Error(
-        `Gemini vision API error ${resp.status}: ${errText.slice(0, 300)}`
-      );
+      throw new Error(`Gemini vision API error ${resp.status}: ${errText.slice(0, 300)}`);
     }
     const data = await resp.json();
     raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } else {
     // Use OpenAI-compatible API (admin key, Forge proxy, or direct OpenAI)
     const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
-    const baseUrl =
-      config.apiKey &&
-      config.apiKey !== (process.env.BUILT_IN_FORGE_API_KEY || "")
-        ? config.baseUrl || "https://api.openai.com/v1"
-        : process.env.BUILT_IN_FORGE_API_URL ||
-          process.env.OPENAI_BASE_URL ||
-          "https://api.openai.com/v1";
+    const baseUrl = (config.apiKey && config.apiKey !== (process.env.BUILT_IN_FORGE_API_KEY || ""))
+      ? (config.baseUrl || "https://api.openai.com/v1")
+      : (process.env.BUILT_IN_FORGE_API_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1");
 
-    if (!apiKey)
-      throw new Error(
-        "No AI API key configured. Go to Admin > Settings > AI Configuration to set one up."
-      );
+    if (!apiKey) throw new Error("No AI API key configured. Go to Admin > Settings > AI Configuration to set one up.");
 
     const model = config.model || "gpt-4o";
-    const resp = await fetch(
-      `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`.replace(
-        "/v1/v1/",
-        "/v1/"
-      ),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: MENU_PARSE_PROMPT },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${mimeType};base64,${base64Image}`,
-                    detail: "high",
-                  },
-                },
-              ],
-            },
+    const resp = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/chat/completions`.replace("/v1/v1/", "/v1/"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: MENU_PARSE_PROMPT },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: "high" } },
           ],
-          max_tokens: 8000,
-          temperature: 0.1,
-        }),
-      }
-    );
+        }],
+        max_tokens: 8000,
+        temperature: 0.1,
+      }),
+    });
     if (!resp.ok) {
       const errText = await resp.text();
-      throw new Error(
-        `OpenAI vision API error ${resp.status}: ${errText.slice(0, 300)}`
-      );
+      throw new Error(`OpenAI vision API error ${resp.status}: ${errText.slice(0, 300)}`);
     }
     const data = await resp.json();
     raw = data.choices?.[0]?.message?.content || "";
   }
 
   const latency = Date.now() - startTime;
-  console.log(
-    `[MenuImport] AI response received in ${latency}ms (${raw.length} chars)`
-  );
+  console.log(`[MenuImport] AI response received in ${latency}ms (${raw.length} chars)`);
 
   // Parse JSON from response (may be wrapped in ```json ... ```)
   let jsonStr = raw.trim();
@@ -184,19 +148,12 @@ export async function parseMenuImage(
   try {
     items = JSON.parse(jsonStr);
   } catch (err: any) {
-    console.error(
-      "[MenuImport] Failed to parse GPT response as JSON:",
-      raw.substring(0, 500)
-    );
-    throw new Error(
-      `AI returned invalid JSON. Please try again. Parse error: ${err.message}`
-    );
+    console.error("[MenuImport] Failed to parse GPT response as JSON:", raw.substring(0, 500));
+    throw new Error(`AI returned invalid JSON. Please try again. Parse error: ${err.message}`);
   }
 
   if (!Array.isArray(items) || items.length === 0) {
-    throw new Error(
-      "AI did not find any products in the image. Please upload a clear menu photo."
-    );
+    throw new Error("AI did not find any products in the image. Please upload a clear menu photo.");
   }
 
   // Validate and normalize
@@ -227,37 +184,13 @@ function normPrice(p: any): string | null {
 
 // ─── Map category to DB fields ───
 
-function mapCategory(menuCategory: string): {
-  category: string;
-  strainType: "Indica" | "Sativa" | "Hybrid";
-  subcategory: string | null;
-} {
+function mapCategory(menuCategory: string): { category: string; strainType: "Indica" | "Sativa" | "Hybrid"; subcategory: string | null } {
   const cat = menuCategory.toLowerCase();
-  if (cat.includes("ounce deal"))
-    return { category: "ounce-deals", strainType: "Hybrid", subcategory: null };
-  if (cat.includes("shake"))
-    return {
-      category: "shake-n-bake",
-      strainType: "Hybrid",
-      subcategory: null,
-    };
-  if (cat.includes("indica"))
-    return {
-      category: "flower",
-      strainType: "Indica",
-      subcategory: "Indica Flower",
-    };
-  if (cat.includes("sativa"))
-    return {
-      category: "flower",
-      strainType: "Sativa",
-      subcategory: "Sativa Flower",
-    };
-  return {
-    category: "flower",
-    strainType: "Hybrid",
-    subcategory: "Hybrid Flower",
-  };
+  if (cat.includes("ounce deal"))    return { category: "ounce-deals",   strainType: "Hybrid",  subcategory: null };
+  if (cat.includes("shake"))          return { category: "shake-n-bake",  strainType: "Hybrid",  subcategory: null };
+  if (cat.includes("indica"))         return { category: "flower",        strainType: "Indica",  subcategory: "Indica Flower" };
+  if (cat.includes("sativa"))         return { category: "flower",        strainType: "Sativa",  subcategory: "Sativa Flower" };
+  return { category: "flower", strainType: "Hybrid", subcategory: "Hybrid Flower" };
 }
 
 function makeSlug(strain: string, weight: string): string {
@@ -270,10 +203,7 @@ function makeSlug(strain: string, weight: string): string {
 /**
  * Pick the "primary" weight option for display price (preferring 3.5g, then 7g, 14g, 28g, 1g)
  */
-function primaryPrice(prices: ParsedMenuItem["prices"]): {
-  weight: string;
-  price: string;
-} {
+function primaryPrice(prices: ParsedMenuItem["prices"]): { weight: string; price: string } {
   const pref = ["3.5g", "7g", "14g", "28g", "1g"] as const;
   for (const w of pref) {
     if (prices[w]) return { weight: w, price: prices[w]! };
@@ -291,21 +221,12 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
 }> {
   const { items, deactivateOldFlower, defaultStock } = payload;
   const included = items.filter(i => i.include);
-  let created = 0,
-    updated = 0,
-    deactivated = 0,
-    skipped = 0;
+  let created = 0, updated = 0, deactivated = 0, skipped = 0;
 
   // Get all existing menu-imported products for matching (flower, ounce-deals, shake-n-bake)
   const menuCategories = new Set(["flower", "ounce-deals", "shake-n-bake"]);
-  const existingProducts = await db.getAllProducts({
-    page: 1,
-    limit: 1000,
-    activeOnly: false,
-  });
-  const existingFlower = existingProducts.data.filter((p: any) =>
-    menuCategories.has(p.category)
-  );
+  const existingProducts = await db.getAllProducts({ page: 1, limit: 1000, activeOnly: false });
+  const existingFlower = existingProducts.data.filter((p: any) => menuCategories.has(p.category));
 
   // Track which existing products were matched (to know which to deactivate)
   const matchedIds = new Set<number>();
@@ -329,8 +250,7 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
       const name = `${titleCase(item.strain)} — ${weight}`;
       const slug = makeSlug(item.strain, weight);
       const shortDesc = `${item.grade} Grade ${strainType} | THC: ${item.thc} | ${weight}`;
-      const description =
-        `${titleCase(item.strain)} is a ${item.grade}-grade ${strainType.toLowerCase()} strain with ${item.thc} THC. Available in ${weight} size. Grade: ${item.grade}. ${item.isNew ? "NEW arrival!" : ""}`.trim();
+      const description = `${titleCase(item.strain)} is a ${item.grade}-grade ${strainType.toLowerCase()} strain with ${item.thc} THC. Available in ${weight} size. Grade: ${item.grade}. ${item.isNew ? "NEW arrival!" : ""}`.trim();
 
       // Check if this exact slug already exists
       const existing = existingFlower.find((p: any) => p.slug === slug);
@@ -391,9 +311,7 @@ export async function applyMenuImport(payload: MenuImportPayload): Promise<{
     }
   }
 
-  console.log(
-    `[MenuImport] Done: ${created} created, ${updated} updated, ${deactivated} deactivated, ${skipped} skipped`
-  );
+  console.log(`[MenuImport] Done: ${created} created, ${updated} updated, ${deactivated} deactivated, ${skipped} skipped`);
   return { created, updated, deactivated, skipped };
 }
 

@@ -17,8 +17,7 @@ import { ENV } from "./_core/env";
 
 // ─── Logo URL helper ───
 function getLogoUrlFallback(): string {
-  if (process.env.RAILWAY_PUBLIC_DOMAIN)
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/logo.png`;
   return `${process.env.SITE_URL || "https://mylegacycannabisca-production.up.railway.app"}/logo.png`;
 }
 
@@ -35,17 +34,11 @@ async function getLogoUrl(): Promise<string> {
 
 // ─── Types ───
 
-export type EmailProvider =
-  | "resend"
-  | "smtp"
-  | "sendgrid"
-  | "mailgun"
-  | "ses"
-  | "unknown";
+export type EmailProvider = "resend" | "smtp" | "sendgrid" | "mailgun" | "ses" | "unknown";
 
 export interface EmailEvent {
   id: string;
-  timestamp: string; // ISO-8601
+  timestamp: string;        // ISO-8601
   provider: EmailProvider;
   to: string;
   subject: string;
@@ -58,7 +51,7 @@ export interface HealthSnapshot {
   status: "healthy" | "degraded" | "down";
   activeProvider: EmailProvider | "none";
   uptime: {
-    last1h: number; // success rate 0–100
+    last1h: number;         // success rate 0–100
     last24h: number;
     allTime: number;
   };
@@ -71,8 +64,8 @@ export interface HealthSnapshot {
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
   lastFailureError: string | null;
-  monitoringSince: string; // ISO-8601 when monitor started
-  warnings: string[]; // actionable warnings for the admin
+  monitoringSince: string;  // ISO-8601 when monitor started
+  warnings: string[];       // actionable warnings for the admin
 }
 
 export interface PingResult {
@@ -115,9 +108,7 @@ export function getHealthDashboard(): HealthSnapshot {
 
   // Calculate success rates
   const calcRate = (cutoff: number): number => {
-    const filtered = events.filter(
-      e => new Date(e.timestamp).getTime() >= cutoff
-    );
+    const filtered = events.filter(e => new Date(e.timestamp).getTime() >= cutoff);
     if (filtered.length === 0) return 100; // no data = assume healthy
     const s = filtered.filter(e => e.status === "sent").length;
     return Math.round((s / filtered.length) * 100);
@@ -136,9 +127,7 @@ export function getHealthDashboard(): HealthSnapshot {
 
   // Last success / failure
   const lastSuccess = events.find(e => e.status === "sent");
-  const lastFailure = events.find(
-    e => e.status === "failed" || e.status === "bounced"
-  );
+  const lastFailure = events.find(e => e.status === "failed" || e.status === "bounced");
 
   // Status determination
   let status: "healthy" | "degraded" | "down" = "healthy";
@@ -148,37 +137,31 @@ export function getHealthDashboard(): HealthSnapshot {
   // Active provider
   let activeProvider: EmailProvider | "none" = "none";
   if (ENV.resendApiKey) activeProvider = "resend";
-  else if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass)
-    activeProvider = "smtp";
+  else if (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass) activeProvider = "smtp";
 
   // Actionable warnings
   const warnings: string[] = [];
 
   // Detect Resend domain restriction from recent failures
-  const domainError = events.find(
-    e =>
-      e.status === "failed" &&
-      e.error?.includes("can only send testing emails to your own email")
+  const domainError = events.find(e =>
+    e.status === "failed" && e.error?.includes("can only send testing emails to your own email")
   );
   if (domainError) {
     warnings.push(
       `Resend free tier: can only send to ${ENV.adminEmail || "your account email"}. ` +
-        `Verify a custom domain at resend.com/domains to send to any recipient (e.g. customers).`
+      `Verify a custom domain at resend.com/domains to send to any recipient (e.g. customers).`
     );
   }
 
   // SMTP port blocked
-  const smtpBlockedError = events.find(
-    e =>
-      e.status === "failed" &&
-      e.provider === "smtp" &&
-      (e.error?.includes("ENETUNREACH") ||
-        e.error?.includes("Connection timeout"))
+  const smtpBlockedError = events.find(e =>
+    e.status === "failed" && e.provider === "smtp" &&
+    (e.error?.includes("ENETUNREACH") || e.error?.includes("Connection timeout"))
   );
   if (smtpBlockedError) {
     warnings.push(
       "SMTP port 587 is blocked on Railway Hobby plan. SMTP fallback will not work. " +
-        "Use Resend as primary provider or upgrade to Railway Pro."
+      "Use Resend as primary provider or upgrade to Railway Pro."
     );
   }
 
@@ -249,7 +232,7 @@ export async function pingProvider(provider: string): Promise<PingResult> {
         });
         if (res.ok) {
           result.reachable = true;
-          const data = (await res.json()) as any;
+          const data = await res.json() as any;
           const domains = data?.data || [];
           const verified = domains.filter((d: any) => d.status === "verified");
           if (domains.length === 0) {
@@ -261,8 +244,7 @@ export async function pingProvider(provider: string): Promise<PingResult> {
           }
         } else {
           // Even non-200 means API is reachable (network works)
-          result.reachable =
-            res.status !== 500 && res.status !== 502 && res.status !== 503;
+          result.reachable = res.status !== 500 && res.status !== 502 && res.status !== 503;
           result.details = `API responded with ${res.status}. ${result.reachable ? "Network OK but check RESEND_API_KEY permissions." : "Resend may be experiencing an outage."}`;
         }
         break;
@@ -281,22 +263,13 @@ export async function pingProvider(provider: string): Promise<PingResult> {
         }
         // Try socket connection to SMTP port
         const net = await import("node:net");
-        const connected = await new Promise<boolean>(resolve => {
+        const connected = await new Promise<boolean>((resolve) => {
           const sock = net.createConnection(
             { host: addresses[0], port: ENV.smtpPort, timeout: 8_000 },
-            () => {
-              sock.destroy();
-              resolve(true);
-            }
+            () => { sock.destroy(); resolve(true); }
           );
-          sock.on("error", () => {
-            sock.destroy();
-            resolve(false);
-          });
-          sock.on("timeout", () => {
-            sock.destroy();
-            resolve(false);
-          });
+          sock.on("error", () => { sock.destroy(); resolve(false); });
+          sock.on("timeout", () => { sock.destroy(); resolve(false); });
         });
         result.reachable = connected;
         result.details = connected
@@ -330,16 +303,13 @@ export async function pingProvider(provider: string): Promise<PingResult> {
           result.details = "MAILGUN_API_KEY or MAILGUN_DOMAIN not configured";
           break;
         }
-        const res = await fetch(
-          `https://api.mailgun.net/v3/${domain}/stats/total?event=accepted&duration=1h`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Basic ${Buffer.from(`api:${key}`).toString("base64")}`,
-            },
-            signal: AbortSignal.timeout(10_000),
-          }
-        );
+        const res = await fetch(`https://api.mailgun.net/v3/${domain}/stats/total?event=accepted&duration=1h`, {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${Buffer.from(`api:${key}`).toString("base64")}`,
+          },
+          signal: AbortSignal.timeout(10_000),
+        });
         result.reachable = res.ok;
         result.details = res.ok
           ? `Mailgun API reachable for domain ${domain} (${res.status})`
@@ -453,12 +423,11 @@ export function getAvailableProviders(): Array<{
       name: "smtp",
       configured: !!(ENV.smtpHost && ENV.smtpUser && ENV.smtpPass),
       envKeys: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"],
-      warning:
-        ENV.smtpHost && ENV.smtpUser && !ENV.smtpPass
-          ? "SMTP_PASS is missing. SMTP transport will not work."
-          : ENV.smtpHost && ENV.smtpUser && ENV.smtpPass
-            ? "Railway Hobby plan blocks SMTP ports 465/587. SMTP only works on Railway Pro or local dev."
-            : undefined,
+      warning: (ENV.smtpHost && ENV.smtpUser && !ENV.smtpPass)
+        ? "SMTP_PASS is missing. SMTP transport will not work."
+        : (ENV.smtpHost && ENV.smtpUser && ENV.smtpPass)
+          ? "Railway Hobby plan blocks SMTP ports 465/587. SMTP only works on Railway Pro or local dev."
+          : undefined,
     },
     {
       name: "sendgrid",
@@ -472,9 +441,7 @@ export function getAvailableProviders(): Array<{
     },
     {
       name: "ses",
-      configured: !!(
-        process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ),
+      configured: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
       envKeys: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"],
     },
   ];

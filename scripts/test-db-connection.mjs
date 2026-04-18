@@ -10,9 +10,7 @@ import postgres from "postgres";
 const url = process.env.DATABASE_URL;
 
 if (!url) {
-  console.error(
-    "DATABASE_URL is not set. Set it in .env or as an environment variable."
-  );
+  console.error("DATABASE_URL is not set. Set it in .env or as an environment variable.");
   process.exit(1);
 }
 
@@ -22,8 +20,7 @@ console.log(`  Host: ${url.replace(/:[^:@]+@/, ":***@")}`);
 try {
   const sql = postgres(url, { max: 1, connect_timeout: 10, idle_timeout: 5 });
 
-  const [result] =
-    await sql`SELECT NOW() as now, current_database() as db, version() as version`;
+  const [result] = await sql`SELECT NOW() as now, current_database() as db, version() as version`;
 
   console.log("\nConnection successful!");
   console.log(`  Database: ${result.db}`);
@@ -38,9 +35,7 @@ try {
   `;
 
   if (tables.length === 0) {
-    console.log(
-      "\n  No tables yet — they will be created on first server startup."
-    );
+    console.log("\n  No tables yet — they will be created on first server startup.");
   } else {
     console.log(`\n  Tables (${tables.length}):`);
     for (const t of tables) {

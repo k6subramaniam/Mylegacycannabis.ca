@@ -30,26 +30,25 @@
 // ─── Brand colours (2026 MLC Brand Guidelines) ─────────────────────
 export const BRAND = {
   /** Legacy Purple — primary brand colour (header/footer bg, CTA) */
-  purple: "#4B2DBE",
+  purple: '#4B2DBE',
   /** Legacy Purple Dark — secondary darker purple */
-  purpleDark: "#3A2270",
+  purpleDark: '#3A2270',
   /** Legacy Orange — accent colour */
-  orange: "#F19929",
+  orange: '#F19929',
   /** Orange Light — secondary accent */
-  orangeLight: "#F5A623",
+  orangeLight: '#F5A623',
   /** Accent stripe — matches the logo's yellow/orange/red bar */
-  stripe:
-    "linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%)",
+  stripe: 'linear-gradient(90deg, #F5C518 0%, #F19929 35%, #E8792B 65%, #C42B2B 100%)',
   /** Charcoal — body text */
-  charcoal: "#323233",
+  charcoal: '#323233',
   /** Gray Medium */
-  gray: "#858481",
+  gray: '#858481',
   /** Page background — light gray */
-  pageBg: "#F5F5F5",
+  pageBg: '#F5F5F5',
   /** Card background — white */
-  cardBg: "#FFFFFF",
+  cardBg: '#FFFFFF',
   /** White */
-  white: "#FFFFFF",
+  white: '#FFFFFF',
 } as const;
 
 // ─── Shared HTML fragments ──────────────────────────────────────────
@@ -119,11 +118,7 @@ export const ADMIN_FOOTER = `
  * @param footer - Which footer to use (CUSTOMER_FOOTER or ADMIN_FOOTER)
  * @returns Complete HTML document string ready for variable replacement
  */
-export function emailShell(
-  title: string,
-  bodyRows: string,
-  footer: string
-): string {
+export function emailShell(title: string, bodyRows: string, footer: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -151,10 +146,7 @@ export function emailShell(
 // ─── Convenience helpers for building template body rows ────────────
 
 /** Gradient heading row — uses brand purple gradient */
-export function headingRow(
-  text: string,
-  gradient = `linear-gradient(135deg, ${BRAND.purple} 0%, ${BRAND.purpleDark} 100%)`
-): string {
+export function headingRow(text: string, gradient = `linear-gradient(135deg, ${BRAND.purple} 0%, ${BRAND.purpleDark} 100%)`): string {
   return `
                     <tr>
                         <td style="background:${gradient}; padding:20px 30px; text-align:center;">
@@ -174,11 +166,7 @@ export function bodyRow(html: string): string {
 }
 
 /** CTA button HTML — pill-shaped per brand guidelines */
-export function ctaButton(
-  text: string,
-  href = "{{action_url}}",
-  bgColor = BRAND.orange
-): string {
+export function ctaButton(text: string, href = '{{action_url}}', bgColor = BRAND.orange): string {
   return `<div style="text-align:center; margin:28px 0;">
     <a href="${href}" style="display:inline-block; background-color:${bgColor}; color:#FFFFFF; text-decoration:none; padding:14px 40px; border-radius:50px; font-size:15px; font-weight:bold; font-family:'Roboto',Arial,Helvetica,sans-serif; text-transform:uppercase; letter-spacing:0.5px;">${text}</a>
 </div>`;

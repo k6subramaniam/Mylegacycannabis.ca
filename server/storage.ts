@@ -5,17 +5,17 @@
 // IMPORTANT: All local uploads are also persisted to the database (file_store table)
 // so they survive container deploys on Railway / Docker.
 
-import { ENV } from "./_core/env";
-import fs from "fs";
-import path from "path";
-import * as db from "./db";
+import { ENV } from './_core/env';
+import fs from 'fs';
+import path from 'path';
+import * as db from './db';
 
 // ─── Image optimization constants ──────────────────────────────────────────────
 // Responsive breakpoints for product images
 const IMAGE_SIZES = {
-  thumb: { width: 200, suffix: "-thumb" }, // product list thumbnails
-  card: { width: 400, suffix: "-card" }, // shop grid cards
-  full: { width: 1200, suffix: "" }, // product detail page (original name)
+  thumb:  { width: 200, suffix: '-thumb' },   // product list thumbnails
+  card:   { width: 400, suffix: '-card' },     // shop grid cards
+  full:   { width: 1200, suffix: '' },         // product detail page (original name)
 } as const;
 const WEBP_QUALITY = 82;
 const IS_IMAGE_RE = /\.(png|jpe?g|webp|avif|gif|heic|heif|tiff?)$/i;
@@ -102,17 +102,12 @@ async function optimizeImage(
   buf: Buffer,
   baseName: string,
   uploadsDir: string,
-  clientUploadsDir: string | null
+  clientUploadsDir: string | null,
 ): Promise<OptimizedImages | null> {
   try {
     const sharp = await import("sharp").then(m => m.default);
     const stem = baseName.replace(/\.[^.]+$/, ""); // e.g. "abc123"
-    const results: OptimizedImages = {
-      url: "",
-      thumb: "",
-      card: "",
-      original: "",
-    };
+    const results: OptimizedImages = { url: "", thumb: "", card: "", original: "" };
 
     for (const [key, { width, suffix }] of Object.entries(IMAGE_SIZES)) {
       const webpName = `${stem}${suffix}.webp`;
@@ -125,19 +120,14 @@ async function optimizeImage(
         fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
       }
       // Persist optimized variant to DB
-      db.fileStorePut(`uploads/${webpName}`, webpBuf, "image/webp").catch(err =>
-        console.warn(
-          `[Storage] DB persist failed for uploads/${webpName}:`,
-          err.message
-        )
+      db.fileStorePut(`uploads/${webpName}`, webpBuf, 'image/webp').catch(err =>
+        console.warn(`[Storage] DB persist failed for uploads/${webpName}:`, err.message)
       );
       const publicUrl = `/uploads/${webpName}`;
-      if (key === "full") results.url = publicUrl;
+      if (key === "full")  results.url   = publicUrl;
       if (key === "thumb") results.thumb = publicUrl;
-      if (key === "card") results.card = publicUrl;
-      console.log(
-        `[Storage] WebP ${key}: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`
-      );
+      if (key === "card")  results.card  = publicUrl;
+      console.log(`[Storage] WebP ${key}: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
     }
     return results;
   } catch {
@@ -156,10 +146,7 @@ export async function storagePut(
     // No storage backend — save file to dist/public/uploads/ and serve
     // via Express static middleware. This avoids oversized data URLs in the DB.
     const key = normalizeKey(relKey);
-    const buf =
-      typeof data === "string"
-        ? Buffer.from(data, "utf8")
-        : Buffer.from(data as any);
+    const buf = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data as any);
 
     // Resolve the dist/public directory — check multiple possible locations:
     //   1. <cwd>/dist/public  (dev mode with vite build output)
@@ -167,12 +154,10 @@ export async function storagePut(
     const projectRoot = process.cwd();
     const candidates = [
       path.resolve(projectRoot, "dist", "public"),
-      ...(import.meta.dirname
-        ? [
-            path.resolve(import.meta.dirname, "_core", "public"),
-            path.resolve(import.meta.dirname, "..", "dist", "public"),
-          ]
-        : []),
+      ...(import.meta.dirname ? [
+        path.resolve(import.meta.dirname, "_core", "public"),
+        path.resolve(import.meta.dirname, "..", "dist", "public"),
+      ] : []),
     ];
     const distPath = candidates.find(p => fs.existsSync(p)) || candidates[0];
     const uploadsDir = path.join(distPath, "uploads");
@@ -185,10 +170,7 @@ export async function storagePut(
 
     // ── Persist to database so file survives container deploys ──
     db.fileStorePut(`uploads/${fileName}`, buf, contentType).catch(err =>
-      console.warn(
-        `[Storage] DB persist failed for uploads/${fileName}:`,
-        err.message
-      )
+      console.warn(`[Storage] DB persist failed for uploads/${fileName}:`, err.message)
     );
 
     // Also write to client/public/uploads/ so Vite dev server serves it too
@@ -212,37 +194,20 @@ export async function storagePut(
         try {
           const sharp = await import("sharp").then(m => m.default);
           const webpName = fileName.replace(/\.[^.]+$/, ".webp");
-          const webpBuf = await sharp(buf)
-            .resize({ width: 512, withoutEnlargement: true })
-            .webp({ quality: 85 })
-            .toBuffer();
+          const webpBuf = await sharp(buf).resize({ width: 512, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
           fs.writeFileSync(path.join(uploadsDir, webpName), webpBuf);
-          if (clientUploadsDir)
-            fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
+          if (clientUploadsDir) fs.writeFileSync(path.join(clientUploadsDir, webpName), webpBuf);
           // Persist WebP variant to DB
-          db.fileStorePut(`uploads/${webpName}`, webpBuf, "image/webp").catch(
-            err =>
-              console.warn(
-                `[Storage] DB persist failed for uploads/${webpName}:`,
-                err.message
-              )
+          db.fileStorePut(`uploads/${webpName}`, webpBuf, 'image/webp').catch(err =>
+            console.warn(`[Storage] DB persist failed for uploads/${webpName}:`, err.message)
           );
-          console.log(
-            `[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`
-          );
+          console.log(`[Storage] Auto-generated WebP: /uploads/${webpName} (${(webpBuf.length / 1024).toFixed(1)} KB)`);
         } catch {
-          console.log(
-            "[Storage] sharp not available — skipping WebP auto-generation"
-          );
+          console.log("[Storage] sharp not available — skipping WebP auto-generation");
         }
       } else {
         // Product / general image — responsive set
-        const result = await optimizeImage(
-          buf,
-          fileName,
-          uploadsDir,
-          clientUploadsDir
-        );
+        const result = await optimizeImage(buf, fileName, uploadsDir, clientUploadsDir);
         if (result) {
           result.original = publicUrl;
           optimized = result;
@@ -272,9 +237,7 @@ export async function storagePut(
   return { key, url };
 }
 
-export async function storageGet(
-  relKey: string
-): Promise<{ key: string; url: string }> {
+export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
   const config = getStorageConfig();
   if (!config) {
     const key = normalizeKey(relKey);

@@ -1,7 +1,5 @@
 # My Legacy Cannabis — AI-Generated Test Plans
-
 # Use with Playwright Test Agents: npx playwright init-agents
-
 # Then ask Claude Code or GitHub Copilot: "@planner explore specs/checkout-flow.md"
 
 ---
@@ -11,12 +9,10 @@
 ### e-Transfer Checkout — Complete Happy Path
 
 **Prerequisites:**
-
 - User is logged in and ID-verified
 - Shop has products in stock
 
 **Scenario:**
-
 1. Navigate to /shop
 2. Browse available products
 3. Click on any product to view details
@@ -37,7 +33,6 @@
 18. Verify the new order appears with "Pending Payment" status
 
 **Expected Outcomes:**
-
 - Order is created with status "Pending Payment"
 - The displayed amount has unique cents (not .00)
 - Payment instructions include the exact amount and order number
@@ -50,12 +45,10 @@
 ### Google OAuth Login — Session Handling
 
 **Prerequisites:**
-
 - Google OAuth is enabled on the platform
 - A Google test account is available
 
 **Scenario:**
-
 1. Navigate to /login
 2. Click "Sign In with Google"
 3. Complete Google OAuth flow (select account, authorize)
@@ -68,14 +61,12 @@
 10. Verify redirect to /account with full profile visible
 
 **Edge Case — Network Interruption:**
-
 1. Log in successfully via Google OAuth
 2. Simulate a network blip (go offline briefly)
 3. Come back online
 4. Verify the user is still logged in (NOT kicked to /login)
 
 **Expected Outcomes:**
-
 - Google OAuth redirect chain completes without landing on /login
 - Session is preserved across network interruptions
 - New Google users are prompted for phone before accessing account
@@ -87,12 +78,10 @@
 ### Admin Geo-Analytics Dashboard
 
 **Prerequisites:**
-
 - User is logged in as admin
 - Some behavioral analytics data exists (page views from different cities)
 
 **Scenario:**
-
 1. Navigate to /admin
 2. Click on "Insights" section
 3. Click the "Geo-Analytics" tab
@@ -113,7 +102,6 @@
 18. Verify it shows product categories with horizontal bars
 
 **Expected Outcomes:**
-
 - All sections render without errors
 - Period selector changes data across all sections
 - Province filter cross-filters the city table
@@ -126,11 +114,9 @@
 ### Rewards Program — Points & Referrals
 
 **Prerequisites:**
-
 - User is logged in with an existing account
 
 **Scenario:**
-
 1. Navigate to /account
 2. Click "My Rewards" tab
 3. Verify points balance is displayed
@@ -141,7 +127,6 @@
 8. Verify sharing options appear
 
 **Expected Outcomes:**
-
 - Points balance is a non-negative number
 - Referral code is a string that can be copied
 - The rewards section explains earning rates
@@ -153,11 +138,9 @@
 ### ID Verification Upload Flow
 
 **Prerequisites:**
-
 - User is logged in but NOT yet ID-verified
 
 **Scenario:**
-
 1. Navigate to /account
 2. Verify "Not Verified" status is shown
 3. Click "Verify Now"
@@ -170,7 +153,6 @@
 10. Verify the ID Verification section shows "Pending Review"
 
 **Expected Outcomes:**
-
 - Image upload works (file input accepts JPG/PNG)
 - Status transitions correctly
 - User cannot place orders until verified (if ID verification is enabled)
@@ -184,7 +166,6 @@
 **Device:** Samsung Galaxy S25 Ultra (412x915 viewport, touch enabled)
 
 **Scenario:**
-
 1. Navigate to / on mobile viewport
 2. Verify the hamburger menu is visible (not desktop nav)
 3. Tap the hamburger menu
@@ -201,7 +182,6 @@
 14. Verify keyboard appears when tapping email input
 
 **Expected Outcomes:**
-
 - All interactions are touch-friendly (44px minimum tap targets)
 - No horizontal scrolling on any page
 - Text is readable without zooming

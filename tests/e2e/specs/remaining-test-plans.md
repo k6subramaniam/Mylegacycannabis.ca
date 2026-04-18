@@ -1,5 +1,4 @@
 # My Legacy Cannabis — Remaining Feature Test Plans
-
 # For use with Playwright Test Agents (Planner/Generator/Healer)
 
 ---
@@ -11,7 +10,6 @@
 **Prerequisites:** Admin account, at least one test order
 
 **Scenario: Valid State Transitions**
-
 1. Navigate to Admin > Orders
 2. Find a "Pending Payment" order
 3. Verify only valid actions are shown (Confirm Payment, Cancel)
@@ -22,12 +20,10 @@
 8. Verify "Cancel" is no longer available on shipped orders
 
 **Scenario: Payment Gate**
-
 1. Try to mark an unpaid order as "Shipped" without confirming payment first
 2. System should block this transition with a clear error
 
 **Scenario: Cancel + Refund**
-
 1. Find a paid order
 2. Click "Cancel"
 3. Verify stock is restored
@@ -43,7 +39,6 @@
 **Prerequisites:** Admin account
 
 **Scenario:**
-
 1. Navigate to Admin > Settings
 2. Enable Maintenance Mode
 3. Verify a preview of the overlay is shown
@@ -63,7 +58,6 @@
 **Prerequisites:** User account without ID verification
 
 **Scenario: Manual Verification**
-
 1. Log in as unverified user
 2. Navigate to Account — status shows "Not Verified"
 3. Click "Verify Now"
@@ -80,7 +74,6 @@
 14. Verify status is now "Verified"
 
 **Scenario: AI Auto-Verification (PR #56)**
-
 1. Enable AI verification toggle in admin Settings
 2. Upload a clear ID image as a test user
 3. System should auto-approve if AI confidence is high
@@ -95,7 +88,6 @@
 **Prerequisites:** Admin account
 
 **Scenario:**
-
 1. Upload a new site logo via Admin > Settings
 2. Verify logo appears on the storefront
 3. Deploy a new version (simulate: the test verifies image accessibility)
@@ -112,7 +104,6 @@
 **Prerequisites:** Admin account
 
 **Scenario:**
-
 1. Navigate to Admin > Settings
 2. Find the Banner Messages section
 3. Add a new message: "Test Banner Message"
@@ -133,7 +124,6 @@
 **Prerequisites:** Admin account, health endpoint access
 
 **Scenario:**
-
 1. Call GET /api/health
 2. Verify response includes Gmail auth status
 3. If Gmail is connected: status should show "connected" or similar
