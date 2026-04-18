@@ -116,22 +116,17 @@ export const appRouter = router({
   // ─── NEWSLETTER ───
   newsletter: router({
     subscribe: publicProcedure
-      .input(
-        z.object({
-          email: z.string().email(),
-          source: z.string().optional(),
-        })
-      )
+      .input(z.object({ email: z.string().email() }))
       .mutation(async ({ input }) => {
-        const result = await db.subscribeNewsletter(input.email, input.source);
-        if (result.isNew) {
-          await triggerNewsletterWelcomeEmail({
+        const { isNew } = await db.subscribeNewsletter(input.email, "website");
+        if (isNew) {
+          triggerNewsletterWelcomeEmail({
             subscriberEmail: input.email,
-          }).catch(err => {
-            console.error("Failed to send newsletter welcome email:", err);
-          });
+          }).catch(err =>
+            console.warn("[Newsletter] Welcome email failed:", err.message)
+          );
         }
-        return result;
+        return { success: true, isNew };
       }),
   }),
 
@@ -240,11 +235,13 @@ export const appRouter = router({
   // ─── ADMIN: DASHBOARD ───
   admin: router({
     // ─── NEWSLETTER ───
-    getAllNewsletterSubscribers: adminProcedure.query(async () => {
-      return db.getAllNewsletterSubscribers();
-    }),
-    getNewsletterSubscriberCount: adminProcedure.query(async () => {
-      return db.getNewsletterSubscriberCount();
+    newsletterSubscribers: router({
+      list: adminProcedure.query(async () => {
+        return db.getAllNewsletterSubscribers();
+      }),
+      count: adminProcedure.query(async () => {
+        return { count: await db.getNewsletterSubscriberCount() };
+      }),
     }),
 
     stats: adminProcedure.query(async () => {

@@ -588,7 +588,7 @@ function NewsletterForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      subscribeMutation.mutate({ email, source: "homepage" });
+      subscribeMutation.mutate({ email });
     }
   };
   return (
