@@ -1,5 +1,3 @@
-🧪 [testing improvement] Add unit tests for isOptedOut function in geolocation
-
-🎯 What: Addressed the testing gap by writing comprehensive unit tests for the `isOptedOut` function in `server/geolocation.ts` which lacked test coverage for analytics opt-out mechanisms (DNT, sec-gpc, and cookies).
-📊 Coverage: Added scenarios for empty headers, correctly structured headers (DNT: '1'/'0', sec-gpc: '1'/'0'), and presence/absence/zero-values of the `mlc-analytics-optout` cookie (including amidst other cookies).
-✨ Result: Enhanced reliability by ensuring conditional privacy checks consistently respect the Do-Not-Track, Global Privacy Control, and opt-out cookie configurations.
+🎯 What: Sensitive OTP code was logged to the console during SMS fallback.
+⚠️ Risk: Exposes OTP codes in server logs, which could allow an attacker with log access to hijack user accounts.
+🛡️ Solution: Removed the code variable from the console.log statement in server/customAuth.ts.

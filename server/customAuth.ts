@@ -220,7 +220,7 @@ export function registerCustomAuthRoutes(app: Express) {
           } else {
             // SMS failed — fall back to email notification to admin
             console.log(
-              `[OTP FALLBACK] SMS failed for ${normalizedIdentifier}. Code: ${code}`
+              `[OTP FALLBACK] SMS failed for ${normalizedIdentifier}.`
             );
             res.json({
               success: true,
