@@ -133,6 +133,16 @@ export const appRouter = router({
         }
         return result;
       }),
+
+    unsubscribe: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await db.unsubscribeNewsletter(input.email);
+      }),
   }),
 
   auth: router({
