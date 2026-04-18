@@ -38,7 +38,6 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
-const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 // Lazy load admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
