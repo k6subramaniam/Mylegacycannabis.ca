@@ -6807,7 +6807,9 @@ export async function subscribeNewsletter(
   }
 }
 
-export async function checkNewsletterSubscriber(email: string): Promise<boolean> {
+export async function checkNewsletterSubscriber(
+  email: string
+): Promise<boolean> {
   if (!USE_PERSISTENT_DB) return true;
   const normalizedEmail = email.toLowerCase().trim();
   const db = getDb();

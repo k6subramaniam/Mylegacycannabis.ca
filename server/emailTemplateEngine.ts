@@ -378,13 +378,20 @@ export async function triggerPromotionalEmail(params: {
 }): Promise<boolean> {
   // Check newsletter subscription status
   try {
-    const isSubscribed = await db.checkNewsletterSubscriber(params.recipientEmail);
+    const isSubscribed = await db.checkNewsletterSubscriber(
+      params.recipientEmail
+    );
     if (!isSubscribed) {
-      console.log(`[TemplateEmail] Skipping ${params.slug} for ${params.recipientEmail} — unsubscribed.`);
+      console.log(
+        `[TemplateEmail] Skipping ${params.slug} for ${params.recipientEmail} — unsubscribed.`
+      );
       return false;
     }
   } catch (err) {
-    console.warn(`[TemplateEmail] Could not check newsletter status for ${params.recipientEmail}:`, err);
+    console.warn(
+      `[TemplateEmail] Could not check newsletter status for ${params.recipientEmail}:`,
+      err
+    );
   }
 
   const base = getSiteUrl();
