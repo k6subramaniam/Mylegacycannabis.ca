@@ -64,5 +64,13 @@ describe("Data Library", () => {
       const eligible = getEligibleRewardTiers(maxPoints);
       expect(eligible).toHaveLength(rewardTiers.length);
     });
+
+    it("should handle exactly 0 points correctly", () => {
+      expect(getEligibleRewardTiers(0)).toEqual([]);
+    });
+
+    it("should handle negative points gracefully", () => {
+      expect(getEligibleRewardTiers(-50)).toEqual([]);
+    });
   });
 });
