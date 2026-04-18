@@ -811,7 +811,7 @@ export const shippingZones: ShippingZone[] = [
   },
 ];
 
-export const FREE_SHIPPING_THRESHOLD = 150;
+export const FREE_SHIPPING_THRESHOLD = 100;
 export const MINIMUM_ORDER = 40;
 
 // ============================================================

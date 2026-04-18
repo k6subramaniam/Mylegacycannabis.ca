@@ -65,9 +65,9 @@ const fr: Translations = {
   // ── Header / Nav ─────────────────────────────────────────────
   header: {
     freeShippingBanner:
-      "Livraison GRATUITE pour les commandes de plus de 150 $ — Livraison partout au Canada",
+      "Livraison GRATUITE pour les commandes de plus de 100 $ — Livraison partout au Canada",
     bannerMessages: [
-      "Livraison GRATUITE pour les commandes de plus de 150 $ — Livraison partout au Canada",
+      "Livraison GRATUITE pour les commandes de plus de 100 $ — Livraison partout au Canada",
       "Ouvert 24/7 — 5 emplacements dans le GTA et Ottawa",
       "Gagnez des récompenses à chaque achat — 1 point par 1 $ dépensé",
       "Aucune taxe sur toutes les commandes — Magasinez et économisez",
@@ -109,9 +109,9 @@ const fr: Translations = {
       "My Legacy Cannabis est votre dispensaire 24/7 avec des succursales dans la region du Grand Toronto et Ottawa. Nous sommes passionnes par l'offre de produits de cannabis de qualite superieure a des prix equitables, avec un personnel competent pret a vous aider a trouver exactement ce dont vous avez besoin.",
     heroDesc2:
       "Que vous preferiez magasiner en succursale ou en ligne, nous offrons la livraison partout au Canada. Aucune taxe sur les commandes, et",
-    heroFreeShipping: "livraison GRATUITE pour les commandes de plus de 150 $",
+    heroFreeShipping: "livraison GRATUITE pour les commandes de plus de 100 $",
     trustFreeShipping: "Livraison gratuite",
-    trustFreeShippingSub: "Commandes de plus de 150 $",
+    trustFreeShippingSub: "Commandes de plus de 100 $",
     trustOpen247: "Ouvert 24/7",
     trustOpen247Sub: "Toujours disponible",
     trustAgeVerified: "Age verifie",
@@ -411,7 +411,7 @@ const fr: Translations = {
       "Nous livrons partout au Canada avec livraison Xpresspost suivie.",
     q_howMuchShipping: "Combien coute la livraison ?",
     a_howMuchShipping:
-      "Les tarifs varient par region : Ontario 10 $, Quebec 12 $, Ouest canadien 15 $, Canada atlantique 18 $, Territoires 25 $. Livraison GRATUITE pour les commandes de plus de 150 $ !",
+      "Les tarifs varient par region : Ontario 10 $, Quebec 12 $, Ouest canadien 15 $, Canada atlantique 18 $, Territoires 25 $. Livraison GRATUITE pour les commandes de plus de 100 $ !",
     q_howLong: "Combien de temps prend la livraison ?",
     a_howLong:
       "Ontario : 1-2 jours ouvrables, Quebec : 2-3 jours, Ouest canadien : 3-5 jours, Canada atlantique : 3-5 jours, Territoires : 5-10 jours.",

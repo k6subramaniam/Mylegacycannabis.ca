@@ -32,13 +32,13 @@ const ROUTE_META: Record<string, RouteMeta> = {
   "/": {
     title: "My Legacy Cannabis \u2014 24/7 Cannabis Dispensary | GTA & Ottawa",
     description:
-      "24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $150 Canada-wide. No taxes on any order.",
+      "24/7 cannabis dispensary with 5 GTA & Ottawa locations. Shop flower, edibles, vapes & more. Free shipping over $100 Canada-wide. No taxes on any order.",
   },
   "/shop": {
     title:
       "Shop Cannabis Online \u2014 Flower, Edibles, Vapes & More | My Legacy Cannabis",
     description:
-      "Browse our full selection of premium cannabis products \u2014 flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $150.",
+      "Browse our full selection of premium cannabis products \u2014 flower, pre-rolls, edibles, vapes, concentrates, and accessories. Free shipping on orders over $100.",
   },
   "/rewards": {
     title:
@@ -59,7 +59,7 @@ const ROUTE_META: Record<string, RouteMeta> = {
   "/shipping": {
     title: "Shipping Policy \u2014 Nationwide Cannabis Delivery Across Canada",
     description:
-      "My Legacy Cannabis ships nationwide across Canada. Free shipping on orders over $150. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25.",
+      "My Legacy Cannabis ships nationwide across Canada. Free shipping on orders over $100. Ontario $10, Quebec $12, Western Canada $15, Atlantic $18, Territories $25.",
   },
   "/contact": {
     title: "Contact Us \u2014 My Legacy Cannabis | Phone, Email & Locations",
@@ -88,7 +88,7 @@ const CATEGORY_META: Record<string, RouteMeta> = {
   flower: {
     title: "Cannabis Flower \u2014 Premium Buds | My Legacy Cannabis",
     description:
-      "Shop premium cannabis flower at My Legacy Cannabis. Indica, Sativa, and Hybrid strains. Free shipping on orders over $150.",
+      "Shop premium cannabis flower at My Legacy Cannabis. Indica, Sativa, and Hybrid strains. Free shipping on orders over $100.",
   },
   "pre-rolls": {
     title:
@@ -145,7 +145,7 @@ async function getMetaForPath(path: string): Promise<RouteMeta | null> {
           title: `${product.name} | My Legacy Cannabis`,
           description:
             product.description ||
-            `Shop ${product.name} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`,
+            `Shop ${product.name} at My Legacy Cannabis. Premium cannabis products with free shipping over $100.`,
           jsonLd: await buildProductJsonLd(product, slug),
         };
       }
@@ -155,7 +155,7 @@ async function getMetaForPath(path: string): Promise<RouteMeta | null> {
 
     return {
       title: `${name} | My Legacy Cannabis`,
-      description: `Shop ${name} at My Legacy Cannabis. Premium cannabis products with free shipping over $150.`,
+      description: `Shop ${name} at My Legacy Cannabis. Premium cannabis products with free shipping over $100.`,
     };
   }
 

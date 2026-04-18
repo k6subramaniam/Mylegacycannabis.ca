@@ -135,7 +135,7 @@ export const MLC_POLICIES = {
     "Interac e-Transfer only. Payment is sent to the payment email provided in the order confirmation. An auto-deposit reference code is given at checkout.",
   shipping: {
     carrier: "Canada Post",
-    freeThreshold: "$150",
+    freeThreshold: "$100",
     minimumOrder: "$40",
     estimatedDelivery:
       "2-5 business days within Ontario, 4-8 for rest of Canada",
@@ -236,6 +236,6 @@ Locations: ${MLC_LOCATIONS.map(l => l.name).join(", ")}.
 Categories: Flower, Pre-Rolls, Edibles, Vapes, Concentrates, Ounce Deals, Shake n Bake, Accessories.
 Grades: AAAA (top), AAA+, AAA, AAA-, AA+, AA, SHAKE (budget).
 Weights: 1g, 3.5g, 7g, 14g, 28g.
-Payment: Interac e-Transfer. Shipping: Canada Post. Free over $150. Min $40.
+Payment: Interac e-Transfer. Shipping: Canada Post. Free over $100. Min $40.
 Brand: Bold, Premium, Community-Rooted. Colors: Purple #4B2DBE, Orange #F19929.`.trim();
 }
