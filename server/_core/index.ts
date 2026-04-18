@@ -16,12 +16,7 @@ import { registerVerifyRoutes } from "../verifyRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./static";
-import {
-  lookupGeo,
-  getClientIP,
-  hashIP,
-  getGeoCacheStats,
-} from "../geolocation";
+import { lookupGeo, getClientIP } from "../geolocation";
 import {
   initializeDatabase,
   USE_PERSISTENT_DB,
@@ -346,42 +341,6 @@ async function startServer() {
       });
     } catch {
       res.json({ store: null, geo: null, source: "error" });
-    }
-  });
-  // ─── DEBUG: Geo-check endpoint (temporary, for deployment validation) ───
-  app.get("/api/debug/geo-check", async (req, res) => {
-    try {
-      const rawIp = req.ip || req.socket.remoteAddress || "";
-      const clientIp = getClientIP(req);
-      const isIPv4Mapped = rawIp.startsWith("::ffff:");
-      const geo = await lookupGeo(clientIp);
-      const cacheStats = getGeoCacheStats();
-
-      res.json({
-        timestamp: new Date().toISOString(),
-        rawIp,
-        isIPv4Mapped,
-        normalizedIp: clientIp,
-        ipHash: clientIp ? hashIP(clientIp) : null,
-        geo: geo
-          ? {
-              city: geo.city,
-              province: geo.province,
-              provinceCode: geo.provinceCode,
-              countryCode: geo.countryCode,
-              isProxy: geo.isProxy,
-            }
-          : null,
-        geoLookupSuccess: !!geo,
-        cacheStats,
-        headers: {
-          "x-forwarded-for": req.headers["x-forwarded-for"] || null,
-          "x-real-ip": req.headers["x-real-ip"] || null,
-          "cf-connecting-ip": req.headers["cf-connecting-ip"] || null,
-        },
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
     }
   });
 

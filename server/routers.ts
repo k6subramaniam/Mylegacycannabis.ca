@@ -10,6 +10,7 @@ import {
 } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { triggerNewsletterWelcomeEmail } from "./emailTemplateEngine";
 import {
   lookupGeo,
   getClientIP,
@@ -111,6 +112,29 @@ const MLC_BRAND_DNA = `BRANDING DNA / CORPORATE VISUAL IDENTITY:
 
 export const appRouter = router({
   system: systemRouter,
+
+  // ─── NEWSLETTER ───
+  newsletter: router({
+    subscribe: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          source: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await db.subscribeNewsletter(input.email, input.source);
+        if (result.isNew) {
+          await triggerNewsletterWelcomeEmail({
+            subscriberEmail: input.email,
+          }).catch(err => {
+            console.error("Failed to send newsletter welcome email:", err);
+          });
+        }
+        return result;
+      }),
+  }),
+
   auth: router({
     me: publicProcedure.query(async opts => {
       const userAgent = opts.ctx.req.headers["user-agent"] || "";
@@ -215,6 +239,14 @@ export const appRouter = router({
 
   // ─── ADMIN: DASHBOARD ───
   admin: router({
+    // ─── NEWSLETTER ───
+    getAllNewsletterSubscribers: adminProcedure.query(async () => {
+      return db.getAllNewsletterSubscribers();
+    }),
+    getNewsletterSubscriberCount: adminProcedure.query(async () => {
+      return db.getNewsletterSubscriberCount();
+    }),
+
     stats: adminProcedure.query(async () => {
       return db.getDashboardStats();
     }),

@@ -636,6 +636,18 @@ export async function initializeDatabase(): Promise<void> {
     )
   `;
 
+  // ─── NEWSLETTER SUBSCRIBERS ───
+  await _sql!`
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(320) NOT NULL UNIQUE,
+      source VARCHAR(50) NOT NULL DEFAULT 'website',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      subscribed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      unsubscribed_at TIMESTAMP
+    )
+  `;
+
   // Smart e-Transfer matching: new columns on orders table
   await _sql!`DO $$ BEGIN
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS original_total NUMERIC(10,2);
@@ -1662,6 +1674,25 @@ export async function updateProduct(
     .update(schema.products)
     .set({ ...data, updatedAt: new Date() } as any)
     .where(eq(schema.products.id, id));
+}
+
+/**
+ * Bulk update multiple products by ID with the same data.
+ * Optimized to perform a single database query/operation.
+ */
+export async function bulkUpdateProducts(
+  ids: number[],
+  data: Partial<schema.InsertProduct>
+): Promise<void> {
+  if (ids.length === 0) return;
+  if (!USE_PERSISTENT_DB) {
+    _mem_bulkUpdateProducts(ids, data);
+    return;
+  }
+  await getDb()
+    .update(schema.products)
+    .set({ ...data, updatedAt: new Date() } as any)
+    .where(inArray(schema.products.id, ids));
 }
 
 export async function deleteProduct(id: number): Promise<void> {
@@ -6394,6 +6425,15 @@ function _mem_updateProduct(id: number, data: any) {
   const p = _products.find(p => p.id === id);
   if (p) Object.assign(p, data, { updatedAt: new Date() });
 }
+function _mem_bulkUpdateProducts(ids: number[], data: any) {
+  const idSet = new Set(ids);
+  const now = new Date();
+  for (const p of _products) {
+    if (idSet.has(p.id)) {
+      Object.assign(p, data, { updatedAt: now });
+    }
+  }
+}
 function _mem_deleteProduct(id: number) {
   const idx = _products.findIndex(p => p.id === id);
   if (idx !== -1) _products.splice(idx, 1);
@@ -6758,4 +6798,84 @@ function _mem_getPendingETransferOrders() {
         (o.status === "pending" || o.status === "confirmed")
     )
     .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+// ─── NEWSLETTER FUNCTIONS ───
+
+export async function subscribeNewsletter(
+  email: string,
+  source: string = "website"
+): Promise<{ isNew: boolean }> {
+  if (!USE_PERSISTENT_DB) return { isNew: true };
+  const normalizedEmail = email.toLowerCase().trim();
+  const db = getDb();
+  try {
+    const existing = await db
+      .select()
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.email, normalizedEmail))
+      .limit(1);
+    if (existing.length > 0) {
+      if (existing[0].isActive) return { isNew: false };
+      else {
+        await db
+          .update(schema.newsletterSubscribers)
+          .set({ isActive: true, unsubscribedAt: null })
+          .where(eq(schema.newsletterSubscribers.email, normalizedEmail));
+        return { isNew: true };
+      }
+    }
+    await db
+      .insert(schema.newsletterSubscribers)
+      .values({ email: normalizedEmail, source });
+    return { isNew: true };
+  } catch (err) {
+    console.error("[DB] Failed to subscribe newsletter:", err);
+    throw err;
+  }
+}
+
+export async function unsubscribeNewsletter(email: string): Promise<void> {
+  if (!USE_PERSISTENT_DB) return;
+  const normalizedEmail = email.toLowerCase().trim();
+  const db = getDb();
+  try {
+    await db
+      .update(schema.newsletterSubscribers)
+      .set({ isActive: false, unsubscribedAt: new Date() })
+      .where(eq(schema.newsletterSubscribers.email, normalizedEmail));
+  } catch (err) {
+    console.error("[DB] Failed to unsubscribe newsletter:", err);
+    throw err;
+  }
+}
+
+export async function getAllNewsletterSubscribers(): Promise<any[]> {
+  if (!USE_PERSISTENT_DB) return [];
+  const db = getDb();
+  try {
+    return await db
+      .select()
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.isActive, true))
+      .orderBy(desc(schema.newsletterSubscribers.subscribedAt));
+  } catch (err) {
+    console.error("[DB] Failed to get newsletter subscribers:", err);
+    return [];
+  }
+}
+
+export async function getNewsletterSubscriberCount(): Promise<number> {
+  if (!USE_PERSISTENT_DB) return 0;
+  const db = getDb();
+  try {
+    const result = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.isActive, true));
+    return result[0]?.count || 0;
+  } catch (err) {
+    console.error("[DB] Failed to get newsletter subscriber count:", err);
+    return 0;
+  }
 }
