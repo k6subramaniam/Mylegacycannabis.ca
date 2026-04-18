@@ -471,15 +471,15 @@ export type InsertSiteSetting = typeof siteSettings.$inferInsert;
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
-  source: varchar("source", { length: 50 }).notNull().default('website'),
+  source: varchar("source", { length: 50 }).notNull().default("website"),
   isActive: boolean("is_active").notNull().default(true),
   subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });
 
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
-export type InsertNewsletterSubscriber = typeof newsletterSubscribers.$inferInsert;
-
+export type InsertNewsletterSubscriber =
+  typeof newsletterSubscribers.$inferInsert;
 
 // ─── E-TRANSFER PAYMENT RECORDS ───
 export const etransferMatchConfidenceEnum = pgEnum(
