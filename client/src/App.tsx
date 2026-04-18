@@ -16,6 +16,7 @@ import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
 import PushOptIn from "./components/PushOptIn";
 import { lazy, Suspense } from "react";
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 // Lazy load storefront pages
 const Home = lazy(() => import("./pages/Home"));
@@ -349,6 +350,13 @@ function Router() {
         <Layout>
           <S>
             <PrivacyPolicy />
+          </S>
+        </Layout>
+      </Route>
+      <Route path="/unsubscribe">
+        <Layout>
+          <S>
+            <Unsubscribe />
           </S>
         </Layout>
       </Route>
