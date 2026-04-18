@@ -4426,7 +4426,7 @@ export async function syncAllSiteKnowledge(): Promise<void> {
         },
         {
           q: "How much does shipping cost?",
-          a: "Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $150!",
+          a: "Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $100!",
         },
         {
           q: "How long does delivery take?",
@@ -4532,7 +4532,7 @@ export async function syncAllSiteKnowledge(): Promise<void> {
     {
       title: "Shipping & Delivery",
       content:
-        "We ship nationwide across Canada with tracked Xpresspost shipping. Free shipping on orders over $150. Signature required upon delivery.",
+        "We ship nationwide across Canada with tracked Xpresspost shipping. Free shipping on orders over $100. Signature required upon delivery.",
     },
     {
       title: "Returns & Refunds",
@@ -4601,7 +4601,7 @@ export async function syncAllSiteKnowledge(): Promise<void> {
 
   // 10. Shipping Policy summary
   const shippingPolicyContent = {
-    freeShippingThreshold: 150,
+    freeShippingThreshold: 100,
     minimumOrder: 40,
     carrier: "Canada Post Xpresspost",
     rates: [
@@ -5582,7 +5582,7 @@ function getSeedData() {
       zoneName: "Ontario",
       provinces: ["ON"],
       rate: "9.99",
-      freeThreshold: "150.00",
+      freeThreshold: "100.00",
       estimatedDays: "2-3",
       deliveryDays: "2-3",
       isActive: true,
@@ -5591,7 +5591,7 @@ function getSeedData() {
       zoneName: "Quebec",
       provinces: ["QC"],
       rate: "12.99",
-      freeThreshold: "150.00",
+      freeThreshold: "100.00",
       estimatedDays: "3-5",
       deliveryDays: "3-5",
       isActive: true,
@@ -5600,7 +5600,7 @@ function getSeedData() {
       zoneName: "British Columbia",
       provinces: ["BC"],
       rate: "14.99",
-      freeThreshold: "150.00",
+      freeThreshold: "100.00",
       estimatedDays: "5-7",
       deliveryDays: "5-7",
       isActive: true,
@@ -5609,7 +5609,7 @@ function getSeedData() {
       zoneName: "Alberta",
       provinces: ["AB"],
       rate: "12.99",
-      freeThreshold: "150.00",
+      freeThreshold: "100.00",
       estimatedDays: "4-6",
       deliveryDays: "4-6",
       isActive: true,

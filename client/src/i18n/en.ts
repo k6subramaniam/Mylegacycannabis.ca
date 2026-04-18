@@ -63,9 +63,9 @@ const en = {
   // ── Header / Nav ─────────────────────────────────────────────
   header: {
     freeShippingBanner:
-      "FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada",
+      "FREE Shipping on Orders Over $100 — Nationwide Delivery Across Canada",
     bannerMessages: [
-      "FREE Shipping on Orders Over $150 — Nationwide Delivery Across Canada",
+      "FREE Shipping on Orders Over $100 — Nationwide Delivery Across Canada",
       "Open 24/7 — 5 Locations Across GTA & Ottawa",
       "Earn Rewards on Every Purchase — 1 Point per $1 Spent",
       "No Taxes on Any Orders — Shop & Save Today",
@@ -107,9 +107,9 @@ const en = {
       "My Legacy Cannabis is your go-to 24/7 dispensary with locations across the Greater Toronto Area and Ottawa. We're passionate about providing premium cannabis products at fair prices, with knowledgeable staff ready to help you find exactly what you need.",
     heroDesc2:
       "Whether you prefer shopping in-store or online, we've got you covered with nationwide shipping across Canada. No taxes on any orders, and",
-    heroFreeShipping: "FREE shipping on orders over $150",
+    heroFreeShipping: "FREE shipping on orders over $100",
     trustFreeShipping: "Free Shipping",
-    trustFreeShippingSub: "Orders over $150",
+    trustFreeShippingSub: "Orders over $100",
     trustOpen247: "Open 24/7",
     trustOpen247Sub: "Always available",
     trustAgeVerified: "Age Verified",
@@ -401,7 +401,7 @@ const en = {
       "We ship nationwide across Canada with tracked Xpresspost shipping.",
     q_howMuchShipping: "How much does shipping cost?",
     a_howMuchShipping:
-      "Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $150!",
+      "Shipping rates vary by region: Ontario $10, Quebec $12, Western Canada $15, Atlantic Canada $18, Territories $25. FREE shipping on orders over $100!",
     q_howLong: "How long does delivery take?",
     a_howLong:
       "Ontario: 1-2 business days, Quebec: 2-3 days, Western Canada: 3-5 days, Atlantic Canada: 3-5 days, Territories: 5-10 days.",

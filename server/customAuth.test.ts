@@ -87,7 +87,7 @@ describe("Custom Auth Routes", () => {
       { name: "Northern Territories", rate: 25 },
     ];
 
-    const FREE_SHIPPING_THRESHOLD = 150;
+    const FREE_SHIPPING_THRESHOLD = 100;
     const orderTotal = 160;
 
     const isFreeShipping = orderTotal >= FREE_SHIPPING_THRESHOLD;
