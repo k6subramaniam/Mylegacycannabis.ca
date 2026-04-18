@@ -1676,6 +1676,25 @@ export async function updateProduct(
     .where(eq(schema.products.id, id));
 }
 
+/**
+ * Bulk update multiple products by ID with the same data.
+ * Optimized to perform a single database query/operation.
+ */
+export async function bulkUpdateProducts(
+  ids: number[],
+  data: Partial<schema.InsertProduct>
+): Promise<void> {
+  if (ids.length === 0) return;
+  if (!USE_PERSISTENT_DB) {
+    _mem_bulkUpdateProducts(ids, data);
+    return;
+  }
+  await getDb()
+    .update(schema.products)
+    .set({ ...data, updatedAt: new Date() } as any)
+    .where(inArray(schema.products.id, ids));
+}
+
 export async function deleteProduct(id: number): Promise<void> {
   if (!USE_PERSISTENT_DB) {
     _mem_deleteProduct(id);
@@ -6405,6 +6424,15 @@ function _mem_createProduct(data: any) {
 function _mem_updateProduct(id: number, data: any) {
   const p = _products.find(p => p.id === id);
   if (p) Object.assign(p, data, { updatedAt: new Date() });
+}
+function _mem_bulkUpdateProducts(ids: number[], data: any) {
+  const idSet = new Set(ids);
+  const now = new Date();
+  for (const p of _products) {
+    if (idSet.has(p.id)) {
+      Object.assign(p, data, { updatedAt: now });
+    }
+  }
 }
 function _mem_deleteProduct(id: number) {
   const idx = _products.findIndex(p => p.id === id);
