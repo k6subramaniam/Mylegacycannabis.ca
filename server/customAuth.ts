@@ -5,7 +5,7 @@ import { sdk } from "./_core/sdk";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
-import { sendOTPEmail, sendOTPSms, getEmailProviderStatus } from "./emailService";
+import { sendOTPEmail, getEmailProviderStatus } from "./emailService";
 import { triggerWelcomeEmail } from "./emailTemplateEngine";
 import rateLimit from "express-rate-limit";
 import { buildFullUserResponse } from "./userHelpers";
@@ -100,17 +100,17 @@ export function registerCustomAuthRoutes(app: Express) {
     message: { error: "Too many verification attempts. Please try again later." }
   });
 
-  // ─── SEND OTP (Email or SMS) ───
+  // ─── SEND OTP (Email Only) ───
   app.post("/api/auth/send-otp", otpSendLimiter, async (req: Request, res: Response) => {
     try {
       const { identifier, type, purpose } = req.body as {
         identifier: string;
-        type: "email" | "sms";
+        type: "email";
         purpose: "login" | "register" | "verify";
       };
 
-      if (!identifier || !type) {
-        res.status(400).json({ error: "identifier and type are required" });
+      if (!identifier || type !== "email") {
+        res.status(400).json({ error: "Email identifier is required" });
         return;
       }
 
@@ -119,19 +119,10 @@ export function registerCustomAuthRoutes(app: Express) {
 
       // For login, check if user exists
       if (purpose === "login") {
-        if (type === "email") {
-          const user = await db.getUserByEmail(identifier);
-          if (!user) {
-            res.status(404).json({ error: "No account found with this email. Please register first." });
-            return;
-          }
-        } else if (type === "sms") {
-          const normalized = normalizePhone(identifier);
-          const user = await db.getUserByPhone(normalized);
-          if (!user) {
-            res.status(404).json({ error: "No account found with this phone number. Please register first." });
-            return;
-          }
+        const user = await db.getUserByEmail(identifier);
+        if (!user) {
+          res.status(404).json({ error: "No account found with this email. Please register first." });
+          return;
         }
       }
 
@@ -147,47 +138,31 @@ export function registerCustomAuthRoutes(app: Express) {
       }
 
       // Store the code
-      const normalizedIdentifier = type === "sms" ? normalizePhone(identifier) : identifier.toLowerCase().trim();
+      const normalizedIdentifier = identifier.toLowerCase().trim();
       await db.createVerificationCode({
         identifier: normalizedIdentifier,
         code,
-        type,
+        type: "email",
         purpose: purpose || "login",
         expiresAt,
       });
 
       // Send the code
-      if (type === "email") {
-        await sendOTPEmail(identifier, code, purpose || "login");
-        res.json({ success: true, message: "Verification code sent to your email.", method: "email" });
-      } else if (type === "sms") {
-        const smsResult = await sendOTPSms(normalizedIdentifier, code, purpose || "login");
-        if (smsResult.sent) {
-          res.json({ success: true, message: "Verification code sent to your phone.", method: "sms" });
-        } else {
-          // SMS failed — fall back to email notification to admin
-          console.log(`[OTP FALLBACK] SMS failed for ${normalizedIdentifier}`);
-          res.json({
-            success: true,
-            message: smsResult.reason || "SMS service is not yet configured. The code has been logged for admin verification.",
-            method: "sms_pending",
-            fallback: true,
-          });
-        }
-      }
+      await sendOTPEmail(identifier, code, purpose || "login");
+      res.json({ success: true, message: "Verification code sent to your email.", method: "email" });
     } catch (error) {
       console.error("[Auth] Send OTP error:", error);
       res.status(500).json({ error: "Failed to send verification code" });
     }
   });
 
-  // ─── VERIFY OTP & LOGIN/REGISTER ───
+  // ─── VERIFY OTP & LOGIN/REGISTER (Email Only) ───
   app.post("/api/auth/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
     try {
       const { identifier, code, type, purpose, registrationData } = req.body as {
         identifier: string;
         code: string;
-        type: "email" | "sms";
+        type: "email";
         purpose: "login" | "register" | "verify";
         registrationData?: {
           name?: string;
@@ -200,13 +175,13 @@ export function registerCustomAuthRoutes(app: Express) {
         };
       };
 
-      if (!identifier || !code || !type) {
-        res.status(400).json({ error: "identifier, code, and type are required" });
+      if (!identifier || !code || type !== "email") {
+        res.status(400).json({ error: "Identifier and code are required" });
         return;
       }
 
-      const normalizedIdentifier = type === "sms" ? normalizePhone(identifier) : identifier.toLowerCase().trim();
-      const result = await db.verifyCode(normalizedIdentifier, code, type);
+      const normalizedIdentifier = identifier.toLowerCase().trim();
+      const result = await db.verifyCode(normalizedIdentifier, code, "email");
 
       if (!result.valid) {
         res.status(400).json({ error: result.reason || "Invalid verification code" });
@@ -272,7 +247,7 @@ export function registerCustomAuthRoutes(app: Express) {
           name: fullName,
           email: registrationData.email?.toLowerCase().trim() || null,
           phone: normalizedPhone,
-          loginMethod: type === "email" ? "email" : "phone",
+          loginMethod: "email",
           lastSignedIn: new Date(),
         });
 
@@ -281,9 +256,9 @@ export function registerCustomAuthRoutes(app: Express) {
         const newUser = await db.getUserByOpenId(openId);
         if (newUser) {
           await db.updateUser(newUser.id, {
-            phoneVerified: type === "sms" ? true : false,
-            emailVerified: type === "email" ? true : false,
-            authMethod: type === "email" ? "email" : "phone",
+            phoneVerified: false,
+            emailVerified: true,
+            authMethod: "email",
             birthday: registrationData.birthday || null,
             rewardPoints: 25, // Welcome bonus!
             registrationIp: clientIp,
@@ -348,12 +323,7 @@ export function registerCustomAuthRoutes(app: Express) {
 
       } else {
         // Login flow
-        let user;
-        if (type === "email") {
-          user = await db.getUserByEmail(normalizedIdentifier);
-        } else {
-          user = await db.getUserByPhone(normalizedIdentifier);
-        }
+        const user = await db.getUserByEmail(normalizedIdentifier);
 
         if (!user) {
           res.status(404).json({ error: "Account not found" });
@@ -367,11 +337,8 @@ export function registerCustomAuthRoutes(app: Express) {
         }
 
         // Update verified status
-        if (type === "email" && !user.emailVerified) {
+        if (!user.emailVerified) {
           await db.updateUser(user.id, { emailVerified: true } as any);
-        }
-        if (type === "sms" && !user.phoneVerified) {
-          await db.updateUser(user.id, { phoneVerified: true } as any);
         }
 
         await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
@@ -573,12 +540,6 @@ export function registerCustomAuthRoutes(app: Express) {
       console.error("[Auth] Complete profile error:", error);
       res.status(500).json({ error: "Failed to update profile" });
     }
-  });
-
-  // ─── CHECK SMS AVAILABILITY ───
-  app.get("/api/auth/sms-available", (_req: Request, res: Response) => {
-    const available = Boolean(ENV.twilioAccountSid && ENV.twilioAuthToken && ENV.twilioPhoneNumber);
-    res.json({ available });
   });
 
   // ─── CHECK GOOGLE AVAILABILITY ───

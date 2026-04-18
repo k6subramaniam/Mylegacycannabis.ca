@@ -461,59 +461,6 @@ export async function sendOTPEmail(
   return true;
 }
 
-// ─── OTP SMS (Twilio) ───
-export async function sendOTPSms(
-  phone: string,
-  code: string,
-  purpose: "login" | "register" | "verify"
-): Promise<{ sent: boolean; reason?: string }> {
-  if (!ENV.twilioAccountSid || !ENV.twilioAuthToken || !ENV.twilioPhoneNumber) {
-    console.log(
-      `[OTP SMS] Twilio not configured. Phone: ${phone} | Purpose: ${purpose}`
-    );
-    return {
-      sent: false,
-      reason:
-        "SMS service not configured. Please use email verification instead.",
-    };
-  }
-
-  try {
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${ENV.twilioAccountSid}/Messages.json`;
-    const body = new URLSearchParams({
-      To: phone,
-      From: ENV.twilioPhoneNumber,
-      Body: `Your My Legacy Cannabis verification code is: ${code}. This code expires in 10 minutes.`,
-    });
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${ENV.twilioAccountSid}:${ENV.twilioAuthToken}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.warn(`[SMS] Twilio error: ${errorData}`);
-      return {
-        sent: false,
-        reason: "Failed to send SMS. Please try email verification.",
-      };
-    }
-
-    console.log(`[SMS] OTP sent to ${phone} for ${purpose}`);
-    return { sent: true };
-  } catch (error) {
-    console.warn("[SMS] Error sending OTP:", error);
-    return {
-      sent: false,
-      reason: "SMS service error. Please try email verification.",
-    };
-  }
-}
 
 // ─── Admin/Owner Notification Email ───
 export async function sendAdminNotification(
