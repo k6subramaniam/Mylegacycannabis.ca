@@ -367,7 +367,7 @@ function Router() {
           </S>
         </Layout>
       </Route>
-      <Route path="/unsubscribe">
+      <Route path="/404">
         <Layout>
           <S>
             <NotFound />
